@@ -34,6 +34,8 @@ export function getAuthorizationUrl(state: string): string {
     scope: [
       "https://www.googleapis.com/auth/calendar.readonly",
       "https://www.googleapis.com/auth/calendar.events",
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile",
     ],
     state,
     prompt: "consent",
@@ -352,4 +354,151 @@ export async function syncGoogleEvents(
 
     throw error;
   }
+}
+
+/**
+ * Create a new event on Google Calendar.
+ */
+export async function createGoogleEvent(
+  accountId: string,
+  calendarId: string,
+  eventData: {
+    title: string;
+    startTime: Date;
+    endTime: Date;
+    isAllDay: boolean;
+    location?: string;
+    description?: string;
+  }
+) {
+  const calendarClient = await getCalendarClient(accountId);
+
+  const [cal] = await db
+    .select()
+    .from(calendars)
+    .where(eq(calendars.id, calendarId));
+
+  if (!cal?.externalId) {
+    throw new Error("Calendar external ID not found");
+  }
+
+  const event: calendar_v3.Schema$Event = {
+    summary: eventData.title,
+    description: eventData.description || undefined,
+    location: eventData.location || undefined,
+    start: eventData.isAllDay
+      ? { date: eventData.startTime.toISOString().split("T")[0] }
+      : { dateTime: eventData.startTime.toISOString(), timeZone: "Europe/Amsterdam" },
+    end: eventData.isAllDay
+      ? { date: eventData.endTime.toISOString().split("T")[0] }
+      : { dateTime: eventData.endTime.toISOString(), timeZone: "Europe/Amsterdam" },
+  };
+
+  const { data } = await calendarClient.events.insert({
+    calendarId: cal.externalId,
+    requestBody: event,
+  });
+
+  return data.id;
+}
+
+/**
+ * Update an existing event on Google Calendar.
+ */
+export async function updateGoogleEvent(
+  accountId: string,
+  calendarId: string,
+  eventId: string,
+  eventData: {
+    title?: string;
+    startTime?: Date;
+    endTime?: Date;
+    isAllDay?: boolean;
+    location?: string;
+    description?: string;
+  }
+) {
+  const calendarClient = await getCalendarClient(accountId);
+
+  const [cal] = await db
+    .select()
+    .from(calendars)
+    .where(eq(calendars.id, calendarId));
+
+  if (!cal?.externalId) {
+    throw new Error("Calendar external ID not found");
+  }
+
+  // Get the event from our DB to find the external ID
+  const [localEvent] = await db
+    .select()
+    .from(events)
+    .where(eq(events.id, eventId));
+
+  if (!localEvent?.externalId) {
+    throw new Error("Event external ID not found");
+  }
+
+  // First fetch current event from Google to preserve fields we're not updating
+  const { data: currentEvent } = await calendarClient.events.get({
+    calendarId: cal.externalId,
+    eventId: localEvent.externalId,
+  });
+
+  const isAllDay = eventData.isAllDay ?? localEvent.isAllDay;
+  const startTime = eventData.startTime || localEvent.startTime;
+  const endTime = eventData.endTime || localEvent.endTime;
+
+  const updatedEvent: calendar_v3.Schema$Event = {
+    ...currentEvent,
+    summary: eventData.title || currentEvent.summary,
+    description: eventData.description !== undefined ? eventData.description : currentEvent.description,
+    location: eventData.location !== undefined ? eventData.location : currentEvent.location,
+    start: isAllDay
+      ? { date: startTime.toISOString().split("T")[0] }
+      : { dateTime: startTime.toISOString(), timeZone: "Europe/Amsterdam" },
+    end: isAllDay
+      ? { date: endTime.toISOString().split("T")[0] }
+      : { dateTime: endTime.toISOString(), timeZone: "Europe/Amsterdam" },
+  };
+
+  await calendarClient.events.update({
+    calendarId: cal.externalId,
+    eventId: localEvent.externalId,
+    requestBody: updatedEvent,
+  });
+}
+
+/**
+ * Delete an event from Google Calendar.
+ */
+export async function deleteGoogleEvent(
+  accountId: string,
+  calendarId: string,
+  eventId: string
+) {
+  const calendarClient = await getCalendarClient(accountId);
+
+  const [cal] = await db
+    .select()
+    .from(calendars)
+    .where(eq(calendars.id, calendarId));
+
+  if (!cal?.externalId) {
+    throw new Error("Calendar external ID not found");
+  }
+
+  const [localEvent] = await db
+    .select()
+    .from(events)
+    .where(eq(events.id, eventId));
+
+  if (!localEvent?.externalId) {
+    throw new Error("Event external ID not found");
+  }
+
+  await calendarClient.events.delete({
+    calendarId: cal.externalId,
+    eventId: localEvent.externalId,
+  });
 }

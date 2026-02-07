@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
@@ -15,7 +15,6 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [calendarGroups, setCalendarGroups] = useState<CalendarGroup[]>([]);
   const { todos, lists, addTodo, toggleTodo, deleteTodo } = useTodos();
-  const createEventRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const fetchCalendars = async () => {
@@ -33,14 +32,44 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleToggleCalendar = useCallback((calendarId: string) => {
+    let newVisibility = true;
+    setCalendarGroups((prev) =>
+      prev.map((group) => ({
+        ...group,
+        calendars: group.calendars.map((cal) => {
+          if (cal.id === calendarId) {
+            newVisibility = !cal.isVisible;
+            return { ...cal, isVisible: newVisibility };
+          }
+          return cal;
+        }),
+      }))
+    );
+    // Persist to API
+    setTimeout(() => {
+      fetch("/api/calendars", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: calendarId, isVisible: newVisibility }),
+      }).catch(() => {});
+    }, 0);
+  }, []);
+
+  const handleChangeCalendarColor = useCallback((calendarId: string, color: string) => {
     setCalendarGroups((prev) =>
       prev.map((group) => ({
         ...group,
         calendars: group.calendars.map((cal) =>
-          cal.id === calendarId ? { ...cal, isVisible: !cal.isVisible } : cal
+          cal.id === calendarId ? { ...cal, color } : cal
         ),
       }))
     );
+    // Persist to API
+    fetch("/api/calendars", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: calendarId, color }),
+    }).catch(() => {});
   }, []);
 
   return (
@@ -52,7 +81,8 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         onNavigateBack={calendar.navigateBack}
         onNavigateForward={calendar.navigateForward}
         onNavigateToday={calendar.navigateToday}
-        onCreateEvent={() => createEventRef.current?.()}
+        onCreateEvent={calendar.createEvent}
+        onOpenSearch={calendar.toggleCommandMenu}
       />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
@@ -60,6 +90,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
           onDateSelect={calendar.setCurrentDate}
           calendarGroups={calendarGroups}
           onToggleCalendar={handleToggleCalendar}
+          onChangeCalendarColor={handleChangeCalendarColor}
           onAddAccount={() => router.push("/settings/accounts")}
           isCollapsed={sidebarCollapsed}
           onToggleCollapsed={() => setSidebarCollapsed((p) => !p)}
@@ -72,11 +103,12 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-hidden">{children}</main>
       </div>
       <CommandMenu
-        onCreateEvent={() => createEventRef.current?.()}
+        onCreateEvent={calendar.createEvent}
         onNavigateToSettings={() => router.push("/settings")}
         onNavigateToday={calendar.navigateToday}
         onNavigateToTasks={() => router.push("/tasks")}
         onNavigateToFocus={() => router.push("/today")}
+        onEventClick={calendar.openEvent}
       />
     </div>
   );

@@ -10,6 +10,7 @@ import {
 import { UserButton } from "@neondatabase/auth/react";
 import { formatMonthYear } from "@/lib/utils/date";
 import type { CalendarViewType } from "@/lib/types";
+import Link from "next/link";
 
 interface HeaderProps {
   currentDate: Date;
@@ -19,6 +20,7 @@ interface HeaderProps {
   onNavigateForward: () => void;
   onNavigateToday: () => void;
   onCreateEvent: () => void;
+  onOpenSearch: () => void;
 }
 
 export function Header({
@@ -29,6 +31,7 @@ export function Header({
   onNavigateForward,
   onNavigateToday,
   onCreateEvent,
+  onOpenSearch,
 }: HeaderProps) {
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3">
@@ -78,12 +81,12 @@ export function Header({
           <Plus className="h-3.5 w-3.5" />
           Nieuw
         </button>
-        <button className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" title="Zoeken (⌘K)">
+        <button onClick={onOpenSearch} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" title="Zoeken (⌘K)">
           <Search className="h-4 w-4" />
         </button>
-        <button className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" title="Instellingen">
+        <Link href="/settings" className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" title="Instellingen">
           <Settings className="h-4 w-4" />
-        </button>
+        </Link>
         <div className="ml-1">
           <UserButton />
         </div>

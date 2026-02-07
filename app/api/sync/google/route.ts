@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import {
   getAuthorizationUrl,
   exchangeCodeForTokens,
+  createOAuth2Client,
   syncGoogleCalendars,
   syncGoogleEvents,
 } from "@/lib/sync/google";
@@ -39,8 +40,8 @@ export async function GET(request: NextRequest) {
       await ensureUserExists({ id: userId });
       const tokens = await exchangeCodeForTokens(code);
 
-      // Get user email from Google
-      const oauth2Client = new google.auth.OAuth2();
+      // Get user email from Google using properly configured client
+      const oauth2Client = createOAuth2Client();
       oauth2Client.setCredentials(tokens);
       const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
       const { data: profile } = await oauth2.userinfo.get();
@@ -60,8 +61,23 @@ export async function GET(request: NextRequest) {
         })
         .returning();
 
-      // Sync calendars immediately
-      await syncGoogleCalendars(newAccount.id);
+      // Sync calendars + events immediately
+      try {
+        await syncGoogleCalendars(newAccount.id);
+        const cals = await db
+          .select()
+          .from(calendars)
+          .where(eq(calendars.accountId, newAccount.id));
+        await Promise.allSettled(
+          cals.map((cal) => syncGoogleEvents(newAccount.id, cal.id))
+        );
+        await db
+          .update(calendarAccounts)
+          .set({ lastSyncAt: new Date(), updatedAt: new Date() })
+          .where(eq(calendarAccounts.id, newAccount.id));
+      } catch (syncError) {
+        console.error("Initial Google sync failed:", syncError);
+      }
 
       return NextResponse.redirect(
         new URL("/settings/accounts?connected=google", request.url)

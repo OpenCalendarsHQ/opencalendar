@@ -40,6 +40,7 @@ export default function AccountsPage() {
   const [iCloudPassword, setICloudPassword] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -106,6 +107,26 @@ export default function AccountsPage() {
     }
   };
 
+  const handleDelete = async (accountId: string, email: string) => {
+    if (!confirm(`Weet je zeker dat je "${email}" wilt verwijderen? Alle kalenders en events van dit account worden ook verwijderd.`)) {
+      return;
+    }
+    setIsDeleting(accountId);
+    try {
+      const res = await fetch(`/api/calendars?accountId=${accountId}`, { method: "DELETE" });
+      if (res.ok) {
+        setAccounts((prev) => prev.filter((a) => a.id !== accountId));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError((data as Record<string, string>).error || "Verwijderen mislukt.");
+      }
+    } catch {
+      setError("Netwerkfout bij verwijderen.");
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
   const handleSync = async (accountId: string, provider: string) => {
     setIsSyncing(accountId);
     try {
@@ -134,6 +155,13 @@ export default function AccountsPage() {
           <p className="text-xs text-muted-foreground">Synchroniseer je kalenders</p>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+          {error}
+          <button onClick={() => setError(null)} className="ml-2 underline">Sluiten</button>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12 text-muted-foreground">
@@ -176,10 +204,15 @@ export default function AccountsPage() {
                   <RefreshCw className={`h-3.5 w-3.5 ${isSyncing === account.id ? "animate-spin" : ""}`} />
                 </button>
                 <button
-                  onClick={() => setAccounts((prev) => prev.filter((a) => a.id !== account.id))}
-                  className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                  onClick={() => handleDelete(account.id, account.email)}
+                  disabled={isDeleting === account.id}
+                  className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-50"
                   title="Verwijder">
-                  <Trash2 className="h-3.5 w-3.5" />
+                  {isDeleting === account.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
                 </button>
               </div>
             </div>

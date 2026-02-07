@@ -5,6 +5,7 @@ import { AuthUIProvider } from "@neondatabase/auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client";
+import { SettingsProvider } from "@/lib/settings-context";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -24,7 +25,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         forgotPassword: true,
       }}
     >
-      {children}
+      <SettingsProvider>{children}</SettingsProvider>
     </AuthUIProvider>
   );
 }

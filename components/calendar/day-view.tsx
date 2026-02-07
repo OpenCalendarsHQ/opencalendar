@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import { formatDateFull, isToday, isSameDay, getTimePosition, getEventHeight } from "@/lib/utils/date";
+import { formatDateFull, isToday, getTimePosition, getEventHeight } from "@/lib/utils/date";
 import { TimeGrid, HOUR_HEIGHT } from "./time-grid";
 import { EventCard, AllDayEventCard } from "./event-card";
+import { computeEventLayout } from "@/lib/utils/event-layout";
+import { splitMultiDayTimedEvents, isEventOnDay } from "@/lib/utils/multi-day";
 import type { CalendarEvent, Todo } from "@/lib/types";
 
 interface DayViewProps {
@@ -16,8 +18,20 @@ interface DayViewProps {
 }
 
 export function DayView({ currentDate, events, todos, onEventClick, onTimeSlotClick, onToggleTodo }: DayViewProps) {
-  const dayEvents = useMemo(() => events.filter((e) => isSameDay(e.startTime, currentDate) && !e.isAllDay), [events, currentDate]);
-  const allDayEvents = useMemo(() => events.filter((e) => isSameDay(e.startTime, currentDate) && e.isAllDay), [events, currentDate]);
+  // Timed events for this day (including clipped multi-day timed events)
+  const dayEvents = useMemo(
+    () => splitMultiDayTimedEvents(events, currentDate),
+    [events, currentDate]
+  );
+
+  // All-day events that are active on this day (single-day or multi-day)
+  const allDayEvents = useMemo(
+    () => events.filter((e) => e.isAllDay && isEventOnDay(e, currentDate)),
+    [events, currentDate]
+  );
+
+  const layoutEvents = useMemo(() => computeEventLayout(dayEvents), [dayEvents]);
+
   const dayTodos = useMemo(() => {
     const dayKey = currentDate.toISOString().split("T")[0];
     return todos.filter((t) => {
@@ -61,9 +75,9 @@ export function DayView({ currentDate, events, todos, onEventClick, onTimeSlotCl
             const hour = Math.floor(y / HOUR_HEIGHT);
             onTimeSlotClick(currentDate, Math.min(23, Math.max(0, hour)));
           }}>
-          {dayEvents.map((event) => {
+          {layoutEvents.map((event) => {
             const top = getTimePosition(event.startTime, HOUR_HEIGHT);
-            const height = getEventHeight(event.startTime, event.endTime, HOUR_HEIGHT);
+            const height = Math.max(getEventHeight(event.startTime, event.endTime, HOUR_HEIGHT), 20);
             return <EventCard key={event.id} event={event} style={{ top: `${top}px`, height: `${height}px` }} onClick={onEventClick} />;
           })}
         </div>

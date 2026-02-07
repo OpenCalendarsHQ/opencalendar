@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import { WeekView } from "./week-view";
 import { DayView } from "./day-view";
 import { MonthView } from "./month-view";
@@ -19,7 +19,12 @@ interface CalendarViewProps {
   onToggleTodo: (id: string) => void;
 }
 
-export function CalendarView({
+export interface CalendarViewRef {
+  openCreateModal: () => void;
+  openEventModal: (eventId: string) => void;
+}
+
+export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
   currentDate,
   viewType,
   events,
@@ -28,16 +33,24 @@ export function CalendarView({
   onDateChange,
   onViewTypeChange,
   onToggleTodo,
-}: CalendarViewProps) {
+}, ref) => {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewEvent, setIsNewEvent] = useState(false);
 
   const handleEventClick = useCallback((event: CalendarEvent) => {
-    setSelectedEvent(event);
+    // If this is a multi-day segment, find the original full event
+    let targetEvent = event;
+    if (event.originalId) {
+      const original = events.find((e) => e.id === event.originalId);
+      if (original) {
+        targetEvent = original;
+      }
+    }
+    setSelectedEvent(targetEvent);
     setIsNewEvent(false);
     setIsModalOpen(true);
-  }, []);
+  }, [events]);
 
   const handleTimeSlotClick = useCallback((date: Date, hour: number) => {
     const startTime = setHours(date, hour);
@@ -60,27 +73,77 @@ export function CalendarView({
     onViewTypeChange("day");
   }, [onDateChange, onViewTypeChange]);
 
-  const handleSaveEvent = useCallback((eventData: Partial<CalendarEvent>) => {
-    if (isNewEvent) {
-      const newEvent: CalendarEvent = {
-        id: `event-${Date.now()}`,
-        title: eventData.title || "(Geen titel)",
-        startTime: eventData.startTime || new Date(),
-        endTime: eventData.endTime || new Date(),
-        color: eventData.color || "#6366f1",
-        calendarId: eventData.calendarId || "cal-1",
-        isAllDay: eventData.isAllDay || false,
-        location: eventData.location,
-        description: eventData.description,
-      };
-      onEventsChange([...events, newEvent]);
-    } else {
-      onEventsChange(events.map((e) => (e.id === eventData.id ? { ...e, ...eventData } : e)));
+  const handleSaveEvent = useCallback(async (eventData: Partial<CalendarEvent>) => {
+    try {
+      if (isNewEvent) {
+        // Create new event via API
+        const res = await fetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            calendarId: eventData.calendarId,
+            title: eventData.title || "(Geen titel)",
+            description: eventData.description,
+            startTime: eventData.startTime?.toISOString(),
+            endTime: eventData.endTime?.toISOString(),
+            isAllDay: eventData.isAllDay || false,
+            location: eventData.location,
+            color: eventData.color,
+          }),
+        });
+        if (res.ok) {
+          const newEvent = await res.json();
+          onEventsChange([...events, {
+            ...newEvent,
+            startTime: new Date(newEvent.startTime),
+            endTime: new Date(newEvent.endTime),
+          }]);
+        }
+      } else {
+        // Update existing event via API
+        const res = await fetch("/api/events", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: eventData.id,
+            title: eventData.title,
+            description: eventData.description,
+            startTime: eventData.startTime?.toISOString(),
+            endTime: eventData.endTime?.toISOString(),
+            isAllDay: eventData.isAllDay,
+            location: eventData.location,
+            color: eventData.color,
+          }),
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          onEventsChange(events.map((e) => (e.id === updated.id ? {
+            ...updated,
+            startTime: new Date(updated.startTime),
+            endTime: new Date(updated.endTime),
+          } : e)));
+        }
+      }
+    } catch (error) {
+      console.error("Failed to save event:", error);
     }
   }, [events, isNewEvent, onEventsChange]);
 
-  const handleDeleteEvent = useCallback((eventId: string) => {
-    onEventsChange(events.filter((e) => e.id !== eventId));
+  const handleDeleteEvent = useCallback(async (eventId: string) => {
+    try {
+      // Resolve original event ID if this was a multi-day segment
+      const event = events.find((e) => e.id === eventId);
+      const realId = event?.originalId || eventId;
+
+      const res = await fetch(`/api/events?id=${realId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        onEventsChange(events.filter((e) => e.id !== realId));
+      }
+    } catch (error) {
+      console.error("Failed to delete event:", error);
+    }
   }, [events, onEventsChange]);
 
   // Expose create for external trigger
@@ -100,6 +163,29 @@ export function CalendarView({
     setIsNewEvent(true);
     setIsModalOpen(true);
   }, []);
+
+  // Expose open event for external trigger
+  const openEventModal = useCallback((eventId: string) => {
+    const event = events.find((e) => e.id === eventId || e.originalId === eventId);
+    if (event) {
+      // If this is a multi-day segment, find the original full event
+      let targetEvent = event;
+      if (event.originalId) {
+        const original = events.find((e) => e.id === event.originalId);
+        if (original) {
+          targetEvent = original;
+        }
+      }
+      setSelectedEvent(targetEvent);
+      setIsNewEvent(false);
+      setIsModalOpen(true);
+    }
+  }, [events]);
+
+  useImperativeHandle(ref, () => ({
+    openCreateModal,
+    openEventModal,
+  }), [openCreateModal, openEventModal]);
 
   return (
     <>
@@ -142,4 +228,6 @@ export function CalendarView({
       />
     </>
   );
-}
+});
+
+CalendarView.displayName = "CalendarView";

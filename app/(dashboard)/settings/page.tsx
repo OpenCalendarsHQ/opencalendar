@@ -5,9 +5,9 @@ import { ArrowLeft, Link2, Palette, Bell, Globe, Shield, ChevronRight } from "lu
 
 const settingsItems = [
   { href: "/settings/accounts", icon: Link2, title: "Verbonden accounts", description: "Google Calendar, iCloud en andere accounts", active: true },
-  { href: "#", icon: Palette, title: "Weergave", description: "Thema, startdag, tijdformaat", active: false },
+  { href: "/settings/appearance", icon: Palette, title: "Weergave", description: "Startdag, tijdformaat, weeknummers", active: true },
+  { href: "/settings/region", icon: Globe, title: "Taal & regio", description: "Tijdzone en datumnotatie", active: true },
   { href: "#", icon: Bell, title: "Meldingen", description: "Herinneringen en notificaties", active: false },
-  { href: "#", icon: Globe, title: "Taal & regio", description: "Taal, tijdzone, datumnotatie", active: false },
   { href: "#", icon: Shield, title: "Privacy", description: "Beveiliging en data export", active: false },
 ];
 

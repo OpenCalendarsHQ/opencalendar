@@ -6,6 +6,7 @@ import {
   getMonthDays, formatMonthYear, formatWeekDay, formatDayNumber,
   isSameDay, isSameMonth, isToday, addMonths, subMonths, getWeekDays,
 } from "@/lib/utils/date";
+import { useSettings } from "@/lib/settings-context";
 
 interface MiniCalendarProps {
   selectedDate: Date;
@@ -13,9 +14,12 @@ interface MiniCalendarProps {
 }
 
 export function MiniCalendar({ selectedDate, onDateSelect }: MiniCalendarProps) {
+  const { settings } = useSettings();
   const [viewMonth, setViewMonth] = useState(new Date());
-  const monthDays = getMonthDays(viewMonth);
-  const weekDayHeaders = getWeekDays(new Date()).map((d) => formatWeekDay(d).charAt(0).toUpperCase());
+  const monthDays = getMonthDays(viewMonth, settings.weekStartsOn);
+  const weekDayHeaders = getWeekDays(new Date(), settings.weekStartsOn).map((d) =>
+    formatWeekDay(d).charAt(0).toUpperCase()
+  );
 
   return (
     <div className="px-3 pb-3">

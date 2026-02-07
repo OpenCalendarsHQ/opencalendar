@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, MapPin, AlignLeft, Clock, Trash2 } from "lucide-react";
+import { X, MapPin, AlignLeft, Clock, Trash2, Calendar } from "lucide-react";
 import { format } from "@/lib/utils/date";
 import type { CalendarEvent } from "@/lib/types";
 
@@ -14,6 +14,13 @@ interface EventModalProps {
   onDelete: (eventId: string) => void;
 }
 
+interface CalendarOption {
+  id: string;
+  name: string;
+  color: string;
+  isReadOnly: boolean;
+}
+
 export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: EventModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -23,6 +30,43 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
   const [isAllDay, setIsAllDay] = useState(false);
+  const [calendarId, setCalendarId] = useState("");
+  const [calendars, setCalendars] = useState<CalendarOption[]>([]);
+
+  // Fetch calendars
+  useEffect(() => {
+    const fetchCalendars = async () => {
+      try {
+        const res = await fetch("/api/calendars");
+        if (res.ok) {
+          const data = await res.json();
+          const allCalendars: CalendarOption[] = [];
+          data.forEach((account: any) => {
+            account.calendars?.forEach((cal: any) => {
+              if (!cal.isReadOnly) {
+                allCalendars.push({
+                  id: cal.id,
+                  name: cal.name,
+                  color: cal.color,
+                  isReadOnly: cal.isReadOnly || false,
+                });
+              }
+            });
+          });
+          setCalendars(allCalendars);
+          // Set default calendar if creating new event
+          if (isNew && allCalendars.length > 0 && !calendarId) {
+            setCalendarId(allCalendars[0].id);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch calendars:", error);
+      }
+    };
+    if (isOpen) {
+      fetchCalendars();
+    }
+  }, [isOpen, isNew, calendarId]);
 
   useEffect(() => {
     if (event) {
@@ -34,6 +78,7 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
       setEndDate(format(event.endTime, "yyyy-MM-dd"));
       setEndTime(format(event.endTime, "HH:mm"));
       setIsAllDay(event.isAllDay);
+      setCalendarId(event.calendarId || "");
     }
   }, [event]);
 
@@ -47,6 +92,8 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
       ? new Date(`${endDate}T23:59`)
       : new Date(`${endDate}T${endTime}`);
 
+    const selectedCalendar = calendars.find(c => c.id === calendarId);
+
     onSave({
       id: event?.id,
       title: title || "(Geen titel)",
@@ -55,8 +102,8 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
       startTime: startDateTime,
       endTime: endDateTime,
       isAllDay,
-      color: "#737373",
-      calendarId: event?.calendarId || "local",
+      color: selectedCalendar?.color || "#737373",
+      calendarId: calendarId || event?.calendarId || "local",
     });
     onClose();
   };
@@ -89,6 +136,23 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
             placeholder="Voeg een titel toe" autoFocus
             className="w-full bg-transparent text-base font-medium text-foreground outline-none placeholder:text-muted-foreground" />
+
+          {calendars.length > 0 && (
+            <div className="flex items-center gap-2.5">
+              <Calendar className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <select
+                value={calendarId}
+                onChange={(e) => setCalendarId(e.target.value)}
+                className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground"
+              >
+                {calendars.map((cal) => (
+                  <option key={cal.id} value={cal.id}>
+                    {cal.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex items-center gap-2.5">
             <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />

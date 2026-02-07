@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { HOURS, getHourLabel, isToday, getTimePosition } from "@/lib/utils/date";
+import { useSettings } from "@/lib/settings-context";
 
 const HOUR_HEIGHT = 60;
 
@@ -12,10 +13,12 @@ interface TimeGridProps {
 }
 
 export function TimeGrid({ children, columnCount, dates }: TimeGridProps) {
+  const { settings } = useSettings();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [currentTimeTop, setCurrentTimeTop] = useState<number>(0);
   const hasTodayColumn = dates.some((d) => isToday(d));
   const todayIndex = dates.findIndex((d) => isToday(d));
+  const use24h = settings.timeFormat === "24h";
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -40,7 +43,7 @@ export function TimeGrid({ children, columnCount, dates }: TimeGridProps) {
           <div key={hour} className="absolute left-0 right-0 flex" style={{ top: hour * HOUR_HEIGHT }}>
             <div className="w-[52px] shrink-0 pr-2 text-right">
               <span className="relative -top-2 select-none text-[10px] text-muted-foreground">
-                {hour > 0 ? getHourLabel(hour) : ""}
+                {hour > 0 ? getHourLabel(hour, use24h) : ""}
               </span>
             </div>
             <div className={`flex-1 border-t ${hour === 0 ? "border-transparent" : "border-border-light"}`} />

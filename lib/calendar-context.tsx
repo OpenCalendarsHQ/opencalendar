@@ -1,24 +1,37 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useRef, type ReactNode, type Dispatch, type SetStateAction } from "react";
 import { addWeeks, subWeeks, addMonths, subMonths, addDays } from "@/lib/utils/date";
+import { useSettings } from "@/lib/settings-context";
 import type { CalendarViewType } from "@/lib/types";
 
 interface CalendarContextValue {
   currentDate: Date;
   viewType: CalendarViewType;
+  weekStartsOn: 0 | 1;
   setCurrentDate: (date: Date) => void;
   setViewType: (type: CalendarViewType) => void;
   navigateBack: () => void;
   navigateForward: () => void;
   navigateToday: () => void;
+  registerCreateEvent: (fn: () => void) => void;
+  createEvent: () => void;
+  registerOpenEvent: (fn: (eventId: string) => void) => void;
+  openEvent: (eventId: string) => void;
+  commandMenuOpen: boolean;
+  setCommandMenuOpen: Dispatch<SetStateAction<boolean>>;
+  toggleCommandMenu: () => void;
 }
 
 const CalendarContext = createContext<CalendarContextValue | null>(null);
 
 export function CalendarProvider({ children }: { children: ReactNode }) {
+  const { settings } = useSettings();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewType, setViewType] = useState<CalendarViewType>("week");
+  const [viewType, setViewType] = useState<CalendarViewType>(settings.defaultView || "week");
+  const [commandMenuOpen, setCommandMenuOpen] = useState(false);
+  const createEventRef = useRef<(() => void) | null>(null);
+  const openEventRef = useRef<((eventId: string) => void) | null>(null);
 
   const navigateBack = useCallback(() => {
     setCurrentDate((prev) => {
@@ -40,16 +53,44 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     setCurrentDate(new Date());
   }, []);
 
+  const registerCreateEvent = useCallback((fn: () => void) => {
+    createEventRef.current = fn;
+  }, []);
+
+  const createEvent = useCallback(() => {
+    createEventRef.current?.();
+  }, []);
+
+  const registerOpenEvent = useCallback((fn: (eventId: string) => void) => {
+    openEventRef.current = fn;
+  }, []);
+
+  const openEvent = useCallback((eventId: string) => {
+    openEventRef.current?.(eventId);
+  }, []);
+
+  const toggleCommandMenu = useCallback(() => {
+    setCommandMenuOpen((prev) => !prev);
+  }, []);
+
   return (
     <CalendarContext.Provider
       value={{
         currentDate,
         viewType,
+        weekStartsOn: settings.weekStartsOn,
         setCurrentDate,
         setViewType,
         navigateBack,
         navigateForward,
         navigateToday,
+        registerCreateEvent,
+        createEvent,
+        registerOpenEvent,
+        openEvent,
+        commandMenuOpen,
+        setCommandMenuOpen,
+        toggleCommandMenu,
       }}
     >
       {children}

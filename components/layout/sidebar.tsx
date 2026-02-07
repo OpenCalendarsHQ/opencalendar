@@ -34,11 +34,17 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
+const CALENDAR_COLORS = [
+  "#737373", "#ef4444", "#f97316", "#eab308", "#22c55e",
+  "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899",
+];
+
 interface SidebarProps {
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
   calendarGroups: CalendarGroup[];
   onToggleCalendar: (calendarId: string) => void;
+  onChangeCalendarColor: (calendarId: string, color: string) => void;
   onAddAccount: () => void;
   isCollapsed: boolean;
   onToggleCollapsed: () => void;
@@ -57,7 +63,7 @@ const providerIcons: Record<string, React.ComponentType<{ className?: string }>>
 
 export function Sidebar({
   selectedDate, onDateSelect, calendarGroups, onToggleCalendar,
-  onAddAccount, isCollapsed, onToggleCollapsed,
+  onChangeCalendarColor, onAddAccount, isCollapsed, onToggleCollapsed,
   todos, todoLists, onToggleTodo, onAddTodo, onDeleteTodo,
 }: SidebarProps) {
   const [activeTab, setActiveTab] = useState<SidebarTab>("calendars");
@@ -147,12 +153,7 @@ export function Sidebar({
                   {isExpanded && (
                     <div className="ml-4 space-y-px">
                       {group.calendars.map((cal) => (
-                        <label key={cal.id} className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-xs hover:bg-muted">
-                          <div className={`h-2.5 w-2.5 rounded-sm ${cal.isVisible ? "" : "border border-border"}`}
-                            style={{ backgroundColor: cal.isVisible ? cal.color : undefined }}
-                            onClick={(e) => { e.preventDefault(); onToggleCalendar(cal.id); }} />
-                          <span className={cal.isVisible ? "text-foreground" : "text-muted-foreground"}>{cal.name}</span>
-                        </label>
+                        <CalendarItem key={cal.id} cal={cal} onToggle={onToggleCalendar} onChangeColor={onChangeCalendarColor} />
                       ))}
                     </div>
                   )}
@@ -196,6 +197,48 @@ export function Sidebar({
         )}
       </div>
     </aside>
+  );
+}
+
+function CalendarItem({ cal, onToggle, onChangeColor }: {
+  cal: { id: string; name: string; color: string; isVisible: boolean };
+  onToggle: (id: string) => void;
+  onChangeColor: (id: string, color: string) => void;
+}) {
+  const [showPicker, setShowPicker] = useState(false);
+
+  return (
+    <div className="group relative flex items-center gap-2 rounded-md px-1.5 py-1 text-xs hover:bg-muted">
+      <button
+        className={`h-2.5 w-2.5 shrink-0 rounded-sm ${cal.isVisible ? "" : "border border-border"}`}
+        style={{ backgroundColor: cal.isVisible ? cal.color : undefined }}
+        onClick={() => onToggle(cal.id)}
+      />
+      <span className={`flex-1 truncate ${cal.isVisible ? "text-foreground" : "text-muted-foreground"}`}>{cal.name}</span>
+      <button
+        onClick={(e) => { e.stopPropagation(); setShowPicker(!showPicker); }}
+        className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100"
+      >
+        <div className="h-2.5 w-2.5 rounded-full border border-border" style={{ backgroundColor: cal.color }} />
+      </button>
+
+      {showPicker && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowPicker(false)} />
+          <div className="absolute right-0 top-full z-50 mt-1 rounded-lg border border-border bg-popover p-2 shadow-lg">
+            <div className="grid grid-cols-5 gap-1">
+              {CALENDAR_COLORS.map((c) => (
+                <button key={c}
+                  onClick={() => { onChangeColor(cal.id, c); setShowPicker(false); }}
+                  className={`h-5 w-5 rounded-md ${cal.color === c ? "ring-2 ring-foreground ring-offset-1 ring-offset-popover" : "hover:scale-110"}`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

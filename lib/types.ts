@@ -10,6 +10,8 @@ export interface CalendarEvent {
   isAllDay: boolean;
   location?: string;
   description?: string;
+  /** Set on multi-day segments that were split for per-day rendering. Points to the real event ID. */
+  originalId?: string;
 }
 
 export interface Todo {

@@ -19,6 +19,7 @@ import {
   setMinutes,
   differenceInMinutes,
   parseISO,
+  getWeek,
 } from "date-fns";
 import { nl } from "date-fns/locale";
 
@@ -38,6 +39,9 @@ export {
   setMinutes,
   differenceInMinutes,
   parseISO,
+  getWeek,
+  startOfWeek,
+  endOfWeek,
 };
 
 export const locale = nl;
@@ -59,8 +63,8 @@ export function getMonthDays(
   return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 }
 
-export function formatTime(date: Date): string {
-  return format(date, "HH:mm", { locale: nl });
+export function formatTime(date: Date, use24h: boolean = true): string {
+  return format(date, use24h ? "HH:mm" : "h:mm a", { locale: nl });
 }
 
 export function formatDateShort(date: Date): string {
@@ -116,6 +120,18 @@ export const HOURS = Array.from({ length: 24 }, (_, i) => i);
 /**
  * Generate a time label for an hour.
  */
-export function getHourLabel(hour: number): string {
-  return `${hour.toString().padStart(2, "0")}:00`;
+export function getHourLabel(hour: number, use24h: boolean = true): string {
+  if (use24h) {
+    return `${hour.toString().padStart(2, "0")}:00`;
+  }
+  const period = hour >= 12 ? "PM" : "AM";
+  const h = hour % 12 || 12;
+  return `${h} ${period}`;
+}
+
+/**
+ * Get the ISO week number for a date.
+ */
+export function getWeekNumber(date: Date, weekStartsOn: 0 | 1 = 1): number {
+  return getWeek(date, { weekStartsOn });
 }

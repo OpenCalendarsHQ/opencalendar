@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { getMonthDays, formatWeekDay, formatDayNumber, isToday, isSameMonth, getWeekDays } from "@/lib/utils/date";
+import { getMonthDays, formatWeekDay, formatDayNumber, isToday, isSameMonth, getWeekDays, getWeekNumber } from "@/lib/utils/date";
+import { useSettings } from "@/lib/settings-context";
+import { isEventOnDay, toDateKey } from "@/lib/utils/multi-day";
 import type { CalendarEvent, Todo } from "@/lib/types";
 
 interface MonthViewProps {
@@ -13,25 +15,28 @@ interface MonthViewProps {
 }
 
 export function MonthView({ currentDate, events, todos, onEventClick, onDayClick }: MonthViewProps) {
-  const monthDays = useMemo(() => getMonthDays(currentDate), [currentDate]);
-  const weekDayHeaders = useMemo(() => getWeekDays(new Date()).map((d) => formatWeekDay(d)), []);
+  const { settings } = useSettings();
+  const monthDays = useMemo(() => getMonthDays(currentDate, settings.weekStartsOn), [currentDate, settings.weekStartsOn]);
+  const weekDayHeaders = useMemo(
+    () => getWeekDays(new Date(), settings.weekStartsOn).map((d) => formatWeekDay(d)),
+    [settings.weekStartsOn]
+  );
 
+  // Pre-compute events per day (including multi-day events on each day they span)
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
-    events.forEach((event) => {
-      const key = event.startTime.toISOString().split("T")[0];
-      const existing = map.get(key) || [];
-      existing.push(event);
-      map.set(key, existing);
+    monthDays.forEach((day) => {
+      const dayKey = toDateKey(day);
+      map.set(dayKey, events.filter((e) => isEventOnDay(e, day)));
     });
     return map;
-  }, [events]);
+  }, [events, monthDays]);
 
   const todosByDay = useMemo(() => {
     const map = new Map<string, Todo[]>();
     todos.forEach((todo) => {
       if (!todo.dueDate || todo.completed) return;
-      const key = todo.dueDate.toISOString().split("T")[0];
+      const key = toDateKey(todo.dueDate);
       const existing = map.get(key) || [];
       existing.push(todo);
       map.set(key, existing);
@@ -45,9 +50,15 @@ export function MonthView({ currentDate, events, todos, onEventClick, onDayClick
     return result;
   }, [monthDays]);
 
+  const showWeekNums = settings.showWeekNumbers;
+  const cols = showWeekNums ? "32px repeat(7, 1fr)" : "repeat(7, 1fr)";
+
   return (
     <div className="flex h-full flex-col">
-      <div className="grid shrink-0 grid-cols-7 border-b border-border">
+      <div className="grid shrink-0 border-b border-border" style={{ gridTemplateColumns: cols }}>
+        {showWeekNums && (
+          <div className="border-r border-border-light px-1 py-2 text-center text-[9px] font-medium text-muted-foreground">#</div>
+        )}
         {weekDayHeaders.map((day, i) => (
           <div key={i} className="border-r border-border-light px-2 py-2 text-center text-[10px] font-medium uppercase tracking-wider text-muted-foreground last:border-r-0">
             {day}
@@ -57,9 +68,18 @@ export function MonthView({ currentDate, events, todos, onEventClick, onDayClick
 
       <div className="flex flex-1 flex-col">
         {weeks.map((week, weekIdx) => (
-          <div key={weekIdx} className="grid flex-1 grid-cols-7 border-b border-border-light last:border-b-0">
+          <div
+            key={weekIdx}
+            className="grid flex-1 border-b border-border-light last:border-b-0"
+            style={{ gridTemplateColumns: cols }}
+          >
+            {showWeekNums && (
+              <div className="flex items-start justify-center border-r border-border-light pt-1 text-[9px] font-medium text-muted-foreground">
+                {getWeekNumber(week[0], settings.weekStartsOn)}
+              </div>
+            )}
             {week.map((day) => {
-              const dayKey = day.toISOString().split("T")[0];
+              const dayKey = toDateKey(day);
               const dayEvents = eventsByDay.get(dayKey) || [];
               const dayTodos = todosByDay.get(dayKey) || [];
               const isCurrentMonth = isSameMonth(day, currentDate);
@@ -80,7 +100,7 @@ export function MonthView({ currentDate, events, todos, onEventClick, onDayClick
                   </div>
                   <div className="mt-0.5 space-y-px">
                     {dayEvents.slice(0, 2).map((event) => (
-                      <button key={event.id} onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
+                      <button key={`${event.id}-${dayKey}`} onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
                         className="flex w-full items-center gap-1 truncate rounded-sm px-1 py-px text-left text-[10px] hover:bg-muted">
                         <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: event.color || "#737373" }} />
                         <span className="truncate text-foreground">{event.title}</span>
