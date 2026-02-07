@@ -27,6 +27,7 @@
     "drizzle-orm": "^0.45.1",
     "geist": "^1.7.0",
     "googleapis": "^171.4.0",
+    "gsap": "^3.14.2",
     "ical.js": "^2.2.1",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",

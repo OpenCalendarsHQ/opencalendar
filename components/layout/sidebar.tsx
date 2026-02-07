@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Image from "next/image";
 import {
   ChevronDown,
   ChevronRight,
@@ -88,6 +89,10 @@ export function Sidebar({
           <PanelLeft className="h-3.5 w-3.5" />
         </button>
         <div className="h-px w-5 bg-border" />
+        <div className="px-1.5 py-1">
+          <Image src="/icon.svg" alt="OpenCalendar" width={24} height={24} className="opacity-80" />
+        </div>
+        <div className="h-px w-5 bg-border" />
         <button onClick={() => { onToggleCollapsed(); setActiveTab("calendars"); }}
           className={`rounded-md p-1.5 ${activeTab === "calendars" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
           <CalendarDays className="h-3.5 w-3.5" />
@@ -108,7 +113,10 @@ export function Sidebar({
   return (
     <aside className="flex w-64 flex-col border-r border-border bg-sidebar-bg">
       <div className="flex items-center justify-between px-3 py-2">
-        <span className="font-pixel text-xs font-bold tracking-wider text-foreground">OpenCalendar</span>
+        <div className="flex items-center gap-2">
+          <Image src="/icon.svg" alt="OpenCalendar" width={20} height={20} className="opacity-90" />
+          <span className="font-pixel text-xs font-bold tracking-wider text-foreground">OpenCalendar</span>
+        </div>
         <button onClick={onToggleCollapsed} className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
           <PanelLeftClose className="h-3.5 w-3.5" />
         </button>
