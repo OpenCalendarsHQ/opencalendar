@@ -65,7 +65,7 @@ export function GridMotion({ items = [], gradientColor = 'black' }: GridMotionPr
       >
         <div className="gridMotion-container">
           {[...Array(4)].map((_, rowIndex) => (
-            <div key={rowIndex} className="row" ref={el => (rowRefs.current[rowIndex] = el)}>
+            <div key={rowIndex} className="row" ref={el => { rowRefs.current[rowIndex] = el; }}>
               {[...Array(7)].map((_, itemIndex) => {
                 const content = combinedItems[rowIndex * 7 + itemIndex];
                 return (
