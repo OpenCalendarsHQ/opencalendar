@@ -1,0 +1,107 @@
+"use client";
+
+import { useMemo } from "react";
+import { getMonthDays, formatWeekDay, formatDayNumber, isToday, isSameMonth, getWeekDays } from "@/lib/utils/date";
+import type { CalendarEvent, Todo } from "@/lib/types";
+
+interface MonthViewProps {
+  currentDate: Date;
+  events: CalendarEvent[];
+  todos: Todo[];
+  onEventClick: (event: CalendarEvent) => void;
+  onDayClick: (date: Date) => void;
+}
+
+export function MonthView({ currentDate, events, todos, onEventClick, onDayClick }: MonthViewProps) {
+  const monthDays = useMemo(() => getMonthDays(currentDate), [currentDate]);
+  const weekDayHeaders = useMemo(() => getWeekDays(new Date()).map((d) => formatWeekDay(d)), []);
+
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+    events.forEach((event) => {
+      const key = event.startTime.toISOString().split("T")[0];
+      const existing = map.get(key) || [];
+      existing.push(event);
+      map.set(key, existing);
+    });
+    return map;
+  }, [events]);
+
+  const todosByDay = useMemo(() => {
+    const map = new Map<string, Todo[]>();
+    todos.forEach((todo) => {
+      if (!todo.dueDate || todo.completed) return;
+      const key = todo.dueDate.toISOString().split("T")[0];
+      const existing = map.get(key) || [];
+      existing.push(todo);
+      map.set(key, existing);
+    });
+    return map;
+  }, [todos]);
+
+  const weeks = useMemo(() => {
+    const result: Date[][] = [];
+    for (let i = 0; i < monthDays.length; i += 7) result.push(monthDays.slice(i, i + 7));
+    return result;
+  }, [monthDays]);
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="grid shrink-0 grid-cols-7 border-b border-border">
+        {weekDayHeaders.map((day, i) => (
+          <div key={i} className="border-r border-border-light px-2 py-2 text-center text-[10px] font-medium uppercase tracking-wider text-muted-foreground last:border-r-0">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-1 flex-col">
+        {weeks.map((week, weekIdx) => (
+          <div key={weekIdx} className="grid flex-1 grid-cols-7 border-b border-border-light last:border-b-0">
+            {week.map((day) => {
+              const dayKey = day.toISOString().split("T")[0];
+              const dayEvents = eventsByDay.get(dayKey) || [];
+              const dayTodos = todosByDay.get(dayKey) || [];
+              const isCurrentMonth = isSameMonth(day, currentDate);
+              const today = isToday(day);
+
+              return (
+                <div key={dayKey}
+                  className={`min-h-[100px] cursor-pointer border-r border-border-light p-1 last:border-r-0 hover:bg-muted/50 ${
+                    !isCurrentMonth ? "bg-muted/30" : ""
+                  }`}
+                  onClick={() => onDayClick(day)}>
+                  <div className="flex justify-center">
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-md font-pixel text-xs ${
+                      today ? "bg-foreground font-bold text-background" : isCurrentMonth ? "text-foreground" : "text-muted-foreground/40"
+                    }`}>
+                      {formatDayNumber(day)}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 space-y-px">
+                    {dayEvents.slice(0, 2).map((event) => (
+                      <button key={event.id} onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
+                        className="flex w-full items-center gap-1 truncate rounded-sm px-1 py-px text-left text-[10px] hover:bg-muted">
+                        <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: event.color || "#737373" }} />
+                        <span className="truncate text-foreground">{event.title}</span>
+                      </button>
+                    ))}
+                    {dayTodos.slice(0, 1).map((todo) => (
+                      <div key={todo.id} className="flex items-center gap-1 truncate px-1 py-px text-[10px] text-muted-foreground">
+                        <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
+                        <span className="truncate">{todo.title}</span>
+                      </div>
+                    ))}
+                    {dayEvents.length + dayTodos.length > 3 && (
+                      <div className="px-1 text-[9px] text-muted-foreground">+{dayEvents.length + dayTodos.length - 3} meer</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
