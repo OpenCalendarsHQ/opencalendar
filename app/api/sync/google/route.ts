@@ -80,12 +80,12 @@ export async function GET(request: NextRequest) {
       }
 
       return NextResponse.redirect(
-        new URL("/settings/accounts?connected=google", request.url)
+        new URL("/settings?connected=google", request.url)
       );
     } catch (error) {
       console.error("Google OAuth callback error:", error);
       return NextResponse.redirect(
-        new URL("/settings/accounts?error=google_oauth_failed", request.url)
+        new URL("/settings?error=google_oauth_failed", request.url)
       );
     }
   }

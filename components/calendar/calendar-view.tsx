@@ -5,6 +5,8 @@ import { WeekView } from "./week-view";
 import { DayView } from "./day-view";
 import { MonthView } from "./month-view";
 import { EventModal } from "./event-modal";
+import { useSwipe } from "@/hooks/use-swipe";
+import { useCalendar } from "@/lib/calendar-context";
 import type { CalendarEvent, CalendarViewType, Todo } from "@/lib/types";
 import { setHours } from "@/lib/utils/date";
 
@@ -13,7 +15,7 @@ interface CalendarViewProps {
   viewType: CalendarViewType;
   events: CalendarEvent[];
   todos: Todo[];
-  onEventsChange: (events: CalendarEvent[]) => void;
+  onEventsChange: () => void;
   onDateChange: (date: Date) => void;
   onViewTypeChange: (type: CalendarViewType) => void;
   onToggleTodo: (id: string) => void;
@@ -92,12 +94,8 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
           }),
         });
         if (res.ok) {
-          const newEvent = await res.json();
-          onEventsChange([...events, {
-            ...newEvent,
-            startTime: new Date(newEvent.startTime),
-            endTime: new Date(newEvent.endTime),
-          }]);
+          // Refetch events to get the latest data with RRULE metadata
+          onEventsChange();
         }
       } else {
         // Update existing event via API
@@ -106,6 +104,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             id: eventData.id,
+            calendarId: eventData.calendarId,
             title: eventData.title,
             description: eventData.description,
             startTime: eventData.startTime?.toISOString(),
@@ -131,7 +130,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
 
   const handleDeleteEvent = useCallback(async (eventId: string) => {
     try {
-      // Resolve original event ID if this was a multi-day segment
+      // Resolve original event ID if this was a multi-day segment or recurring occurrence
       const event = events.find((e) => e.id === eventId);
       const realId = event?.originalId || eventId;
 
@@ -139,7 +138,11 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
         method: "DELETE",
       });
       if (res.ok) {
-        onEventsChange(events.filter((e) => e.id !== realId));
+        // Filter out the deleted event AND all its occurrences (for recurring events)
+        onEventsChange(events.filter((e) => {
+          const eRealId = e.originalId || e.id;
+          return eRealId !== realId;
+        }));
       }
     } catch (error) {
       console.error("Failed to delete event:", error);
@@ -187,8 +190,15 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
     openEventModal,
   }), [openCreateModal, openEventModal]);
 
+  // Swipe navigation for mobile
+  const calendar = useCalendar();
+  const swipeHandlers = useSwipe({
+    onSwipeLeft: calendar.navigateForward,
+    onSwipeRight: calendar.navigateBack,
+  });
+
   return (
-    <>
+    <div className="h-full" {...swipeHandlers}>
       {viewType === "week" && (
         <WeekView
           currentDate={currentDate}
@@ -226,7 +236,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
       />
-    </>
+    </div>
   );
 });
 

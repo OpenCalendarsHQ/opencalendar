@@ -5,6 +5,7 @@ import {
   calendars,
   events,
   syncStates,
+  eventRecurrences,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { parseFirstEvent, generateSingleEventICS } from "./ical-parser";
@@ -99,11 +100,11 @@ export async function syncICloudCalendars(accountId: string) {
       );
 
     if (existing) {
+      // Never overwrite color — user may have customized it
       await db
         .update(calendars)
         .set({
           name,
-          color,
           updatedAt: new Date(),
         })
         .where(eq(calendars.id, existing.id));
@@ -224,7 +225,10 @@ export async function syncICloudEvents(
         updatedAt: new Date(),
       };
 
+      let eventId: string;
+
       if (existing) {
+        eventId = existing.id;
         // Only update if etag changed
         if (existing.etag !== obj.etag) {
           await db
@@ -233,11 +237,77 @@ export async function syncICloudEvents(
             .where(eq(events.id, existing.id));
         }
       } else {
-        await db.insert(events).values({
+        const [newEvent] = await db.insert(events).values({
           calendarId,
           externalId,
           ...eventData,
-        });
+        }).returning();
+        eventId = newEvent.id;
+      }
+
+      // Handle recurrence rule
+      if (parsed.rrule) {
+        console.log(`[iCloud Sync] Found recurring event: ${parsed.title}, RRULE: ${parsed.rrule}`);
+
+        // Check if recurrence rule exists
+        const [existingRecurrence] = await db
+          .select()
+          .from(eventRecurrences)
+          .where(eq(eventRecurrences.eventId, eventId));
+
+        // Parse UNTIL date (can be date-only or datetime)
+        let recurUntil: Date | null = null;
+        if (parsed.rrule.includes("UNTIL=")) {
+          try {
+            const untilStr = parsed.rrule.split("UNTIL=")[1].split(";")[0];
+            // Handle both date-only (20230714) and datetime (20230714T235959Z) formats
+            if (untilStr.length === 8) {
+              // Date only: 20230714
+              recurUntil = new Date(
+                parseInt(untilStr.substring(0, 4)),
+                parseInt(untilStr.substring(4, 6)) - 1,
+                parseInt(untilStr.substring(6, 8))
+              );
+            } else {
+              // Datetime: 20230714T235959Z
+              recurUntil = new Date(untilStr.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?/, "$1-$2-$3T$4:$5:$6Z"));
+            }
+          } catch (e) {
+            console.error(`Failed to parse UNTIL date: ${e}`);
+          }
+        }
+
+        const recurCount = parsed.rrule.includes("COUNT=")
+          ? parseInt(parsed.rrule.split("COUNT=")[1].split(";")[0])
+          : null;
+
+        const recurrenceData = {
+          rrule: parsed.rrule,
+          recurUntil,
+          recurCount,
+          exDates: (parsed.exDates || []).map((d: Date) => d.toISOString()),
+        };
+
+        console.log(`[iCloud Sync] Saving recurrence for ${parsed.title}:`, recurrenceData);
+
+        if (existingRecurrence) {
+          await db
+            .update(eventRecurrences)
+            .set(recurrenceData)
+            .where(eq(eventRecurrences.id, existingRecurrence.id));
+          console.log(`[iCloud Sync] Updated existing recurrence for ${parsed.title}`);
+        } else {
+          await db.insert(eventRecurrences).values({
+            eventId,
+            ...recurrenceData,
+          });
+          console.log(`[iCloud Sync] Created new recurrence for ${parsed.title}`);
+        }
+      } else {
+        // Remove recurrence rule if event is no longer recurring
+        await db
+          .delete(eventRecurrences)
+          .where(eq(eventRecurrences.eventId, eventId));
       }
     }
 

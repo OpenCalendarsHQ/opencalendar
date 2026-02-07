@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { CalendarView, type CalendarViewRef } from "@/components/calendar/calendar-view";
 import { useCalendar } from "@/lib/calendar-context";
 import { useTodos } from "@/hooks/use-todos";
+import { useRecurringEvents } from "@/hooks/use-recurring-events";
 import {
   startOfWeek,
   endOfWeek,
@@ -14,7 +15,7 @@ import {
 import type { CalendarEvent } from "@/lib/types";
 
 export default function DashboardPage() {
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [rawEvents, setRawEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { currentDate, viewType, weekStartsOn, setCurrentDate, setViewType, registerCreateEvent, registerOpenEvent } = useCalendar();
   const { todos, toggleTodo } = useTodos();
@@ -47,8 +48,13 @@ export default function DashboardPage() {
     return {
       start: addDays(start, -1).toISOString(),
       end: addDays(end, 1).toISOString(),
+      startDate: addDays(start, -1),
+      endDate: addDays(end, 1),
     };
   }, [currentDate, viewType, weekStartsOn]);
+
+  // Expand recurring events client-side for better performance
+  const events = useRecurringEvents(rawEvents, dateRange.startDate, dateRange.endDate);
 
   const fetchEvents = useCallback(
     async (signal?: AbortSignal) => {
@@ -58,19 +64,9 @@ export default function DashboardPage() {
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
-            setEvents(
-              data.map((e: Record<string, unknown>) => ({
-                id: e.id as string,
-                title: (e.title as string) || "Geen titel",
-                startTime: new Date(e.startTime as string),
-                endTime: new Date(e.endTime as string),
-                color: (e.color as string) || "#737373",
-                calendarId: (e.calendarId as string) || "local",
-                isAllDay: (e.isAllDay as boolean) || false,
-                location: e.location as string | undefined,
-                description: e.description as string | undefined,
-              }))
-            );
+            // Store raw events (including RRULE metadata)
+            // Client-side hook will expand recurring events
+            setRawEvents(data);
             setLoading(false);
             return data.length;
           }
@@ -146,7 +142,7 @@ export default function DashboardPage() {
       viewType={viewType}
       events={events}
       todos={todos}
-      onEventsChange={setEvents}
+      onEventsChange={() => fetchEvents()}
       onDateChange={setCurrentDate}
       onViewTypeChange={setViewType}
       onToggleTodo={toggleTodo}

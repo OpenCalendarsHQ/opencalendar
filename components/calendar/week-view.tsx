@@ -83,7 +83,7 @@ export function WeekView({ currentDate, events, todos, onEventClick, onTimeSlotC
       <div className="shrink-0 border-b border-border">
         {/* Day labels row */}
         <div className="flex">
-          <div className="flex w-[52px] shrink-0 items-end justify-center pb-1">
+          <div className="flex w-[36px] shrink-0 items-end justify-center pb-1 md:w-[52px]">
             {weekNumber !== null && (
               <span className="text-[9px] font-medium text-muted-foreground">W{weekNumber}</span>
             )}
@@ -111,7 +111,7 @@ export function WeekView({ currentDate, events, todos, onEventClick, onTimeSlotC
         {(multiDaySpans.length > 0 || [...singleDayAllDay.values()].some((v) => v.length > 0)) && (
           <div className="relative border-t border-border-light">
             <div className="flex">
-              <div className="w-[52px] shrink-0" />
+              <div className="w-[36px] shrink-0 md:w-[52px]" />
               <div className="relative flex flex-1">
                 {/* Multi-day spanning events */}
                 {multiDaySpans.map((span, idx) => (

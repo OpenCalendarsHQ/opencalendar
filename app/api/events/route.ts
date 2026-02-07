@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { events, calendars, calendarAccounts } from "@/lib/db/schema";
+import { events, calendars, calendarAccounts, eventRecurrences } from "@/lib/db/schema";
 import { auth } from "@/lib/auth/server";
 import { ensureUserExists } from "@/lib/auth/ensure-user";
-import { eq, and, gte, lte, inArray, sql } from "drizzle-orm";
+import { eq, and, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 import { createICloudEvent, updateICloudEvent, deleteICloudEvent } from "@/lib/sync/icloud";
 import { createGoogleEvent, updateGoogleEvent, deleteGoogleEvent } from "@/lib/sync/google";
@@ -89,21 +89,44 @@ export async function GET(request: NextRequest) {
       .innerJoin(calendarAccounts, eq(calendars.accountId, calendarAccounts.id))
       .where(and(...conditions));
 
-    const mapped = result.map((e) => ({
-      id: e.id,
-      title: e.title,
-      description: e.description,
-      startTime: e.startTime,
-      endTime: e.endTime,
-      isAllDay: e.isAllDay,
-      location: e.location,
-      color: e.eventColor || e.calendarColor || "#737373",
-      calendarId: e.calendarId,
-      status: e.status,
-      isRecurring: e.isRecurring,
-    }));
+    // For recurring events, fetch and attach their RRULE metadata
+    // Client-side will handle occurrence generation
+    const eventsWithRRules: any[] = [];
 
-    return NextResponse.json(mapped);
+    for (const e of result) {
+      const eventData = {
+        id: e.id,
+        title: e.title,
+        description: e.description,
+        startTime: e.startTime,
+        endTime: e.endTime,
+        isAllDay: e.isAllDay,
+        location: e.location,
+        color: e.eventColor || e.calendarColor || "#737373",
+        calendarId: e.calendarId,
+        status: e.status,
+        isRecurring: e.isRecurring,
+        rrule: null as string | null,
+        exDates: null as string[] | null,
+      };
+
+      if (e.isRecurring) {
+        // Get recurrence rule for this event
+        const [recurrence] = await db
+          .select()
+          .from(eventRecurrences)
+          .where(eq(eventRecurrences.eventId, e.id));
+
+        if (recurrence) {
+          eventData.rrule = recurrence.rrule;
+          eventData.exDates = recurrence.exDates as string[] | null;
+        }
+      }
+
+      eventsWithRRules.push(eventData);
+    }
+
+    return NextResponse.json(eventsWithRRules);
   } catch (error) {
     console.error("GET /api/events error:", error);
     return NextResponse.json(
@@ -210,6 +233,32 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Event ID is verplicht" }, { status: 400 });
     }
 
+    // Get the existing event to check if calendar changed
+    const [existingEvent] = await db.select().from(events).where(eq(events.id, id));
+    if (!existingEvent) {
+      return NextResponse.json({ error: "Event niet gevonden" }, { status: 404 });
+    }
+
+    const calendarChanged = data.calendarId && data.calendarId !== existingEvent.calendarId;
+
+    // If calendar changed, verify ownership of new calendar
+    if (calendarChanged) {
+      const [newCal] = await db
+        .select({ id: calendars.id })
+        .from(calendars)
+        .innerJoin(calendarAccounts, eq(calendars.accountId, calendarAccounts.id))
+        .where(
+          and(
+            eq(calendars.id, data.calendarId),
+            eq(calendarAccounts.userId, session.user.id)
+          )
+        );
+
+      if (!newCal) {
+        return NextResponse.json({ error: "Nieuwe kalender niet gevonden" }, { status: 403 });
+      }
+    }
+
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (data.title !== undefined) updateData.title = data.title;
     if (data.description !== undefined) updateData.description = data.description;
@@ -218,33 +267,85 @@ export async function PUT(request: NextRequest) {
     if (data.isAllDay !== undefined) updateData.isAllDay = data.isAllDay;
     if (data.location !== undefined) updateData.location = data.location;
     if (data.color !== undefined) updateData.color = data.color;
+    if (calendarChanged) {
+      updateData.calendarId = data.calendarId;
+      // Reset external IDs when moving between calendars
+      updateData.externalId = null;
+      updateData.icsUid = null;
+    }
 
     const [updated] = await db.update(events).set(updateData).where(eq(events.id, id)).returning();
     if (!updated) {
       return NextResponse.json({ error: "Event niet gevonden" }, { status: 404 });
     }
 
-    // Sync update to external provider (non-blocking)
-    if (updated.calendarId) {
-      const providerInfo = await getCalendarProviderInfo(updated.calendarId);
-      if (providerInfo && !providerInfo.isReadOnly && updated.externalId) {
-        try {
-          const syncData = {
-            title: data.title,
-            description: data.description,
-            startTime: data.startTime ? new Date(data.startTime) : undefined,
-            endTime: data.endTime ? new Date(data.endTime) : undefined,
-            isAllDay: data.isAllDay,
-            location: data.location,
-          };
+    // Handle calendar change: delete from old, create in new
+    if (calendarChanged) {
+      // Delete from old calendar's external provider
+      if (existingEvent.externalId && existingEvent.calendarId) {
+        const oldProviderInfo = await getCalendarProviderInfo(existingEvent.calendarId);
+        if (oldProviderInfo && !oldProviderInfo.isReadOnly) {
+          try {
+            if (oldProviderInfo.provider === "icloud") {
+              await deleteICloudEvent(oldProviderInfo.accountId, id);
+            } else if (oldProviderInfo.provider === "google") {
+              await deleteGoogleEvent(oldProviderInfo.accountId, existingEvent.calendarId, id);
+            }
+          } catch (syncError) {
+            console.error(`Failed to delete event from old ${oldProviderInfo.provider} calendar:`, syncError);
+          }
+        }
+      }
 
-          if (providerInfo.provider === "icloud") {
-            await updateICloudEvent(providerInfo.accountId, updated.calendarId, id, syncData);
-          } else if (providerInfo.provider === "google") {
-            await updateGoogleEvent(providerInfo.accountId, updated.calendarId, id, syncData);
+      // Create in new calendar's external provider
+      const newProviderInfo = await getCalendarProviderInfo(data.calendarId);
+      if (newProviderInfo && !newProviderInfo.isReadOnly) {
+        const syncData = {
+          title: updated.title,
+          startTime: updated.startTime,
+          endTime: updated.endTime,
+          isAllDay: updated.isAllDay,
+          location: updated.location || undefined,
+          description: updated.description || undefined,
+        };
+
+        try {
+          if (newProviderInfo.provider === "icloud") {
+            const externalUid = await createICloudEvent(newProviderInfo.accountId, data.calendarId, syncData);
+            await db.update(events).set({ icsUid: externalUid }).where(eq(events.id, id));
+          } else if (newProviderInfo.provider === "google") {
+            const externalId = await createGoogleEvent(newProviderInfo.accountId, data.calendarId, syncData);
+            if (externalId) {
+              await db.update(events).set({ externalId }).where(eq(events.id, id));
+            }
           }
         } catch (syncError) {
-          console.error(`Failed to sync event update to ${providerInfo.provider}:`, syncError);
+          console.error(`Failed to create event in new ${newProviderInfo.provider} calendar:`, syncError);
+        }
+      }
+    } else {
+      // Just update in the same calendar
+      if (updated.calendarId) {
+        const providerInfo = await getCalendarProviderInfo(updated.calendarId);
+        if (providerInfo && !providerInfo.isReadOnly && updated.externalId) {
+          try {
+            const syncData = {
+              title: data.title,
+              description: data.description,
+              startTime: data.startTime ? new Date(data.startTime) : undefined,
+              endTime: data.endTime ? new Date(data.endTime) : undefined,
+              isAllDay: data.isAllDay,
+              location: data.location,
+            };
+
+            if (providerInfo.provider === "icloud") {
+              await updateICloudEvent(providerInfo.accountId, updated.calendarId, id, syncData);
+            } else if (providerInfo.provider === "google") {
+              await updateGoogleEvent(providerInfo.accountId, updated.calendarId, id, syncData);
+            }
+          } catch (syncError) {
+            console.error(`Failed to sync event update to ${providerInfo.provider}:`, syncError);
+          }
         }
       }
     }

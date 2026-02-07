@@ -5,6 +5,7 @@ import {
   calendars,
   events,
   syncStates,
+  eventRecurrences,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -115,11 +116,11 @@ export async function syncGoogleCalendars(accountId: string) {
       );
 
     if (existing) {
+      // Never overwrite color — user may have customized it
       await db
         .update(calendars)
         .set({
           name: gcal.summary || existing.name,
-          color: gcal.backgroundColor || existing.color,
           isReadOnly: gcal.accessRole === "reader",
           isPrimary: gcal.primary || false,
           updatedAt: new Date(),
@@ -274,6 +275,10 @@ export async function syncGoogleEvents(
             )
           );
 
+        // Check if this event has recurrence rules (RRULE)
+        const hasRecurrence = gEvent.recurrence && gEvent.recurrence.length > 0;
+        const isRecurringInstance = !!gEvent.recurringEventId;
+
         const eventData = {
           title: gEvent.summary || "(Geen titel)",
           description: gEvent.description || null,
@@ -287,22 +292,79 @@ export async function syncGoogleEvents(
             ? "tentative"
             : "confirmed") as "confirmed" | "tentative" | "cancelled",
           timezone: gEvent.start?.timeZone || "Europe/Amsterdam",
-          isRecurring: !!gEvent.recurringEventId,
+          isRecurring: hasRecurrence,
           url: gEvent.hangoutLink || null,
           updatedAt: new Date(),
         };
 
+        let eventId: string;
+
         if (existing) {
+          eventId = existing.id;
           await db
             .update(events)
             .set(eventData)
             .where(eq(events.id, existing.id));
         } else {
-          await db.insert(events).values({
+          const [newEvent] = await db.insert(events).values({
             calendarId,
             externalId: gEvent.id,
             ...eventData,
-          });
+          }).returning();
+          eventId = newEvent.id;
+        }
+
+        // Handle recurrence rules (only for parent recurring events, not instances)
+        if (hasRecurrence && !isRecurringInstance) {
+          // Google Calendar returns RRULE in the recurrence array like ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR"]
+          const rruleStr = gEvent.recurrence?.find((r) => r.startsWith("RRULE:")) || null;
+
+          if (rruleStr) {
+            // Check if recurrence rule exists
+            const [existingRecurrence] = await db
+              .select()
+              .from(eventRecurrences)
+              .where(eq(eventRecurrences.eventId, eventId));
+
+            // Parse RRULE to extract UNTIL and COUNT
+            const recurUntil = rruleStr.includes("UNTIL=")
+              ? new Date(rruleStr.split("UNTIL=")[1].split(";")[0])
+              : null;
+            const recurCount = rruleStr.includes("COUNT=")
+              ? parseInt(rruleStr.split("COUNT=")[1].split(";")[0])
+              : null;
+
+            // Extract EXDATE if present
+            const exDateStrs = gEvent.recurrence?.filter((r) => r.startsWith("EXDATE:")) || [];
+            const exDates = exDateStrs.flatMap((exStr) => {
+              const dates = exStr.replace("EXDATE:", "").split(",");
+              return dates.map((d) => new Date(d).toISOString());
+            });
+
+            const recurrenceData = {
+              rrule: rruleStr.replace("RRULE:", ""),
+              recurUntil,
+              recurCount,
+              exDates,
+            };
+
+            if (existingRecurrence) {
+              await db
+                .update(eventRecurrences)
+                .set(recurrenceData)
+                .where(eq(eventRecurrences.id, existingRecurrence.id));
+            } else {
+              await db.insert(eventRecurrences).values({
+                eventId,
+                ...recurrenceData,
+              });
+            }
+          }
+        } else if (!hasRecurrence) {
+          // Remove recurrence rule if event is no longer recurring
+          await db
+            .delete(eventRecurrences)
+            .where(eq(eventRecurrences.eventId, eventId));
         }
       }
 

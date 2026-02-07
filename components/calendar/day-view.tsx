@@ -45,7 +45,7 @@ export function DayView({ currentDate, events, todos, onEventClick, onTimeSlotCl
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 border-b border-border">
-        <div className="w-[52px] shrink-0" />
+        <div className="w-[36px] shrink-0 md:w-[52px]" />
         <div className="flex flex-1 flex-col items-center border-l border-border-light py-2">
           <span className={`font-pixel text-base capitalize ${today ? "font-bold text-foreground" : "text-foreground"}`}>
             {formatDateFull(currentDate)}

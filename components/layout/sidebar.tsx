@@ -14,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { MiniCalendar } from "@/components/calendar/mini-calendar";
+import { ColorPicker } from "@/components/ui/color-picker";
 import type { CalendarGroup, Todo, TodoList, SidebarTab } from "@/lib/types";
 
 function AppleIcon({ className }: { className?: string }) {
@@ -35,11 +36,6 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
-const CALENDAR_COLORS = [
-  "#737373", "#ef4444", "#f97316", "#eab308", "#22c55e",
-  "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899",
-];
-
 interface SidebarProps {
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
@@ -54,6 +50,7 @@ interface SidebarProps {
   onToggleTodo: (id: string) => void;
   onAddTodo: (title: string, listId?: string) => void;
   onDeleteTodo: (id: string) => void;
+  isMobile?: boolean;
 }
 
 const providerIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -65,7 +62,7 @@ const providerIcons: Record<string, React.ComponentType<{ className?: string }>>
 export function Sidebar({
   selectedDate, onDateSelect, calendarGroups, onToggleCalendar,
   onChangeCalendarColor, onAddAccount, isCollapsed, onToggleCollapsed,
-  todos, todoLists, onToggleTodo, onAddTodo, onDeleteTodo,
+  todos, todoLists, onToggleTodo, onAddTodo, onDeleteTodo, isMobile,
 }: SidebarProps) {
   const [activeTab, setActiveTab] = useState<SidebarTab>("calendars");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(calendarGroups.map((g) => g.id)));
@@ -111,14 +108,14 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex w-64 flex-col border-r border-border bg-sidebar-bg">
+    <aside className={`flex flex-col border-r border-border bg-sidebar-bg ${isMobile ? "h-full w-full" : "w-64"}`}>
       <div className="flex items-center justify-between px-3 py-2">
         <div className="flex items-center gap-2">
           <Image src="/icon.svg" alt="OpenCalendar" width={20} height={20} className="opacity-90" />
           <span className="font-pixel text-xs font-bold tracking-wider text-foreground">OpenCalendar</span>
         </div>
-        <button onClick={onToggleCollapsed} className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-          <PanelLeftClose className="h-3.5 w-3.5" />
+        <button onClick={onToggleCollapsed} className="touch-target rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+          <PanelLeftClose className={isMobile ? "h-5 w-5" : "h-3.5 w-3.5"} />
         </button>
       </div>
 
@@ -231,20 +228,13 @@ function CalendarItem({ cal, onToggle, onChangeColor }: {
       </button>
 
       {showPicker && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setShowPicker(false)} />
-          <div className="absolute right-0 top-full z-50 mt-1 rounded-lg border border-border bg-popover p-2 shadow-lg">
-            <div className="grid grid-cols-5 gap-1">
-              {CALENDAR_COLORS.map((c) => (
-                <button key={c}
-                  onClick={() => { onChangeColor(cal.id, c); setShowPicker(false); }}
-                  className={`h-5 w-5 rounded-md ${cal.color === c ? "ring-2 ring-foreground ring-offset-1 ring-offset-popover" : "hover:scale-110"}`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
-          </div>
-        </>
+        <div className="absolute right-0 top-full z-50 mt-1">
+          <ColorPicker
+            value={cal.color}
+            onChange={(color) => onChangeColor(cal.id, color)}
+            onClose={() => setShowPicker(false)}
+          />
+        </div>
       )}
     </div>
   );

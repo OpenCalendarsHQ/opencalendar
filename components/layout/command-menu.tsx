@@ -72,7 +72,7 @@ export function CommandMenu({ onCreateEvent, onNavigateToSettings, onNavigateTod
   if (!commandMenuOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[18vh]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[12vh] md:pt-[18vh]">
       <div className="fixed inset-0 bg-black/20" onClick={() => setCommandMenuOpen(false)} />
       <div className="relative w-full max-w-md overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
         <Command className="flex flex-col">

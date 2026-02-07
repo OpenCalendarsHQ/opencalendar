@@ -41,8 +41,8 @@ export function TimeGrid({ children, columnCount, dates }: TimeGridProps) {
         {/* Hour lines */}
         {HOURS.map((hour) => (
           <div key={hour} className="absolute left-0 right-0 flex" style={{ top: hour * HOUR_HEIGHT }}>
-            <div className="w-[52px] shrink-0 pr-2 text-right">
-              <span className="relative -top-2 select-none text-[10px] text-muted-foreground">
+            <div className="w-[36px] shrink-0 pr-1 text-right md:w-[52px] md:pr-2">
+              <span className="relative -top-2 select-none text-[9px] text-muted-foreground md:text-[10px]">
                 {hour > 0 ? getHourLabel(hour, use24h) : ""}
               </span>
             </div>
@@ -51,22 +51,22 @@ export function TimeGrid({ children, columnCount, dates }: TimeGridProps) {
         ))}
 
         {/* Column dividers */}
-        <div className="absolute inset-0 ml-[52px] flex">
+        <div className="absolute inset-0 ml-[36px] flex md:ml-[52px]">
           {Array.from({ length: columnCount }).map((_, i) => (
             <div key={i} className={`flex-1 ${i < columnCount - 1 ? "border-r border-border-light" : ""}`} />
           ))}
         </div>
 
         {/* Events container */}
-        <div className="absolute inset-0 ml-[52px] flex">{children}</div>
+        <div className="absolute inset-0 ml-[36px] flex md:ml-[52px]">{children}</div>
 
         {/* Current time indicator */}
         {hasTodayColumn && (
-          <div className="absolute z-20 flex items-center"
+          <div className="absolute z-20 flex items-center time-indicator-position"
             style={{
               top: currentTimeTop,
-              left: todayIndex >= 0 ? `calc(52px + ${(todayIndex / columnCount) * 100}%)` : "52px",
-              width: todayIndex >= 0 ? `calc(${(1 / columnCount) * 100}%)` : "calc(100% - 52px)",
+              left: todayIndex >= 0 ? `calc(var(--time-gutter) + ${(todayIndex / columnCount) * 100}%)` : "var(--time-gutter)",
+              width: todayIndex >= 0 ? `calc(${(1 / columnCount) * 100}%)` : "calc(100% - var(--time-gutter))",
             }}>
             <div className="h-2.5 w-2.5 -translate-x-1 rounded-full bg-current-time" />
             <div className="h-[1.5px] flex-1 bg-current-time" />

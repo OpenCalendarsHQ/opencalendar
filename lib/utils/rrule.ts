@@ -1,9 +1,9 @@
 /**
  * RRULE (RFC 5545) utilities for recurring events.
- *
- * This module provides helpers to generate event instances
- * from recurrence rules in the iCalendar standard.
+ * Uses the rrule.js library for proper RRULE handling.
  */
+
+import { RRule, RRuleSet, rrulestr } from 'rrule';
 
 export type Frequency = "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
 
@@ -68,6 +68,7 @@ export function parseRRule(rruleStr: string): RRule {
 
 /**
  * Generate occurrences for a recurring event within a date range.
+ * Uses rrule.js library for accurate occurrence generation.
  */
 export function generateOccurrences(
   rule: RRule,
@@ -77,39 +78,82 @@ export function generateOccurrences(
   exDates: Date[] = [],
   maxOccurrences: number = 365
 ): Date[] {
-  const occurrences: Date[] = [];
-  let current = new Date(startDate);
-  let count = 0;
-
-  // Convert exDates to timestamp set for fast lookup
-  const excludedTimestamps = new Set(exDates.map((d) => d.getTime()));
-
-  while (current <= rangeEnd && count < maxOccurrences) {
-    // Check count limit
-    if (rule.count !== undefined && count >= rule.count) break;
-
-    // Check until limit
-    if (rule.until && current > rule.until) break;
-
-    // Check if this occurrence is within range and not excluded
-    if (
-      current >= rangeStart &&
-      !excludedTimestamps.has(current.getTime())
-    ) {
-      // Check BYDAY filter
-      if (rule.byDay && !matchesByDay(current, rule.byDay)) {
-        current = advanceDate(current, rule);
-        continue;
-      }
-
-      occurrences.push(new Date(current));
+  try {
+    // Early exit if event ends before range starts
+    if (rule.until && rule.until < rangeStart) {
+      return [];
     }
 
-    current = advanceDate(current, rule);
-    count++;
-  }
+    // Map our RRule to rrule.js RRule
+    const freqMap: Record<Frequency, number> = {
+      DAILY: RRule.DAILY,
+      WEEKLY: RRule.WEEKLY,
+      MONTHLY: RRule.MONTHLY,
+      YEARLY: RRule.YEARLY,
+    };
 
-  return occurrences;
+    const dayMap: Record<string, any> = {
+      MO: RRule.MO,
+      TU: RRule.TU,
+      WE: RRule.WE,
+      TH: RRule.TH,
+      FR: RRule.FR,
+      SA: RRule.SA,
+      SU: RRule.SU,
+    };
+
+    const rruleOptions: any = {
+      freq: freqMap[rule.freq],
+      interval: rule.interval,
+      dtstart: startDate,
+    };
+
+    if (rule.count) {
+      rruleOptions.count = rule.count;
+    }
+
+    if (rule.until) {
+      rruleOptions.until = rule.until;
+    }
+
+    if (rule.byDay && rule.byDay.length > 0) {
+      rruleOptions.byweekday = rule.byDay.map(day => {
+        const cleanDay = day.replace(/[+-\d]/g, "");
+        return dayMap[cleanDay];
+      });
+    }
+
+    if (rule.byMonth && rule.byMonth.length > 0) {
+      rruleOptions.bymonth = rule.byMonth;
+    }
+
+    if (rule.byMonthDay && rule.byMonthDay.length > 0) {
+      rruleOptions.bymonthday = rule.byMonthDay;
+    }
+
+    if (rule.bySetPos && rule.bySetPos.length > 0) {
+      rruleOptions.bysetpos = rule.bySetPos;
+    }
+
+    // Create RRuleSet to handle exclusion dates
+    const rruleSet = new RRuleSet();
+    const rrule = new RRule(rruleOptions);
+    rruleSet.rrule(rrule);
+
+    // Add exclusion dates
+    exDates.forEach(exDate => {
+      rruleSet.exdate(exDate);
+    });
+
+    // Generate occurrences within the range
+    const occurrences = rruleSet.between(rangeStart, rangeEnd, true);
+
+    // Limit to maxOccurrences
+    return occurrences.slice(0, maxOccurrences);
+  } catch (error) {
+    console.error('Error generating occurrences:', error);
+    return [];
+  }
 }
 
 /**
@@ -130,45 +174,6 @@ export function buildRRule(rule: RRule): string {
 }
 
 // --- Internal helpers ---
-
-function advanceDate(date: Date, rule: RRule): Date {
-  const next = new Date(date);
-
-  switch (rule.freq) {
-    case "DAILY":
-      next.setDate(next.getDate() + rule.interval);
-      break;
-    case "WEEKLY":
-      next.setDate(next.getDate() + 7 * rule.interval);
-      break;
-    case "MONTHLY":
-      next.setMonth(next.getMonth() + rule.interval);
-      break;
-    case "YEARLY":
-      next.setFullYear(next.getFullYear() + rule.interval);
-      break;
-  }
-
-  return next;
-}
-
-const DAY_MAP: Record<string, number> = {
-  SU: 0,
-  MO: 1,
-  TU: 2,
-  WE: 3,
-  TH: 4,
-  FR: 5,
-  SA: 6,
-};
-
-function matchesByDay(date: Date, byDay: string[]): boolean {
-  const dayOfWeek = date.getDay();
-  return byDay.some((day) => {
-    const dayNum = DAY_MAP[day.replace(/[+-\d]/g, "")];
-    return dayNum === dayOfWeek;
-  });
-}
 
 function parseRRuleDate(value: string): Date {
   const clean = value.replace("Z", "");

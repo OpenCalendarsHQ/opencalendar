@@ -120,8 +120,11 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
 
     const selectedCalendar = calendars.find(c => c.id === calendarId);
 
+    // For recurring event occurrences, use the originalId to edit the parent event
+    const eventIdToSave = (event as any)?.originalId || event?.id;
+
     onSave({
-      id: event?.id,
+      id: eventIdToSave,
       title: title || "(Geen titel)",
       description,
       location,
@@ -135,30 +138,36 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh]">
+    <div className="fixed inset-0 z-50 flex items-end justify-center md:items-start md:pt-[12vh]">
       <div className="fixed inset-0 bg-black/20" onClick={onClose} />
 
-      <div className="relative w-full max-w-md rounded-lg border border-border bg-popover shadow-lg">
+      <div className="relative w-full max-h-[90dvh] overflow-y-auto rounded-t-xl border border-border bg-popover shadow-lg md:max-w-md md:rounded-lg md:rounded-t-lg safe-bottom">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3 sticky top-0 bg-popover z-10">
           <h2 className="text-sm font-medium text-foreground">
             {isNew ? "Nieuw evenement" : "Evenement bewerken"}
           </h2>
           <div className="flex items-center gap-1">
             {!isNew && event && (
               <button onClick={() => { onDelete(event.id); onClose(); }}
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive">
-                <Trash2 className="h-3.5 w-3.5" />
+                className="touch-target rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive">
+                <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" />
               </button>
             )}
-            <button onClick={onClose} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
-              <X className="h-3.5 w-3.5" />
+            <button onClick={onClose} className="touch-target rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+              <X className="h-4 w-4 md:h-3.5 md:w-3.5" />
             </button>
           </div>
         </div>
 
         {/* Body */}
         <div className="space-y-3 p-4">
+          {!isNew && (event as any)?.originalId && (
+            <div className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+              Dit is een herhalend evenement. Wijzigingen gelden voor alle herhalingen.
+            </div>
+          )}
+
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
             placeholder="Voeg een titel toe" autoFocus
             className="w-full bg-transparent text-base font-medium text-foreground outline-none placeholder:text-muted-foreground" />
@@ -284,11 +293,11 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
         {/* Footer */}
         <div className="flex justify-end gap-2 border-t border-border px-4 py-3">
           <button onClick={onClose}
-            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted">
+            className="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted md:px-3 md:py-1.5 md:text-xs">
             Annuleren
           </button>
           <button onClick={handleSave}
-            className="rounded-md bg-foreground px-3 py-1.5 text-xs font-medium text-background hover:bg-foreground/90">
+            className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background hover:bg-foreground/90 md:px-3 md:py-1.5 md:text-xs">
             Opslaan
           </button>
         </div>

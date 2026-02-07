@@ -87,12 +87,12 @@ export function MonthView({ currentDate, events, todos, onEventClick, onDayClick
 
               return (
                 <div key={dayKey}
-                  className={`min-h-[100px] cursor-pointer border-r border-border-light p-1 last:border-r-0 hover:bg-muted/50 ${
+                  className={`min-h-[60px] cursor-pointer border-r border-border-light p-0.5 last:border-r-0 hover:bg-muted/50 md:min-h-[100px] md:p-1 ${
                     !isCurrentMonth ? "bg-muted/30" : ""
                   }`}
                   onClick={() => onDayClick(day)}>
                   <div className="flex justify-center">
-                    <span className={`flex h-6 w-6 items-center justify-center rounded-md font-pixel text-xs ${
+                    <span className={`flex h-5 w-5 items-center justify-center rounded-md font-pixel text-[10px] md:h-6 md:w-6 md:text-xs ${
                       today ? "bg-foreground font-bold text-background" : isCurrentMonth ? "text-foreground" : "text-muted-foreground/40"
                     }`}>
                       {formatDayNumber(day)}
@@ -101,19 +101,23 @@ export function MonthView({ currentDate, events, todos, onEventClick, onDayClick
                   <div className="mt-0.5 space-y-px">
                     {dayEvents.slice(0, 2).map((event) => (
                       <button key={`${event.id}-${dayKey}`} onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
-                        className="flex w-full items-center gap-1 truncate rounded-sm px-1 py-px text-left text-[10px] hover:bg-muted">
+                        className="flex w-full items-center gap-1 truncate rounded-sm px-0.5 py-px text-left text-[9px] hover:bg-muted md:px-1 md:text-[10px]">
                         <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: event.color || "#737373" }} />
-                        <span className="truncate text-foreground">{event.title}</span>
+                        <span className="hidden truncate text-foreground md:inline">{event.title}</span>
                       </button>
                     ))}
                     {dayTodos.slice(0, 1).map((todo) => (
-                      <div key={todo.id} className="flex items-center gap-1 truncate px-1 py-px text-[10px] text-muted-foreground">
+                      <div key={todo.id} className="hidden items-center gap-1 truncate px-1 py-px text-[10px] text-muted-foreground md:flex">
                         <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
                         <span className="truncate">{todo.title}</span>
                       </div>
                     ))}
                     {dayEvents.length + dayTodos.length > 3 && (
-                      <div className="px-1 text-[9px] text-muted-foreground">+{dayEvents.length + dayTodos.length - 3} meer</div>
+                      <div className="hidden px-1 text-[9px] text-muted-foreground md:block">+{dayEvents.length + dayTodos.length - 3} meer</div>
+                    )}
+                    {/* Mobile: show count only */}
+                    {dayEvents.length > 2 && (
+                      <div className="px-0.5 text-center text-[8px] text-muted-foreground md:hidden">+{dayEvents.length - 2}</div>
                     )}
                   </div>
                 </div>
