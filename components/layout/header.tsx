@@ -35,6 +35,14 @@ export function Header({
 }: HeaderProps) {
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3">
+      {/* Left: Date */}
+      <div className="flex items-center">
+        <span className="text-sm font-medium capitalize text-foreground">
+          {formatMonthYear(currentDate)}
+        </span>
+      </div>
+
+      {/* Center: Navigation + View Selector */}
       <div className="flex items-center gap-2">
         <button
           onClick={onNavigateToday}
@@ -43,36 +51,27 @@ export function Header({
           Vandaag
         </button>
 
-        <div className="flex items-center">
-          <button onClick={onNavigateBack} className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+        <div className="flex items-center rounded-md border border-border">
+          <button onClick={onNavigateBack} className="rounded-l-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <button onClick={onNavigateForward} className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+          <button onClick={onNavigateForward} className="rounded-r-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
 
-        <span className="text-sm font-medium capitalize text-foreground">
-          {formatMonthYear(currentDate)}
-        </span>
+        <select
+          value={viewType}
+          onChange={(e) => onViewTypeChange(e.target.value as CalendarViewType)}
+          className="rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
+        >
+          <option value="day">Dag</option>
+          <option value="week">Week</option>
+          <option value="month">Maand</option>
+        </select>
       </div>
 
-      <div className="flex items-center gap-1 rounded-md border border-border p-0.5">
-        {(["day", "week", "month"] as const).map((type) => (
-          <button
-            key={type}
-            onClick={() => onViewTypeChange(type)}
-            className={`rounded px-3 py-1 text-xs font-medium ${
-              viewType === type
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {type === "day" ? "Dag" : type === "week" ? "Week" : "Maand"}
-          </button>
-        ))}
-      </div>
-
+      {/* Right: Actions */}
       <div className="flex items-center gap-1">
         <button
           onClick={onCreateEvent}
@@ -88,7 +87,7 @@ export function Header({
           <Settings className="h-4 w-4" />
         </Link>
         <div className="ml-1">
-          <UserButton />
+          <UserButton size="icon" />
         </div>
       </div>
     </header>

@@ -112,11 +112,15 @@ button, a, input, [role="button"] {
   transition: background-color 100ms ease, color 100ms ease, opacity 100ms ease;
 }
 
-/* Focus */
+/* Geen focus outline */
 :focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-  border-radius: 6px;
+  outline: none;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
 }
 
 /* Custom checkbox - Notion style */

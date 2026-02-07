@@ -10,23 +10,18 @@ export const metadata: Metadata = {
   description: "Een moderne kalender app met Google en iCloud sync",
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml", sizes: "any" },
-      { url: "/icon-16.svg", type: "image/svg+xml", sizes: "16x16" },
-      { url: "/icon-32.svg", type: "image/svg+xml", sizes: "32x32" },
-      { url: "/icon-48.svg", type: "image/svg+xml", sizes: "48x48" },
+      { url: "/icon-16.png", type: "image/png", sizes: "16x16" },
+      { url: "/icon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/icon-48.png", type: "image/png", sizes: "48x48" },
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
     ],
     shortcut: [
-      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png", type: "image/png" },
     ],
     apple: [
       { url: "/apple-icon.svg", type: "image/svg+xml", sizes: "any" },
       { url: "/apple-icon-180.svg", type: "image/svg+xml", sizes: "180x180" },
-    ],
-    other: [
-      {
-        rel: "mask-icon",
-        url: "/icon.svg",
-      },
     ],
   },
   manifest: "/manifest.json",
