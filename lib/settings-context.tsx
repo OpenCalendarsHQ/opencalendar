@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 
@@ -77,62 +78,81 @@ const DEFAULT_SETTINGS: AppSettings = {
   enableNotifications: false,
 };
 
-const STORAGE_KEY = "opencalendar-settings";
-
 interface SettingsContextValue {
   settings: AppSettings;
   updateSettings: (partial: Partial<AppSettings>) => void;
   resetSettings: () => void;
+  isLoading: boolean;
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
-function loadSettings(): AppSettings {
-  if (typeof window === "undefined") return DEFAULT_SETTINGS;
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
-    }
-  } catch {
-    // corrupt localStorage
-  }
-  return DEFAULT_SETTINGS;
-}
-
-function saveSettings(settings: AppSettings) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  } catch {
-    // localStorage full or unavailable
-  }
-}
-
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const [loaded, setLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load from localStorage on mount (client only)
+  // Load settings from database on mount
   useEffect(() => {
-    setSettings(loadSettings());
-    setLoaded(true);
+    const loadSettings = async () => {
+      try {
+        const res = await fetch("/api/settings");
+        if (res.ok) {
+          const data = await res.json();
+          if (data) {
+            setSettings({ ...DEFAULT_SETTINGS, ...data });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load settings:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSettings();
   }, []);
 
   const updateSettings = useCallback((partial: Partial<AppSettings>) => {
     setSettings((prev) => {
       const next = { ...prev, ...partial };
-      saveSettings(next);
+
+      // Debounce database save (500ms)
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+
+      updateTimeoutRef.current = setTimeout(async () => {
+        try {
+          await fetch("/api/settings", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(next),
+          });
+        } catch (error) {
+          console.error("Failed to save settings:", error);
+        }
+      }, 500);
+
       return next;
     });
   }, []);
 
-  const resetSettings = useCallback(() => {
+  const resetSettings = useCallback(async () => {
     setSettings(DEFAULT_SETTINGS);
-    saveSettings(DEFAULT_SETTINGS);
+    try {
+      await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(DEFAULT_SETTINGS),
+      });
+    } catch (error) {
+      console.error("Failed to reset settings:", error);
+    }
   }, []);
 
   return (
-    <SettingsContext.Provider value={{ settings, updateSettings, resetSettings }}>
+    <SettingsContext.Provider value={{ settings, updateSettings, resetSettings, isLoading }}>
       {children}
     </SettingsContext.Provider>
   );

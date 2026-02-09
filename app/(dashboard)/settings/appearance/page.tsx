@@ -150,6 +150,116 @@ export default function AppearanceSettingsPage() {
             onChange={(checked) => updateSettings({ showDeclinedEvents: checked })}
           />
         </SettingSection>
+
+        {/* Working hours */}
+        <SettingSection title="Werkuren highlighten" description="Markeer werkuren in dag- en weekweergave">
+          <ToggleSwitch
+            checked={settings.showWorkingHours}
+            onChange={(checked) => updateSettings({ showWorkingHours: checked })}
+          />
+        </SettingSection>
+
+        {/* Working hours range */}
+        {settings.showWorkingHours && (
+          <SettingSection title="Werkuren tijden" description="Begin en einde van werkuren">
+            <div className="flex items-center gap-3">
+              <select
+                value={settings.workingHoursStart}
+                onChange={(e) => updateSettings({ workingHoursStart: parseInt(e.target.value) })}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+              >
+                {Array.from({ length: 24 }, (_, i) => (
+                  <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+                ))}
+              </select>
+              <span className="text-sm text-muted-foreground">tot</span>
+              <select
+                value={settings.workingHoursEnd}
+                onChange={(e) => updateSettings({ workingHoursEnd: parseInt(e.target.value) })}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+              >
+                {Array.from({ length: 24 }, (_, i) => (
+                  <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+                ))}
+              </select>
+            </div>
+          </SettingSection>
+        )}
+
+        {/* Day start/end hours */}
+        <SettingSection title="Begin/eind van de dag" description="Eerste en laatste uur in dagweergave">
+          <div className="flex items-center gap-3">
+            <select
+              value={settings.dayStartHour}
+              onChange={(e) => updateSettings({ dayStartHour: parseInt(e.target.value) })}
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+            >
+              {Array.from({ length: 24 }, (_, i) => (
+                <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+              ))}
+            </select>
+            <span className="text-sm text-muted-foreground">tot</span>
+            <select
+              value={settings.dayEndHour}
+              onChange={(e) => updateSettings({ dayEndHour: parseInt(e.target.value) })}
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+            >
+              {Array.from({ length: 24 }, (_, i) => (
+                <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+              ))}
+            </select>
+          </div>
+        </SettingSection>
+
+        {/* Time slot interval */}
+        <SettingSection title="Tijdslot interval" description="Grootte van tijdslots in de weergave">
+          <div className="flex gap-2">
+            {([
+              { value: 15 as const, label: "15 min" },
+              { value: 30 as const, label: "30 min" },
+              { value: 60 as const, label: "60 min" },
+            ]).map((opt) => (
+              <OptionButton
+                key={opt.value}
+                label={opt.label}
+                selected={settings.timeSlotInterval === opt.value}
+                onClick={() => updateSettings({ timeSlotInterval: opt.value })}
+              />
+            ))}
+          </div>
+        </SettingSection>
+
+        {/* Show weekends */}
+        <SettingSection title="Weekenden tonen" description="Toon zaterdag en zondag in weekweergave">
+          <ToggleSwitch
+            checked={settings.showWeekends}
+            onChange={(checked) => updateSettings({ showWeekends: checked })}
+          />
+        </SettingSection>
+
+        {/* Event color source */}
+        <SettingSection title="Event kleuren" description="Gebruik kalender- of event-kleur">
+          <div className="flex gap-2">
+            <OptionButton
+              label="Van kalender"
+              selected={settings.eventColorSource === "calendar"}
+              onClick={() => updateSettings({ eventColorSource: "calendar" })}
+            />
+            <OptionButton
+              label="Van event zelf"
+              selected={settings.eventColorSource === "event"}
+              onClick={() => updateSettings({ eventColorSource: "event" })}
+            />
+          </div>
+        </SettingSection>
+
+        {/* Show mini calendar */}
+        <SettingSection title="Mini kalender" description="Toon mini maandkalender in sidebar">
+          <ToggleSwitch
+            checked={settings.showMiniCalendar}
+            onChange={(checked) => updateSettings({ showMiniCalendar: checked })}
+          />
+        </SettingSection>
       </div>
     </div>
   );
