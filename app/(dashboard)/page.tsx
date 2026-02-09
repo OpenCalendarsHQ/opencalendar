@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarView, type CalendarViewRef } from "@/components/calendar/calendar-view";
 import { useCalendar } from "@/lib/calendar-context";
@@ -17,7 +17,7 @@ import {
 import type { CalendarEvent } from "@/lib/types";
 import { Loader2 } from "lucide-react";
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, isPending } = useSession();
@@ -263,5 +263,17 @@ export default function DashboardPage() {
         onToggleTodo={toggleTodo}
       />
     </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }
