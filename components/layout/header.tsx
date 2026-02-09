@@ -212,7 +212,7 @@ export function Header({
           <Settings className="h-4 w-4" />
         </Link>
         <div className="ml-1">
-          <UserButtonWrapper size="icon" />
+          <UserButtonWrapper />
         </div>
       </div>
     </header>

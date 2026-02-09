@@ -142,10 +142,8 @@ export async function GET(request: NextRequest) {
 // POST /api/sync/google - Trigger sync for an account
 export async function POST(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession({
-      fetchOptions: { headers: request.headers }
-    });
-    if (!session?.user) {
+    const user = await getUser();
+    if (!user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
 
