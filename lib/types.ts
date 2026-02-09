@@ -52,6 +52,6 @@ export interface CalendarGroup {
   calendars: CalendarItem[];
 }
 
-export type CalendarViewType = "day" | "week" | "month";
+export type CalendarViewType = "day" | "week" | "month" | "year";
 
 export type SidebarTab = "calendars" | "todos";

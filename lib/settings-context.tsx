@@ -16,7 +16,7 @@ export interface AppSettings {
   timeFormat: "24h" | "12h";
   timezone: string;
   showWeekNumbers: boolean;
-  defaultView: "day" | "week" | "month";
+  defaultView: "day" | "week" | "month" | "year";
   defaultEventDuration: 30 | 60 | 90 | 120; // minutes
   showDeclinedEvents: boolean;
 

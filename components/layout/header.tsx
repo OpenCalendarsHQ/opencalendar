@@ -87,64 +87,114 @@ export function Header({
   // Mobile header layout
   if (isMobile) {
     return (
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border px-2 safe-left safe-right">
-        {/* Left: Menu + Date */}
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={onToggleMobileSidebar}
-            className="touch-target rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label="Menu openen"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium capitalize text-foreground">
-              {formatMonthYear(currentDate)}
-            </span>
-            <span className="text-[10px] capitalize text-muted-foreground">
-              {formatTodayDate(new Date())}
-            </span>
+      <header className="shrink-0 border-b border-border">
+        {/* Top row */}
+        <div className="flex h-14 items-center justify-between px-2 safe-left safe-right">
+          {/* Left: Menu + Date */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={onToggleMobileSidebar}
+              className="touch-target rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Menu openen"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium capitalize text-foreground">
+                {formatMonthYear(currentDate)}
+              </span>
+              <span className="text-[10px] capitalize text-muted-foreground">
+                {formatTodayDate(new Date())}
+              </span>
+            </div>
+          </div>
+
+          {/* Right: Create + Search */}
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={onCreateEvent}
+              className="touch-target rounded-md bg-accent p-2 text-accent-foreground hover:bg-accent-hover"
+              aria-label="Nieuw evenement"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+            <button
+              onClick={onOpenSearch}
+              className="touch-target rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Zoeken"
+            >
+              <Search className="h-5 w-5" />
+            </button>
           </div>
         </div>
 
-        {/* Center: Navigation arrows */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={onNavigateBack}
-            className="touch-target rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            onClick={onNavigateToday}
-            className="rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground hover:bg-muted"
-          >
-            Vandaag
-          </button>
-          <button
-            onClick={onNavigateForward}
-            className="touch-target rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
+        {/* Bottom row: Navigation + View selector */}
+        <div className="flex items-center justify-between border-t border-border-light px-2 py-1.5">
+          {/* Navigation arrows */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onNavigateBack}
+              className="touch-target rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onNavigateToday}
+              className="rounded-md border border-border px-2 py-1 text-[10px] font-medium text-foreground hover:bg-muted"
+            >
+              Vandaag
+            </button>
+            <button
+              onClick={onNavigateForward}
+              className="touch-target rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
 
-        {/* Right: Create + More */}
-        <div className="flex items-center gap-0.5">
-          <button
-            onClick={onCreateEvent}
-            className="touch-target rounded-md bg-accent p-2 text-accent-foreground hover:bg-accent-hover"
-            aria-label="Nieuw evenement"
-          >
-            <Plus className="h-5 w-5" />
-          </button>
-          <button
-            onClick={onOpenSearch}
-            className="touch-target rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label="Zoeken"
-          >
-            <Search className="h-5 w-5" />
-          </button>
+          {/* View selector */}
+          <div className="flex items-center gap-0.5 rounded-md border border-border p-0.5">
+            <button
+              onClick={() => onViewTypeChange("day")}
+              className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                viewType === "day"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground"
+              }`}
+            >
+              D
+            </button>
+            <button
+              onClick={() => onViewTypeChange("week")}
+              className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                viewType === "week"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground"
+              }`}
+            >
+              W
+            </button>
+            <button
+              onClick={() => onViewTypeChange("month")}
+              className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                viewType === "month"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground"
+              }`}
+            >
+              M
+            </button>
+            <button
+              onClick={() => onViewTypeChange("year")}
+              className={`rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                viewType === "year"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground"
+              }`}
+            >
+              J
+            </button>
+          </div>
         </div>
       </header>
     );
@@ -195,15 +245,48 @@ export function Header({
           </button>
         </div>
 
-        <select
-          value={viewType}
-          onChange={(e) => onViewTypeChange(e.target.value as CalendarViewType)}
-          className="rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
-        >
-          <option value="day">Dag</option>
-          <option value="week">Week</option>
-          <option value="month">Maand</option>
-        </select>
+        <div className="flex items-center gap-0.5 rounded-md border border-border p-0.5">
+          <button
+            onClick={() => onViewTypeChange("day")}
+            className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              viewType === "day"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            Dag
+          </button>
+          <button
+            onClick={() => onViewTypeChange("week")}
+            className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              viewType === "week"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            Week
+          </button>
+          <button
+            onClick={() => onViewTypeChange("month")}
+            className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              viewType === "month"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            Maand
+          </button>
+          <button
+            onClick={() => onViewTypeChange("year")}
+            className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              viewType === "year"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            Jaar
+          </button>
+        </div>
       </div>
 
       {/* Right: Actions */}

@@ -3,6 +3,7 @@ import {
   endOfWeek,
   startOfMonth,
   endOfMonth,
+  startOfYear,
   eachDayOfInterval,
   format,
   addDays,
@@ -42,6 +43,7 @@ export {
   getWeek,
   startOfWeek,
   endOfWeek,
+  startOfYear,
 };
 
 export const locale = nl;

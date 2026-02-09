@@ -4,6 +4,7 @@ import { useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import { WeekView } from "./week-view";
 import { DayView } from "./day-view";
 import { MonthView } from "./month-view";
+import { YearView } from "./year-view";
 import { EventModal } from "./event-modal";
 import { RecurringEventDialog } from "./recurring-event-dialog";
 import { useSwipe } from "@/hooks/use-swipe";
@@ -135,6 +136,11 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
   const handleDayClick = useCallback((date: Date) => {
     onDateChange(date);
     onViewTypeChange("day");
+  }, [onDateChange, onViewTypeChange]);
+
+  const handleMonthClick = useCallback((date: Date) => {
+    onDateChange(date);
+    onViewTypeChange("month");
   }, [onDateChange, onViewTypeChange]);
 
   const handleSaveEvent = useCallback(async (eventData: Partial<CalendarEvent> & {
@@ -454,6 +460,16 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
           todos={todos}
           onEventClick={handleEventClick}
           onDayClick={handleDayClick}
+        />
+      )}
+      {viewType === "year" && (
+        <YearView
+          currentDate={currentDate}
+          events={events}
+          todos={todos}
+          onEventClick={handleEventClick}
+          onDayClick={handleDayClick}
+          onMonthClick={handleMonthClick}
         />
       )}
 

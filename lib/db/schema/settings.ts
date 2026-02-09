@@ -12,7 +12,7 @@ export const userSettings = pgTable("user_settings", {
   timeFormat: text("time_format").notNull().default("24h"), // "24h" | "12h"
   timezone: text("timezone").notNull().default("Europe/Amsterdam"),
   showWeekNumbers: boolean("show_week_numbers").notNull().default(false),
-  defaultView: text("default_view").notNull().default("week"), // "day" | "week" | "month"
+  defaultView: text("default_view").notNull().default("week"), // "day" | "week" | "month" | "year"
   defaultEventDuration: integer("default_event_duration").notNull().default(60), // minutes
   showDeclinedEvents: boolean("show_declined_events").notNull().default(false),
 
