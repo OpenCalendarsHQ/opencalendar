@@ -5,6 +5,7 @@ import { WeekView } from "./week-view";
 import { DayView } from "./day-view";
 import { MonthView } from "./month-view";
 import { EventModal } from "./event-modal";
+import { RecurringEventDialog } from "./recurring-event-dialog";
 import { useSwipe } from "@/hooks/use-swipe";
 import { useCalendar } from "@/lib/calendar-context";
 import type { CalendarEvent, CalendarViewType, Todo } from "@/lib/types";
@@ -14,6 +15,7 @@ interface CalendarViewProps {
   currentDate: Date;
   viewType: CalendarViewType;
   events: CalendarEvent[];
+  rawEvents: CalendarEvent[]; // Original events with RRULE, before expansion
   todos: Todo[];
   onEventsChange: () => void;
   onDateChange: (date: Date) => void;
@@ -30,6 +32,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
   currentDate,
   viewType,
   events,
+  rawEvents,
   todos,
   onEventsChange,
   onDateChange,
@@ -39,20 +42,24 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewEvent, setIsNewEvent] = useState(false);
+  const [showRecurringDialog, setShowRecurringDialog] = useState(false);
+  const [recurringDialogAction, setRecurringDialogAction] = useState<"edit" | "delete">("edit");
+  const [pendingEvent, setPendingEvent] = useState<CalendarEvent | null>(null);
 
   const handleEventClick = useCallback((event: CalendarEvent) => {
-    // If this is a multi-day segment, find the original full event
-    let targetEvent = event;
-    if (event.originalId) {
-      const original = events.find((e) => e.id === event.originalId);
-      if (original) {
-        targetEvent = original;
-      }
+    // If this is a recurring event (either occurrence or original with rrule), show dialog
+    if (event.originalId || event.rrule) {
+      setPendingEvent(event);
+      setRecurringDialogAction("edit");
+      setShowRecurringDialog(true);
+      return;
     }
-    setSelectedEvent(targetEvent);
+
+    // Regular event - open modal directly
+    setSelectedEvent(event);
     setIsNewEvent(false);
     setIsModalOpen(true);
-  }, [events]);
+  }, []);
 
   const handleTimeSlotClick = useCallback((date: Date, hour: number) => {
     const startTime = setHours(date, hour);
@@ -128,9 +135,18 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
     try {
       // Resolve original event ID if this was a multi-day segment or recurring occurrence
       const event = events.find((e) => e.id === eventId);
-      const realId = event?.originalId || eventId;
 
-      const res = await fetch(`/api/events?id=${realId}`, {
+      // If this is a recurring event (occurrence or original), show dialog first
+      if (event?.originalId || event?.rrule) {
+        setPendingEvent(event);
+        setRecurringDialogAction("delete");
+        setShowRecurringDialog(true);
+        setIsModalOpen(false); // Close event modal while showing dialog
+        return;
+      }
+
+      // Regular event - delete directly
+      const res = await fetch(`/api/events?id=${eventId}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -141,6 +157,69 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
       console.error("Failed to delete event:", error);
     }
   }, [events, onEventsChange]);
+
+  // Handle recurring event dialog choice for edit
+  const handleEditThisOccurrence = useCallback(() => {
+    if (!pendingEvent) return;
+    setShowRecurringDialog(false);
+    // For now, just open the event modal for this occurrence
+    // TODO: Implement single occurrence editing
+    setSelectedEvent(pendingEvent);
+    setIsNewEvent(false);
+    setIsModalOpen(true);
+    setPendingEvent(null);
+  }, [pendingEvent]);
+
+  const handleEditAllOccurrences = useCallback(() => {
+    if (!pendingEvent) return;
+    setShowRecurringDialog(false);
+
+    // If this IS the original recurring event (has rrule), use it directly
+    if (pendingEvent.rrule) {
+      setSelectedEvent(pendingEvent);
+      setIsNewEvent(false);
+      setIsModalOpen(true);
+      setPendingEvent(null);
+      return;
+    }
+
+    // Otherwise, find the original recurring event from rawEvents
+    const originalEvent = rawEvents.find((e) => e.id === pendingEvent.originalId);
+    if (originalEvent) {
+      setSelectedEvent(originalEvent);
+      setIsNewEvent(false);
+      setIsModalOpen(true);
+    }
+    setPendingEvent(null);
+  }, [pendingEvent, rawEvents]);
+
+  // Handle recurring event dialog choice for delete
+  const handleDeleteThisOccurrence = useCallback(async () => {
+    if (!pendingEvent) return;
+    setShowRecurringDialog(false);
+    // TODO: Implement single occurrence deletion (requires exception dates)
+    console.log("Delete single occurrence not yet implemented");
+    setPendingEvent(null);
+  }, [pendingEvent]);
+
+  const handleDeleteAllOccurrences = useCallback(async () => {
+    if (!pendingEvent) return;
+    setShowRecurringDialog(false);
+
+    try {
+      // If this IS the original event, use its ID; otherwise use originalId
+      const realId = pendingEvent.rrule ? pendingEvent.id : (pendingEvent.originalId || pendingEvent.id);
+      const res = await fetch(`/api/events?id=${realId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        onEventsChange();
+      }
+    } catch (error) {
+      console.error("Failed to delete event:", error);
+    }
+    setPendingEvent(null);
+  }, [pendingEvent, onEventsChange]);
 
   // Expose create for external trigger
   const openCreateModal = useCallback(() => {
@@ -228,6 +307,19 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
+      />
+
+      <RecurringEventDialog
+        isOpen={showRecurringDialog}
+        action={recurringDialogAction}
+        onClose={() => {
+          setShowRecurringDialog(false);
+          setPendingEvent(null);
+        }}
+        onEditThis={handleEditThisOccurrence}
+        onEditAll={handleEditAllOccurrences}
+        onDeleteThis={handleDeleteThisOccurrence}
+        onDeleteAll={handleDeleteAllOccurrences}
       />
     </div>
   );

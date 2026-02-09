@@ -10,7 +10,7 @@ import {
   RefreshCw,
   Menu,
 } from "lucide-react";
-import { UserButton } from "@neondatabase/auth/react";
+import { UserButtonWrapper } from "./user-button-wrapper";
 import { formatMonthYear } from "@/lib/utils/date";
 import type { CalendarViewType } from "@/lib/types";
 import Link from "next/link";
@@ -212,7 +212,7 @@ export function Header({
           <Settings className="h-4 w-4" />
         </Link>
         <div className="ml-1">
-          <UserButton size="icon" />
+          <UserButtonWrapper size="icon" />
         </div>
       </div>
     </header>

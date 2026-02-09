@@ -413,8 +413,13 @@ export async function updateICloudEvent(
     .from(events)
     .where(eq(events.id, eventId));
 
-  if (!event?.externalId || !event.icsData) {
-    throw new Error("Event not found or missing ICS data");
+  if (!event) {
+    throw new Error("Event not found in database");
+  }
+
+  // If no externalId or icsData, event was never synced or can't be updated
+  if (!event.externalId || !event.icsData) {
+    throw new Error("Event not synced to iCloud or missing ICS data");
   }
 
   // Rebuild ICS with updated fields
@@ -458,8 +463,13 @@ export async function deleteICloudEvent(
     .from(events)
     .where(eq(events.id, eventId));
 
-  if (!event?.externalId) {
-    throw new Error("Event not found");
+  if (!event) {
+    throw new Error("Event not found in database");
+  }
+
+  // If no externalId, event was never synced to iCloud, nothing to delete
+  if (!event.externalId) {
+    return;
   }
 
   await client.deleteCalendarObject({

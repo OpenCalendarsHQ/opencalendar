@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { CalendarView, type CalendarViewRef } from "@/components/calendar/calendar-view";
 import { useCalendar } from "@/lib/calendar-context";
 import { useTodos } from "@/hooks/use-todos";
 import { useRecurringEvents } from "@/hooks/use-recurring-events";
+import { useSession } from "@/lib/auth/client";
 import {
   startOfWeek,
   endOfWeek,
@@ -15,13 +17,23 @@ import {
 import type { CalendarEvent } from "@/lib/types";
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { data: session, isPending } = useSession();
   const [rawEvents, setRawEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { currentDate, viewType, weekStartsOn, setCurrentDate, setViewType, registerCreateEvent, registerOpenEvent } = useCalendar();
   const { todos, toggleTodo } = useTodos();
   const hasSynced = useRef(false);
+  const hasInitialized = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const calendarRef = useRef<CalendarViewRef>(null);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isPending && !session) {
+      router.push("/auth/sign-in");
+    }
+  }, [session, isPending, router]);
 
   // Compute visible date range based on current view
   const dateRange = useMemo(() => {
@@ -80,7 +92,7 @@ export default function DashboardPage() {
     [dateRange]
   );
 
-  // Auto-sync on first load if no events
+  // Auto-sync on first load if no events (background, non-blocking)
   const triggerSync = useCallback(async () => {
     if (hasSynced.current) return;
     hasSynced.current = true;
@@ -89,24 +101,33 @@ export default function DashboardPage() {
       if (!res.ok) return;
       const groups = await res.json();
       if (!Array.isArray(groups)) return;
-      for (const group of groups) {
-        if (group.provider === "local") continue;
-        const endpoint =
-          group.provider === "google" ? "/api/sync/google" : "/api/sync/icloud";
-        await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "sync", accountId: group.id }),
-        }).catch(() => {});
-      }
+
+      // Sync all accounts in parallel for better performance
+      const syncPromises = groups
+        .filter(group => group.provider !== "local")
+        .map(group => {
+          const endpoint =
+            group.provider === "google" ? "/api/sync/google" : "/api/sync/icloud";
+          return fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "sync", accountId: group.id }),
+          }).catch(() => {}); // Ignore errors - sync is best-effort
+        });
+
+      // Wait for all syncs to complete, then refresh events
+      await Promise.all(syncPromises);
       await fetchEvents();
     } catch {
       /* ignore */
     }
   }, [fetchEvents]);
 
-  // Fetch events when date range changes
+  // Fetch events when date range changes or session becomes available
   useEffect(() => {
+    // Only fetch if session is available
+    if (isPending || !session) return;
+
     // Cancel previous request
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -115,16 +136,50 @@ export default function DashboardPage() {
     const init = async () => {
       const count = await fetchEvents(controller.signal);
       if (count === 0 && !hasSynced.current) await triggerSync();
+      hasInitialized.current = true;
     };
     init();
 
     return () => controller.abort();
-  }, [fetchEvents, triggerSync]);
+  }, [fetchEvents, triggerSync, session, isPending]);
 
-  // Periodic refresh (every 60s)
+  // Periodic refresh (every 5 minutes) - only when tab is visible
   useEffect(() => {
-    const interval = setInterval(() => fetchEvents(), 60_000);
-    return () => clearInterval(interval);
+    let interval: NodeJS.Timeout | null = null;
+
+    const startInterval = () => {
+      if (interval) return; // Already running
+      interval = setInterval(() => fetchEvents(), 300_000); // 5 minutes
+    };
+
+    const stopInterval = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopInterval();
+      } else {
+        // When tab becomes visible, fetch immediately and restart interval
+        fetchEvents();
+        startInterval();
+      }
+    };
+
+    // Start interval if tab is visible
+    if (!document.hidden) {
+      startInterval();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      stopInterval();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [fetchEvents]);
 
   // Register create event function with context
@@ -141,6 +196,7 @@ export default function DashboardPage() {
       currentDate={currentDate}
       viewType={viewType}
       events={events}
+      rawEvents={rawEvents}
       todos={todos}
       onEventsChange={() => fetchEvents()}
       onDateChange={setCurrentDate}

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/client";
 import { SettingsProvider } from "@/lib/settings-context";
+import { ThemeProvider } from "@/components/theme-provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -25,7 +26,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         forgotPassword: true,
       }}
     >
-      <SettingsProvider>{children}</SettingsProvider>
+      <SettingsProvider>
+        <ThemeProvider>{children}</ThemeProvider>
+      </SettingsProvider>
     </AuthUIProvider>
   );
 }

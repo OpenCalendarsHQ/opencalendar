@@ -42,6 +42,24 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <GridMotion items={gridItems} gradientColor="#4f46e5" />
         </div>
 
+        {/* Dark Veil Gradient Overlay */}
+        <div className="absolute inset-0 pointer-events-none">
+          {/* Top gradient veil */}
+          <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />
+
+          {/* Bottom gradient veil */}
+          <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
+
+          {/* Center radial glow */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(79,70,229,0.15)_0%,transparent_50%)]" />
+
+          {/* Left edge darkening */}
+          <div className="absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-black/40 to-transparent" />
+
+          {/* Right edge darkening */}
+          <div className="absolute inset-y-0 right-0 w-1/4 bg-gradient-to-l from-black/40 to-transparent" />
+        </div>
+
         {/* Content */}
         <Link href="/" className="flex items-center gap-3 relative z-10">
           <Image src="/icon.svg" alt="OpenCalendar" width={40} height={40} />

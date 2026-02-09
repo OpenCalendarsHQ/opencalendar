@@ -46,13 +46,13 @@ interface ConnectedAccount {
 }
 
 const settingsItems = [
+  { href: "/settings/account", icon: Shield, title: "Account & Beveiliging", description: "Wachtwoord, 2FA en sessies" },
   { href: "/settings/appearance", icon: Palette, title: "Weergave", description: "Startdag, tijdformaat, weeknummers" },
   { href: "/settings/region", icon: Globe, title: "Taal & regio", description: "Tijdzone en datumnotatie" },
 ];
 
 const comingSoonItems = [
   { icon: Bell, title: "Meldingen", description: "Herinneringen en notificaties" },
-  { icon: Shield, title: "Privacy", description: "Beveiliging en data export" },
 ];
 
 export default function SettingsPage() {

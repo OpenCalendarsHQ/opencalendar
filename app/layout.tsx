@@ -58,6 +58,39 @@ export default function RootLayout({
       <body
         className={`${GeistSans.variable} ${GeistMono.variable} ${GeistPixelSquare.variable} font-sans antialiased`}
       >
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('theme');
+                  var colorScheme = localStorage.getItem('colorScheme') || 'default';
+                  var compactMode = localStorage.getItem('compactMode') === 'true';
+                  var root = document.documentElement;
+
+                  // Apply theme
+                  if (theme === 'light') {
+                    root.classList.add('light');
+                  } else if (theme === 'dark') {
+                    root.classList.add('dark');
+                  } else {
+                    // Auto mode - detect system preference
+                    var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    root.classList.add(isDark ? 'dark' : 'light');
+                  }
+
+                  // Apply color scheme
+                  root.classList.add('scheme-' + colorScheme);
+
+                  // Apply compact mode
+                  if (compactMode) {
+                    root.classList.add('compact');
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
         <Providers>{children}</Providers>
         <ServiceWorkerRegister />
       </body>

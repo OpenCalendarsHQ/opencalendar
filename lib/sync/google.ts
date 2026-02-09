@@ -555,8 +555,13 @@ export async function deleteGoogleEvent(
     .from(events)
     .where(eq(events.id, eventId));
 
-  if (!localEvent?.externalId) {
-    throw new Error("Event external ID not found");
+  if (!localEvent) {
+    throw new Error("Event not found in database");
+  }
+
+  // If no externalId, event was never synced to Google, nothing to delete
+  if (!localEvent.externalId) {
+    return;
   }
 
   await calendarClient.events.delete({

@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(events.calendarId, calendarId));
     }
 
+    // Single optimized query with LEFT JOIN for recurrence rules
     const result = await db
       .select({
         id: events.id,
@@ -83,18 +84,24 @@ export async function GET(request: NextRequest) {
         calendarId: events.calendarId,
         status: events.status,
         isRecurring: events.isRecurring,
+        rrule: eventRecurrences.rrule,
+        exDates: eventRecurrences.exDates,
       })
       .from(events)
       .innerJoin(calendars, eq(events.calendarId, calendars.id))
       .innerJoin(calendarAccounts, eq(calendars.accountId, calendarAccounts.id))
+      .leftJoin(eventRecurrences, eq(events.id, eventRecurrences.eventId))
       .where(and(...conditions));
 
-    // For recurring events, fetch and attach their RRULE metadata
-    // Client-side will handle occurrence generation
-    const eventsWithRRules: any[] = [];
-
-    for (const e of result) {
-      const eventData = {
+    // Format the results and deduplicate (LEFT JOIN can create duplicates if there are multiple recurrence entries)
+    const seen = new Set<string>();
+    const formattedEvents = result
+      .filter((e) => {
+        if (seen.has(e.id)) return false;
+        seen.add(e.id);
+        return true;
+      })
+      .map((e) => ({
         id: e.id,
         title: e.title,
         description: e.description,
@@ -106,27 +113,11 @@ export async function GET(request: NextRequest) {
         calendarId: e.calendarId,
         status: e.status,
         isRecurring: e.isRecurring,
-        rrule: null as string | null,
-        exDates: null as string[] | null,
-      };
+        rrule: e.rrule,
+        exDates: e.exDates as string[] | null,
+      }));
 
-      if (e.isRecurring) {
-        // Get recurrence rule for this event
-        const [recurrence] = await db
-          .select()
-          .from(eventRecurrences)
-          .where(eq(eventRecurrences.eventId, e.id));
-
-        if (recurrence) {
-          eventData.rrule = recurrence.rrule;
-          eventData.exDates = recurrence.exDates as string[] | null;
-        }
-      }
-
-      eventsWithRRules.push(eventData);
-    }
-
-    return NextResponse.json(eventsWithRRules);
+    return NextResponse.json(formattedEvents);
   } catch (error) {
     console.error("GET /api/events error:", error);
     return NextResponse.json(
@@ -327,21 +318,44 @@ export async function PUT(request: NextRequest) {
       // Just update in the same calendar
       if (updated.calendarId) {
         const providerInfo = await getCalendarProviderInfo(updated.calendarId);
-        if (providerInfo && !providerInfo.isReadOnly && updated.externalId) {
+        if (providerInfo && !providerInfo.isReadOnly) {
           try {
-            const syncData = {
-              title: data.title,
-              description: data.description,
-              startTime: data.startTime ? new Date(data.startTime) : undefined,
-              endTime: data.endTime ? new Date(data.endTime) : undefined,
-              isAllDay: data.isAllDay,
-              location: data.location,
-            };
+            // Build syncData with only the fields that were actually updated
+            const syncData: Record<string, any> = {};
+            if (data.title !== undefined) syncData.title = data.title;
+            if (data.description !== undefined) syncData.description = data.description;
+            if (data.startTime !== undefined) syncData.startTime = new Date(data.startTime);
+            if (data.endTime !== undefined) syncData.endTime = new Date(data.endTime);
+            if (data.isAllDay !== undefined) syncData.isAllDay = data.isAllDay;
+            if (data.location !== undefined) syncData.location = data.location;
 
-            if (providerInfo.provider === "icloud") {
-              await updateICloudEvent(providerInfo.accountId, updated.calendarId, id, syncData);
-            } else if (providerInfo.provider === "google") {
-              await updateGoogleEvent(providerInfo.accountId, updated.calendarId, id, syncData);
+            // If no externalId exists, try to create the event remotely first
+            if (!updated.externalId) {
+              const createData = {
+                title: updated.title,
+                startTime: updated.startTime,
+                endTime: updated.endTime,
+                isAllDay: updated.isAllDay,
+                location: updated.location || undefined,
+                description: updated.description || undefined,
+              };
+
+              if (providerInfo.provider === "icloud") {
+                const externalUid = await createICloudEvent(providerInfo.accountId, updated.calendarId, createData);
+                await db.update(events).set({ icsUid: externalUid }).where(eq(events.id, id));
+              } else if (providerInfo.provider === "google") {
+                const externalId = await createGoogleEvent(providerInfo.accountId, updated.calendarId, createData);
+                if (externalId) {
+                  await db.update(events).set({ externalId }).where(eq(events.id, id));
+                }
+              }
+            } else {
+              // Update existing external event
+              if (providerInfo.provider === "icloud") {
+                await updateICloudEvent(providerInfo.accountId, updated.calendarId, id, syncData);
+              } else if (providerInfo.provider === "google") {
+                await updateGoogleEvent(providerInfo.accountId, updated.calendarId, id, syncData);
+              }
             }
           } catch (syncError) {
             console.error(`Failed to sync event update to ${providerInfo.provider}:`, syncError);
@@ -382,7 +396,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Sync deletion to external provider BEFORE local delete
-    if (eventToDelete.externalId && eventToDelete.calendarId) {
+    if (eventToDelete.calendarId) {
       const providerInfo = await getCalendarProviderInfo(eventToDelete.calendarId);
       if (providerInfo && !providerInfo.isReadOnly) {
         try {
@@ -393,6 +407,7 @@ export async function DELETE(request: NextRequest) {
           }
         } catch (syncError) {
           console.error(`Failed to sync event deletion to ${providerInfo.provider}:`, syncError);
+          // Continue with local delete even if sync fails
         }
       }
     }
