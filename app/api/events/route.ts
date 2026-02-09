@@ -7,6 +7,17 @@ import { eq, and, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 import { createICloudEvent, updateICloudEvent, deleteICloudEvent } from "@/lib/sync/icloud";
 import { createGoogleEvent, updateGoogleEvent, deleteGoogleEvent } from "@/lib/sync/google";
+import { rateLimit, rateLimitConfigs } from "@/lib/rate-limit";
+
+// Type for event sync data to avoid using 'any'
+interface EventSyncData {
+  title?: string;
+  description?: string;
+  startTime?: Date;
+  endTime?: Date;
+  isAllDay?: boolean;
+  location?: string;
+}
 
 /**
  * Get the provider and account info for a calendar.
@@ -41,30 +52,83 @@ const eventSchema = z.object({
 // GET /api/events?start=...&end=...&calendarId=...
 export async function GET(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession();
+    const { data: session } = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
 
+    // RATE LIMITING: Prevent excessive API calls
+    const rateLimitResult = rateLimit(session.user.id, rateLimitConfigs.reads);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        {
+          error: "Te veel verzoeken. Probeer het later opnieuw.",
+          limit: rateLimitResult.limit,
+          resetAt: rateLimitResult.resetAt,
+        },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": String(rateLimitResult.limit),
+            "X-RateLimit-Remaining": String(rateLimitResult.remaining),
+            "X-RateLimit-Reset": String(Math.floor(rateLimitResult.resetAt.getTime() / 1000)),
+            "Retry-After": String(Math.ceil((rateLimitResult.resetAt.getTime() - Date.now()) / 1000)),
+          },
+        }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
-    const start = searchParams.get("start");
-    const end = searchParams.get("end");
+    const rawStart = searchParams.get("start");
+    const rawEnd = searchParams.get("end");
     const calendarId = searchParams.get("calendarId");
 
+    // IMPORTANT: Date range is now REQUIRED to prevent loading all events at once
+    // This protects against excessive network transfer usage
+    if (!rawStart || !rawEnd) {
+      // Default to current month ± 1 year to prevent loading all historical events
+      const now = new Date();
+      const defaultStart = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+      const defaultEnd = new Date(now.getFullYear() + 1, now.getMonth() + 1, 0);
+
+      return NextResponse.json({
+        error: "Date range required. Use ?start=YYYY-MM-DD&end=YYYY-MM-DD",
+        hint: `Default range: ${defaultStart.toISOString()} to ${defaultEnd.toISOString()}`,
+      }, { status: 400 });
+    }
+
+    // Parse and validate dates
+    const startDate = new Date(rawStart);
+    const endDate = new Date(rawEnd);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return NextResponse.json({ error: "Invalid date format. Use ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ)" }, { status: 400 });
+    }
+
+    if (startDate > endDate) {
+      return NextResponse.json({ error: "Start date must be before end date" }, { status: 400 });
+    }
+
+    // PERFORMANCE: Limit maximum date range to 2 years to prevent excessive queries
+    const maxRangeDays = 730; // 2 years
+    const rangeDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+    if (rangeDays > maxRangeDays) {
+      return NextResponse.json({
+        error: `Date range too large. Maximum ${maxRangeDays} days (2 years)`,
+        requested: Math.floor(rangeDays),
+      }, { status: 400 });
+    }
+
     // Single optimized JOIN query: events + calendars + accounts
-    // Filters by userId at the account level (security), with optional date range
+    // Filters by userId at the account level (security), with date range
     const conditions = [
       eq(calendarAccounts.userId, session.user.id),
       eq(calendarAccounts.isActive, true),
       eq(calendars.isVisible, true),
+      gte(events.endTime, startDate),
+      lte(events.startTime, endDate),
     ];
 
-    if (start) {
-      conditions.push(gte(events.endTime, new Date(start)));
-    }
-    if (end) {
-      conditions.push(lte(events.startTime, new Date(end)));
-    }
     if (calendarId) {
       conditions.push(eq(events.calendarId, calendarId));
     }
@@ -130,7 +194,7 @@ export async function GET(request: NextRequest) {
 // POST /api/events
 export async function POST(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession();
+    const { data: session } = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
@@ -212,7 +276,7 @@ export async function POST(request: NextRequest) {
 // PUT /api/events (update)
 export async function PUT(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession();
+    const { data: session } = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
@@ -321,7 +385,7 @@ export async function PUT(request: NextRequest) {
         if (providerInfo && !providerInfo.isReadOnly) {
           try {
             // Build syncData with only the fields that were actually updated
-            const syncData: Record<string, any> = {};
+            const syncData: EventSyncData = {};
             if (data.title !== undefined) syncData.title = data.title;
             if (data.description !== undefined) syncData.description = data.description;
             if (data.startTime !== undefined) syncData.startTime = new Date(data.startTime);
@@ -374,7 +438,7 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/events?id=...
 export async function DELETE(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession();
+    const { data: session } = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }

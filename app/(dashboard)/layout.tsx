@@ -10,6 +10,7 @@ import { CalendarProvider, useCalendar } from "@/lib/calendar-context";
 import { useTodos } from "@/hooks/use-todos";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import type { CalendarGroup } from "@/lib/types";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 function DashboardInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -205,8 +206,10 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <CalendarProvider>
-      <DashboardInner>{children}</DashboardInner>
-    </CalendarProvider>
+    <ErrorBoundary>
+      <CalendarProvider>
+        <DashboardInner>{children}</DashboardInner>
+      </CalendarProvider>
+    </ErrorBoundary>
   );
 }

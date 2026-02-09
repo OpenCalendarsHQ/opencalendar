@@ -4,6 +4,7 @@ import {
   timestamp,
   uuid,
   pgEnum,
+  index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { calendarAccounts, calendars } from "./calendars";
@@ -32,7 +33,12 @@ export const syncStates = pgTable("sync_states", {
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  // PERFORMANCE: Index on accountId for sync queries
+  accountIdIdx: index("sync_states_account_id_idx").on(table.accountId),
+  // PERFORMANCE: Index on calendarId for sync queries
+  calendarIdIdx: index("sync_states_calendar_id_idx").on(table.calendarId),
+}));
 
 // Relations
 export const syncStatesRelations = relations(syncStates, ({ one }) => ({

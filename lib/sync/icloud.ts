@@ -247,14 +247,6 @@ export async function syncICloudEvents(
 
       // Handle recurrence rule
       if (parsed.rrule) {
-        console.log(`[iCloud Sync] Found recurring event: ${parsed.title}, RRULE: ${parsed.rrule}`);
-
-        // Check if recurrence rule exists
-        const [existingRecurrence] = await db
-          .select()
-          .from(eventRecurrences)
-          .where(eq(eventRecurrences.eventId, eventId));
-
         // Parse UNTIL date (can be date-only or datetime)
         let recurUntil: Date | null = null;
         if (parsed.rrule.includes("UNTIL=")) {
@@ -277,6 +269,20 @@ export async function syncICloudEvents(
           }
         }
 
+        // Skip events that ended more than 1 year ago
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        if (recurUntil && recurUntil < oneYearAgo) {
+          // Skip this event - it's too old
+          continue;
+        }
+
+        // Check if recurrence rule exists
+        const [existingRecurrence] = await db
+          .select()
+          .from(eventRecurrences)
+          .where(eq(eventRecurrences.eventId, eventId));
+
         const recurCount = parsed.rrule.includes("COUNT=")
           ? parseInt(parsed.rrule.split("COUNT=")[1].split(";")[0])
           : null;
@@ -288,20 +294,16 @@ export async function syncICloudEvents(
           exDates: (parsed.exDates || []).map((d: Date) => d.toISOString()),
         };
 
-        console.log(`[iCloud Sync] Saving recurrence for ${parsed.title}:`, recurrenceData);
-
         if (existingRecurrence) {
           await db
             .update(eventRecurrences)
             .set(recurrenceData)
             .where(eq(eventRecurrences.id, existingRecurrence.id));
-          console.log(`[iCloud Sync] Updated existing recurrence for ${parsed.title}`);
         } else {
           await db.insert(eventRecurrences).values({
             eventId,
             ...recurrenceData,
           });
-          console.log(`[iCloud Sync] Created new recurrence for ${parsed.title}`);
         }
       } else {
         // Remove recurrence rule if event is no longer recurring

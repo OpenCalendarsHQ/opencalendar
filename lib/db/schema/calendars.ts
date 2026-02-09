@@ -6,6 +6,8 @@ import {
   uuid,
   jsonb,
   pgEnum,
+  index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { user } from "./auth";
@@ -33,7 +35,12 @@ export const calendarAccounts = pgTable("calendar_accounts", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  // PERFORMANCE: Index on userId for fast lookup by user (used in every calendar query)
+  userIdIdx: index("calendar_accounts_user_id_idx").on(table.userId),
+  // PERFORMANCE: Composite unique constraint on userId + email to prevent duplicate accounts
+  userEmailUnique: uniqueIndex("calendar_accounts_user_email_unique").on(table.userId, table.email),
+}));
 
 // Individual calendars within an account
 export const calendars = pgTable("calendars", {
@@ -51,7 +58,10 @@ export const calendars = pgTable("calendars", {
   timezone: text("timezone").default("Europe/Amsterdam"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  // PERFORMANCE: Index on accountId for fast lookup by account (used in calendar queries)
+  accountIdIdx: index("calendars_account_id_idx").on(table.accountId),
+}));
 
 // Relations
 export const calendarAccountsRelations = relations(

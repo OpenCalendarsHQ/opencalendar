@@ -12,6 +12,8 @@ import {
   syncGoogleEvents,
 } from "@/lib/sync/google";
 import { google } from "googleapis";
+import { generateOAuthState, validateOAuthState } from "@/lib/oauth-state";
+import { encrypt } from "@/lib/encryption";
 
 // GET /api/sync/google - OAuth redirect or callback
 export async function GET(request: NextRequest) {
@@ -22,20 +24,31 @@ export async function GET(request: NextRequest) {
 
   // Step 1: Initiate OAuth flow
   if (action === "connect") {
-    const { data: session } = await auth.getSession();
+    const { data: session } = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) {
       return NextResponse.redirect(new URL("/auth/sign-in", request.url));
     }
     await ensureUserExists(session.user);
 
-    const authUrl = getAuthorizationUrl(session.user.id);
+    // SECURITY: Generate secure random state token to prevent CSRF attacks
+    const secureState = generateOAuthState(session.user.id, "google");
+    const authUrl = getAuthorizationUrl(secureState);
     return NextResponse.redirect(authUrl);
   }
 
   // Step 2: OAuth callback
   if (code && state) {
     try {
-      const userId = state;
+      // SECURITY: Validate state token to prevent CSRF attacks
+      const userId = validateOAuthState(state, "google");
+
+      if (!userId) {
+        console.error("Google OAuth: Invalid or expired state token");
+        return NextResponse.redirect(
+          new URL("/settings?error=oauth_state_invalid", request.url)
+        );
+      }
+
       // Ensure user exists before inserting account
       await ensureUserExists({ id: userId });
       const tokens = await exchangeCodeForTokens(code);
@@ -46,15 +59,23 @@ export async function GET(request: NextRequest) {
       const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
       const { data: profile } = await oauth2.userinfo.get();
 
-      // Save the account
+      // SECURITY: Encrypt tokens before storing in database
+      const encryptedAccessToken = tokens.access_token
+        ? encrypt(tokens.access_token)
+        : null;
+      const encryptedRefreshToken = tokens.refresh_token
+        ? encrypt(tokens.refresh_token)
+        : null;
+
+      // Save the account with encrypted tokens
       const [newAccount] = await db
         .insert(calendarAccounts)
         .values({
           userId,
           provider: "google",
           email: profile.email || "unknown@gmail.com",
-          accessToken: tokens.access_token || null,
-          refreshToken: tokens.refresh_token || null,
+          accessToken: encryptedAccessToken,
+          refreshToken: encryptedRefreshToken,
           tokenExpiresAt: tokens.expiry_date
             ? new Date(tokens.expiry_date)
             : null,
@@ -96,7 +117,7 @@ export async function GET(request: NextRequest) {
 // POST /api/sync/google - Trigger sync for an account
 export async function POST(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession();
+    const { data: session } = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }

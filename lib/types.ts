@@ -10,6 +10,10 @@ export interface CalendarEvent {
   isAllDay: boolean;
   location?: string;
   description?: string;
+  status?: string;
+  isRecurring?: boolean;
+  rrule?: string | null;
+  exDates?: string[] | null;
   /** Set on multi-day segments that were split for per-day rendering. Points to the real event ID. */
   originalId?: string;
 }

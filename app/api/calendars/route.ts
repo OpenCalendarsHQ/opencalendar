@@ -6,45 +6,64 @@ import { ensureUserExists } from "@/lib/auth/ensure-user";
 import { eq, inArray } from "drizzle-orm";
 
 // GET /api/calendars - Get all calendars for the current user
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession();
+    const { data: session } = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
 
     await ensureUserExists(session.user);
 
-    // Get all calendar accounts for the user, with their calendars
-    const accounts = await db
-      .select()
+    // OPTIMIZED: Single query with LEFT JOIN instead of N+1 queries
+    // This reduces database round-trips from 1+N to just 1
+    const results = await db
+      .select({
+        accountId: calendarAccounts.id,
+        provider: calendarAccounts.provider,
+        email: calendarAccounts.email,
+        lastSyncAt: calendarAccounts.lastSyncAt,
+        isActive: calendarAccounts.isActive,
+        calendarId: calendars.id,
+        calendarName: calendars.name,
+        calendarColor: calendars.color,
+        calendarIsVisible: calendars.isVisible,
+        calendarIsReadOnly: calendars.isReadOnly,
+        calendarIsPrimary: calendars.isPrimary,
+      })
       .from(calendarAccounts)
+      .leftJoin(calendars, eq(calendars.accountId, calendarAccounts.id))
       .where(eq(calendarAccounts.userId, session.user.id));
 
-    const result = await Promise.all(
-      accounts.map(async (account) => {
-        const cals = await db
-          .select()
-          .from(calendars)
-          .where(eq(calendars.accountId, account.id));
+    // Group calendars by account
+    const accountsMap = new Map<string, any>();
 
-        return {
-          id: account.id,
-          provider: account.provider,
-          email: account.email,
-          lastSyncAt: account.lastSyncAt,
-          isActive: account.isActive,
-          calendars: cals.map((cal) => ({
-            id: cal.id,
-            name: cal.name,
-            color: cal.color,
-            isVisible: cal.isVisible,
-            isReadOnly: cal.isReadOnly,
-            isPrimary: cal.isPrimary,
-          })),
-        };
-      })
-    );
+    for (const row of results) {
+      if (!accountsMap.has(row.accountId)) {
+        accountsMap.set(row.accountId, {
+          id: row.accountId,
+          provider: row.provider,
+          email: row.email,
+          lastSyncAt: row.lastSyncAt,
+          isActive: row.isActive,
+          calendars: [],
+        });
+      }
+
+      // Only add calendar if it exists (LEFT JOIN might return null)
+      if (row.calendarId) {
+        accountsMap.get(row.accountId).calendars.push({
+          id: row.calendarId,
+          name: row.calendarName,
+          color: row.calendarColor,
+          isVisible: row.calendarIsVisible,
+          isReadOnly: row.calendarIsReadOnly,
+          isPrimary: row.calendarIsPrimary,
+        });
+      }
+    }
+
+    const result = Array.from(accountsMap.values());
 
     return NextResponse.json(result);
   } catch (error) {
@@ -59,7 +78,7 @@ export async function GET() {
 // POST /api/calendars - Create a local calendar
 export async function POST(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession();
+    const { data: session } = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
@@ -116,7 +135,7 @@ export async function POST(request: NextRequest) {
 // PATCH /api/calendars - Update calendar color/visibility/name
 export async function PATCH(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession();
+    const { data: session } = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
@@ -160,7 +179,7 @@ export async function PATCH(request: NextRequest) {
 // DELETE /api/calendars?accountId=... - Delete a connected account and all its data
 export async function DELETE(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession();
+    const { data: session } = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }

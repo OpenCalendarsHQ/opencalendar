@@ -7,6 +7,7 @@ import {
   jsonb,
   integer,
   pgEnum,
+  index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { calendars } from "./calendars";
@@ -42,7 +43,15 @@ export const events = pgTable("events", {
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  // PERFORMANCE: Most critical index - used in every event query
+  calendarIdIdx: index("events_calendar_id_idx").on(table.calendarId),
+  // PERFORMANCE: Index on time range for efficient date-based queries
+  startTimeIdx: index("events_start_time_idx").on(table.startTime),
+  endTimeIdx: index("events_end_time_idx").on(table.endTime),
+  // PERFORMANCE: Composite index for common query pattern (calendar + time range)
+  calendarStartIdx: index("events_calendar_start_idx").on(table.calendarId, table.startTime),
+}));
 
 // Recurrence rules for recurring events
 export const eventRecurrences = pgTable("event_recurrences", {
@@ -54,7 +63,10 @@ export const eventRecurrences = pgTable("event_recurrences", {
   recurUntil: timestamp("recur_until"), // End date of recurrence
   recurCount: integer("recur_count"), // Number of occurrences
   exDates: jsonb("ex_dates").$type<string[]>(), // Excluded dates (ISO strings)
-});
+}, (table) => ({
+  // PERFORMANCE: Index on eventId for fast lookup (used in events API LEFT JOIN)
+  eventIdIdx: index("event_recurrences_event_id_idx").on(table.eventId),
+}));
 
 // Individual instances of recurring events (with possible overrides)
 export const eventInstances = pgTable("event_instances", {
@@ -72,7 +84,12 @@ export const eventInstances = pgTable("event_instances", {
     location?: string;
     color?: string;
   }>(),
-});
+}, (table) => ({
+  // PERFORMANCE: Index on eventId for fast lookup
+  eventIdIdx: index("event_instances_event_id_idx").on(table.eventId),
+  // PERFORMANCE: Index on originalStart for recurring event instance queries
+  originalStartIdx: index("event_instances_original_start_idx").on(table.originalStart),
+}));
 
 // Relations
 export const eventsRelations = relations(events, ({ one, many }) => ({

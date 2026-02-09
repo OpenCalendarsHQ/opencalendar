@@ -1,48 +1,28 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { GridMotion } from "@/components/ui/grid-motion";
-
-const gridItems = [
-  '📅',
-  <div key='jsx-item-1' className="text-sm">Sync</div>,
-  'https://images.unsplash.com/photo-1723403804231-f4e9b515fe9d?q=80&w=3870&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-  '⏰',
-  <div key='jsx-item-2' className="text-sm">Plan</div>,
-  '📊',
-  <div key='jsx-item-3' className="text-sm">Track</div>,
-  'https://images.unsplash.com/photo-1723403804231-f4e9b515fe9d?q=80&w=3870&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-  '✅',
-  <div key='jsx-item-4' className="text-sm">Organize</div>,
-  '🎯',
-  <div key='jsx-item-5' className="text-sm">Focus</div>,
-  'https://images.unsplash.com/photo-1723403804231-f4e9b515fe9d?q=80&w=3870&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-  '📱',
-  <div key='jsx-item-6' className="text-sm">Mobile</div>,
-  '🔄',
-  <div key='jsx-item-7' className="text-sm">Sync</div>,
-  'https://images.unsplash.com/photo-1723403804231-f4e9b515fe9d?q=80&w=3870&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-  '🌐',
-  <div key='jsx-item-8' className="text-sm">Connect</div>,
-  '💼',
-  <div key='jsx-item-9' className="text-sm">Work</div>,
-  'https://images.unsplash.com/photo-1723403804231-f4e9b515fe9d?q=80&w=3870&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-  '🚀',
-  <div key='jsx-item-10' className="text-sm">Boost</div>,
-  '⚡',
-  <div key='jsx-item-11' className="text-sm">Fast</div>,
-];
+import DarkVeil from "@/components/animations/dark-veil";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-[#0a0a0a]">
       {/* Left side - Branding */}
-      <div className="hidden w-1/2 flex-col justify-between p-12 lg:flex relative overflow-hidden">
-        {/* Background Grid Motion */}
-        <div className="absolute inset-0 opacity-20">
-          <GridMotion items={gridItems} gradientColor="#4f46e5" />
+      <div className="hidden w-1/2 flex-col justify-between p-12 lg:flex relative overflow-hidden bg-black">
+        {/* Dark Veil WebGL Background - Full Width */}
+        <div className="absolute inset-0 w-full h-full">
+          <DarkVeil
+            hueShift={0}
+            noiseIntensity={0.02}
+            scanlineIntensity={0}
+            speed={0.3}
+            scanlineFrequency={0}
+            warpAmount={0.1}
+            resolutionScale={1}
+          />
         </div>
 
-        {/* Dark Veil Gradient Overlay */}
+        {/* Gradient Overlay for depth */}
         <div className="absolute inset-0 pointer-events-none">
           {/* Top gradient veil */}
           <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />

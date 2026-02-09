@@ -8,6 +8,7 @@ import {
   eventRecurrences,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { decrypt, encrypt, decryptIfNeeded } from "@/lib/encryption";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
@@ -67,20 +68,35 @@ export async function getCalendarClient(
     throw new Error("Account not found");
   }
 
+  // SECURITY: Decrypt tokens before use
+  const decryptedAccessToken = account.accessToken
+    ? decryptIfNeeded(account.accessToken)
+    : null;
+  const decryptedRefreshToken = account.refreshToken
+    ? decryptIfNeeded(account.refreshToken)
+    : null;
+
   const oauth2Client = createOAuth2Client();
   oauth2Client.setCredentials({
-    access_token: account.accessToken,
-    refresh_token: account.refreshToken,
+    access_token: decryptedAccessToken,
+    refresh_token: decryptedRefreshToken,
     expiry_date: account.tokenExpiresAt?.getTime(),
   });
 
-  // Handle token refresh
+  // Handle token refresh - encrypt new tokens before storing
   oauth2Client.on("tokens", async (tokens) => {
+    const newAccessToken = tokens.access_token
+      ? encrypt(tokens.access_token)
+      : account.accessToken;
+    const newRefreshToken = tokens.refresh_token
+      ? encrypt(tokens.refresh_token)
+      : account.refreshToken;
+
     await db
       .update(calendarAccounts)
       .set({
-        accessToken: tokens.access_token || account.accessToken,
-        refreshToken: tokens.refresh_token || account.refreshToken,
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
         tokenExpiresAt: tokens.expiry_date
           ? new Date(tokens.expiry_date)
           : account.tokenExpiresAt,

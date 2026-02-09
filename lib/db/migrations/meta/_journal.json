@@ -8,6 +8,13 @@
       "when": 1770626467194,
       "tag": "0000_typical_boomerang",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770636585745,
+      "tag": "0001_old_deathstrike",
+      "breakpoints": true
     }
   ]
 }
