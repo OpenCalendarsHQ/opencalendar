@@ -12,14 +12,19 @@ function App() {
   useEffect(() => {
     const unlisten = listen<string[]>("deep-link://new-url", (event) => {
       const urls = event.payload;
-      console.log("Deep link received:", urls);
+      console.log("Deep link received in frontend:", urls);
 
       // Parse the URL: opencalendar://auth-callback?token=...&refresh_token=...&user_id=...&email=...
       if (urls && urls.length > 0) {
         const url = urls[0];
+        console.log("Processing deep link URL:", url);
+
         if (url.includes("auth-callback")) {
           try {
-            const urlObj = new URL(url);
+            // Handle both with and without trailing slash: auth-callback/ or auth-callback
+            const urlObj = new URL(url.replace("auth-callback/", "auth-callback"));
+            console.log("Parsed URL:", urlObj.toString());
+
             const token = urlObj.searchParams.get("token");
             const refreshToken = urlObj.searchParams.get("refresh_token");
             const userId = urlObj.searchParams.get("user_id");
@@ -27,11 +32,16 @@ function App() {
             const name = urlObj.searchParams.get("name");
             const image = urlObj.searchParams.get("image");
 
+            console.log("Deep link params:", { token: token?.substring(0, 20) + "...", refreshToken: refreshToken?.substring(0, 20) + "...", userId, email, name });
+
             if (token && refreshToken && userId && email) {
+              console.log("Logging in with deep link credentials...");
               login(
                 { token, refreshToken },
                 { id: userId, email, name: name || undefined, image: image || undefined }
               );
+            } else {
+              console.error("Missing required parameters in deep link");
             }
           } catch (error) {
             console.error("Failed to parse deep link:", error);
