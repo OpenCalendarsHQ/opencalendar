@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendars, calendarAccounts, events, syncStates } from "@/lib/db/schema";
-import { auth } from "@/lib/auth/server";
+import { verifyRequest } from "@/lib/auth/verify-request";
 import { ensureUserExists } from "@/lib/auth/ensure-user";
 import { eq, inArray } from "drizzle-orm";
 
 // GET /api/calendars - Get all calendars for the current user
 export async function GET(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession({
-      fetchOptions: { headers: request.headers }
-    });
-    if (!session?.user) {
+    // Accept both JWT (desktop) and session cookies (web)
+    const { user } = await verifyRequest(request);
+    if (!user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
 
-    await ensureUserExists(session.user);
+    await ensureUserExists(user);
 
     // OPTIMIZED: Single query with LEFT JOIN instead of N+1 queries
     // This reduces database round-trips from 1+N to just 1
@@ -35,7 +34,7 @@ export async function GET(request: NextRequest) {
       })
       .from(calendarAccounts)
       .leftJoin(calendars, eq(calendars.accountId, calendarAccounts.id))
-      .where(eq(calendarAccounts.userId, session.user.id));
+      .where(eq(calendarAccounts.userId, user.id));
 
     // Group calendars by account
     const accountsMap = new Map<string, any>();
@@ -80,14 +79,13 @@ export async function GET(request: NextRequest) {
 // POST /api/calendars - Create a local calendar
 export async function POST(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession({
-      fetchOptions: { headers: request.headers }
-    });
-    if (!session?.user) {
+    // Accept both JWT (desktop) and session cookies (web)
+    const { user } = await verifyRequest(request);
+    if (!user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
 
-    await ensureUserExists(session.user);
+    await ensureUserExists(user);
 
     const body = await request.json();
     const { name, color } = body;
@@ -103,16 +101,16 @@ export async function POST(request: NextRequest) {
     let [localAccount] = await db
       .select()
       .from(calendarAccounts)
-      .where(eq(calendarAccounts.userId, session.user.id))
+      .where(eq(calendarAccounts.userId, user.id))
       .limit(1);
 
     if (!localAccount) {
       [localAccount] = await db
         .insert(calendarAccounts)
         .values({
-          userId: session.user.id,
+          userId: user.id,
           provider: "local",
-          email: session.user.email || "local",
+          email: user.email || "local",
         })
         .returning();
     }
@@ -139,10 +137,9 @@ export async function POST(request: NextRequest) {
 // PATCH /api/calendars - Update calendar color/visibility/name
 export async function PATCH(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession({
-      fetchOptions: { headers: request.headers }
-    });
-    if (!session?.user) {
+    // Accept both JWT (desktop) and session cookies (web)
+    const { user } = await verifyRequest(request);
+    if (!user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
 
@@ -160,7 +157,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const [account] = await db.select().from(calendarAccounts).where(eq(calendarAccounts.id, cal.accountId));
-    if (!account || account.userId !== session.user.id) {
+    if (!account || account.userId !== user.id) {
       return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
     }
 
@@ -185,10 +182,9 @@ export async function PATCH(request: NextRequest) {
 // DELETE /api/calendars?accountId=... - Delete a connected account and all its data
 export async function DELETE(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession({
-      fetchOptions: { headers: request.headers }
-    });
-    if (!session?.user) {
+    // Accept both JWT (desktop) and session cookies (web)
+    const { user } = await verifyRequest(request);
+    if (!user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
 
@@ -205,7 +201,7 @@ export async function DELETE(request: NextRequest) {
       .from(calendarAccounts)
       .where(eq(calendarAccounts.id, accountId));
 
-    if (!account || account.userId !== session.user.id) {
+    if (!account || account.userId !== user.id) {
       return NextResponse.json({ error: "Account niet gevonden" }, { status: 404 });
     }
 

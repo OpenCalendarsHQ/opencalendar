@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { userSettings } from "@/lib/db/schema";
-import { auth } from "@/lib/auth/server";
+import { verifyRequest } from "@/lib/auth/verify-request";
 import { eq } from "drizzle-orm";
 
 // GET /api/settings - Fetch user settings
 export async function GET(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession({
-      fetchOptions: { headers: request.headers }
-    });
-    if (!session?.user) {
+    // Accept both JWT (desktop) and session cookies (web)
+    const { user } = await verifyRequest(request);
+    if (!user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
@@ -18,7 +17,7 @@ export async function GET(request: NextRequest) {
     const [settings] = await db
       .select()
       .from(userSettings)
-      .where(eq(userSettings.userId, session.user.id));
+      .where(eq(userSettings.userId, user.id));
 
     if (settings) {
       // Parse JSON fields
@@ -40,10 +39,9 @@ export async function GET(request: NextRequest) {
 // PUT /api/settings - Update user settings
 export async function PUT(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession({
-      fetchOptions: { headers: request.headers }
-    });
-    if (!session?.user) {
+    // Accept both JWT (desktop) and session cookies (web)
+    const { user } = await verifyRequest(request);
+    if (!user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
@@ -60,14 +58,14 @@ export async function PUT(request: NextRequest) {
     const [existing] = await db
       .select()
       .from(userSettings)
-      .where(eq(userSettings.userId, session.user.id));
+      .where(eq(userSettings.userId, user.id));
 
     if (existing) {
       // Update existing settings
       const [updated] = await db
         .update(userSettings)
         .set(dataToSave)
-        .where(eq(userSettings.userId, session.user.id))
+        .where(eq(userSettings.userId, user.id))
         .returning();
 
       return NextResponse.json({
@@ -79,7 +77,7 @@ export async function PUT(request: NextRequest) {
       const [created] = await db
         .insert(userSettings)
         .values({
-          userId: session.user.id,
+          userId: user.id,
           ...dataToSave,
         })
         .returning();

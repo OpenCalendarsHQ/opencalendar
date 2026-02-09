@@ -9,32 +9,55 @@ import { CommandMenu } from "@/components/layout/command-menu";
 import { CalendarProvider, useCalendar } from "@/lib/calendar-context";
 import { useTodos } from "@/hooks/use-todos";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { useSession } from "@/lib/auth/client";
 import type { CalendarGroup } from "@/lib/types";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 function DashboardInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const calendar = useCalendar();
+  const { data: session, isPending } = useSession();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [calendarGroups, setCalendarGroups] = useState<CalendarGroup[]>([]);
   const { todos, lists, addTodo, toggleTodo, deleteTodo } = useTodos();
 
-  useEffect(() => {
-    const fetchCalendars = async () => {
-      try {
-        const res = await fetch("/api/calendars");
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) setCalendarGroups(data);
-        }
-      } catch {
-        // No calendars yet
+  // Fetch calendars function
+  const fetchCalendars = useCallback(async () => {
+    try {
+      const res = await fetch("/api/calendars");
+
+      // Handle auth errors
+      if (res.status === 401) {
+        router.push("/auth/sign-in");
+        return [];
       }
-    };
+
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setCalendarGroups(data);
+          return data;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch calendars:", err);
+    }
+    return [];
+  }, [router]);
+
+  // Fetch calendars when session becomes available
+  useEffect(() => {
+    if (isPending) return; // Wait for session check
+    if (!session) {
+      router.push("/auth/sign-in");
+      return;
+    }
+
+    // Session is available, fetch calendars
     fetchCalendars();
-  }, []);
+  }, [session, isPending, fetchCalendars, router]);
 
   const handleToggleCalendar = useCallback((calendarId: string) => {
     let newVisibility = true;
@@ -117,17 +140,14 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
       await Promise.all(syncPromises);
 
-      // Refresh calendar list after sync
-      const updatedRes = await fetch("/api/calendars");
-      if (updatedRes.ok) {
-        const updatedData = await updatedRes.json();
-        if (Array.isArray(updatedData)) setCalendarGroups(updatedData);
-      }
+      // Refresh both calendars list AND events after sync
+      await fetchCalendars();
+      calendar.refreshEvents();
     } catch (error) {
       console.error("Sync failed:", error);
       throw error;
     }
-  }, []);
+  }, [fetchCalendars, calendar]);
 
   // Close mobile sidebar on navigation
   const prevDateRef = useRef(calendar.currentDate);

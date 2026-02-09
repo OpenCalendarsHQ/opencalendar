@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { events, calendars, calendarAccounts, eventRecurrences } from "@/lib/db/schema";
-import { auth } from "@/lib/auth/server";
+import { verifyRequest } from "@/lib/auth/verify-request";
 import { ensureUserExists } from "@/lib/auth/ensure-user";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { z } from "zod";
@@ -52,15 +52,14 @@ const eventSchema = z.object({
 // GET /api/events?start=...&end=...&calendarId=...
 export async function GET(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession({
-      fetchOptions: { headers: request.headers }
-    });
-    if (!session?.user) {
+    // Accept both JWT (desktop) and session cookies (web)
+    const { user } = await verifyRequest(request);
+    if (!user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
 
     // RATE LIMITING: Prevent excessive API calls
-    const rateLimitResult = rateLimit(session.user.id, rateLimitConfigs.reads);
+    const rateLimitResult = rateLimit(user.id, rateLimitConfigs.reads);
     if (!rateLimitResult.success) {
       return NextResponse.json(
         {
@@ -123,7 +122,7 @@ export async function GET(request: NextRequest) {
 
     // Base conditions (security, visibility, user ownership)
     const baseConditions = [
-      eq(calendarAccounts.userId, session.user.id),
+      eq(calendarAccounts.userId, user.id),
       eq(calendarAccounts.isActive, true),
       eq(calendars.isVisible, true),
     ];
@@ -239,13 +238,12 @@ export async function GET(request: NextRequest) {
 // POST /api/events
 export async function POST(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession({
-      fetchOptions: { headers: request.headers }
-    });
-    if (!session?.user) {
+    // Accept both JWT (desktop) and session cookies (web)
+    const { user } = await verifyRequest(request);
+    if (!user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
-    await ensureUserExists(session.user);
+    await ensureUserExists(user);
 
     const body = await request.json();
     const validated = eventSchema.parse(body);
@@ -258,7 +256,7 @@ export async function POST(request: NextRequest) {
       .where(
         and(
           eq(calendars.id, validated.calendarId),
-          eq(calendarAccounts.userId, session.user.id)
+          eq(calendarAccounts.userId, user.id)
         )
       );
 
@@ -323,10 +321,9 @@ export async function POST(request: NextRequest) {
 // PUT /api/events (update)
 export async function PUT(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession({
-      fetchOptions: { headers: request.headers }
-    });
-    if (!session?.user) {
+    // Accept both JWT (desktop) and session cookies (web)
+    const { user } = await verifyRequest(request);
+    if (!user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
 
@@ -354,7 +351,7 @@ export async function PUT(request: NextRequest) {
         .where(
           and(
             eq(calendars.id, data.calendarId),
-            eq(calendarAccounts.userId, session.user.id)
+            eq(calendarAccounts.userId, user.id)
           )
         );
 
@@ -487,10 +484,9 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/events?id=...
 export async function DELETE(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession({
-      fetchOptions: { headers: request.headers }
-    });
-    if (!session?.user) {
+    // Accept both JWT (desktop) and session cookies (web)
+    const { user } = await verifyRequest(request);
+    if (!user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
 

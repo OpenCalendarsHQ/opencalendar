@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { events, eventRecurrences, calendars, calendarAccounts } from "@/lib/db/schema";
-import { auth } from "@/lib/auth/server";
+import { verifyRequest } from "@/lib/auth/verify-request";
 import { eq, and } from "drizzle-orm";
 import { updateICloudEvent } from "@/lib/sync/icloud";
 import { updateGoogleEvent } from "@/lib/sync/google";
@@ -12,10 +12,9 @@ import { updateGoogleEvent } from "@/lib/sync/google";
  */
 export async function POST(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession({
-      fetchOptions: { headers: request.headers }
-    });
-    if (!session?.user) {
+    // Accept both JWT (desktop) and session cookies (web)
+    const { user } = await verifyRequest(request);
+    if (!user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
 
@@ -43,7 +42,7 @@ export async function POST(request: NextRequest) {
       .where(
         and(
           eq(events.id, eventId),
-          eq(calendarAccounts.userId, session.user.id)
+          eq(calendarAccounts.userId, user.id)
         )
       );
 
