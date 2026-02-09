@@ -3,11 +3,11 @@
  * Uses the rrule.js library for proper RRULE handling.
  */
 
-import { RRule, RRuleSet, rrulestr } from 'rrule';
+import { RRule as RRuleLib, RRuleSet } from 'rrule';
 
 export type Frequency = "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
 
-export interface RRule {
+export interface ParsedRRule {
   freq: Frequency;
   interval: number;
   count?: number;
@@ -23,9 +23,9 @@ export interface RRule {
  * Parse an RRULE string into a structured object.
  * Example: "FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE,FR"
  */
-export function parseRRule(rruleStr: string): RRule {
+export function parseRRule(rruleStr: string): ParsedRRule {
   const parts = rruleStr.replace("RRULE:", "").split(";");
-  const rule: RRule = {
+  const rule: ParsedRRule = {
     freq: "WEEKLY",
     interval: 1,
   };
@@ -71,7 +71,7 @@ export function parseRRule(rruleStr: string): RRule {
  * Uses rrule.js library for accurate occurrence generation.
  */
 export function generateOccurrences(
-  rule: RRule,
+  rule: ParsedRRule,
   startDate: Date,
   rangeStart: Date,
   rangeEnd: Date,
@@ -84,22 +84,22 @@ export function generateOccurrences(
       return [];
     }
 
-    // Map our RRule to rrule.js RRule
+    // Map our ParsedRRule to rrule.js RRule
     const freqMap: Record<Frequency, number> = {
-      DAILY: RRule.DAILY,
-      WEEKLY: RRule.WEEKLY,
-      MONTHLY: RRule.MONTHLY,
-      YEARLY: RRule.YEARLY,
+      DAILY: RRuleLib.DAILY,
+      WEEKLY: RRuleLib.WEEKLY,
+      MONTHLY: RRuleLib.MONTHLY,
+      YEARLY: RRuleLib.YEARLY,
     };
 
     const dayMap: Record<string, any> = {
-      MO: RRule.MO,
-      TU: RRule.TU,
-      WE: RRule.WE,
-      TH: RRule.TH,
-      FR: RRule.FR,
-      SA: RRule.SA,
-      SU: RRule.SU,
+      MO: RRuleLib.MO,
+      TU: RRuleLib.TU,
+      WE: RRuleLib.WE,
+      TH: RRuleLib.TH,
+      FR: RRuleLib.FR,
+      SA: RRuleLib.SA,
+      SU: RRuleLib.SU,
     };
 
     const rruleOptions: any = {
@@ -137,7 +137,7 @@ export function generateOccurrences(
 
     // Create RRuleSet to handle exclusion dates
     const rruleSet = new RRuleSet();
-    const rrule = new RRule(rruleOptions);
+    const rrule = new RRuleLib(rruleOptions);
     rruleSet.rrule(rrule);
 
     // Add exclusion dates
@@ -159,7 +159,7 @@ export function generateOccurrences(
 /**
  * Build an RRULE string from components.
  */
-export function buildRRule(rule: RRule): string {
+export function buildRRule(rule: ParsedRRule): string {
   const parts: string[] = [`FREQ=${rule.freq}`];
 
   if (rule.interval > 1) parts.push(`INTERVAL=${rule.interval}`);

@@ -292,7 +292,7 @@ export async function syncGoogleEvents(
             ? "tentative"
             : "confirmed") as "confirmed" | "tentative" | "cancelled",
           timezone: gEvent.start?.timeZone || "Europe/Amsterdam",
-          isRecurring: hasRecurrence,
+          isRecurring: hasRecurrence as boolean,
           url: gEvent.hangoutLink || null,
           updatedAt: new Date(),
         };

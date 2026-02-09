@@ -10,6 +10,7 @@ import type { CalendarEvent } from "@/lib/types";
 interface RawEvent extends Omit<CalendarEvent, "startTime" | "endTime"> {
   startTime: string | Date;
   endTime: string | Date;
+  isRecurring?: boolean;
   rrule?: string | null;
   exDates?: string[] | null;
 }
@@ -62,8 +63,6 @@ export function useRecurringEvents(
               location: e.location,
               color: e.color,
               calendarId: e.calendarId,
-              status: e.status,
-              isRecurring: true,
             });
           }
         } catch (error) {

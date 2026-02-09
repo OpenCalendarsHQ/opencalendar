@@ -115,12 +115,8 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
           }),
         });
         if (res.ok) {
-          const updated = await res.json();
-          onEventsChange(events.map((e) => (e.id === updated.id ? {
-            ...updated,
-            startTime: new Date(updated.startTime),
-            endTime: new Date(updated.endTime),
-          } : e)));
+          // Refetch events to get the latest data with RRULE metadata
+          onEventsChange();
         }
       }
     } catch (error) {
@@ -138,11 +134,8 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
         method: "DELETE",
       });
       if (res.ok) {
-        // Filter out the deleted event AND all its occurrences (for recurring events)
-        onEventsChange(events.filter((e) => {
-          const eRealId = e.originalId || e.id;
-          return eRealId !== realId;
-        }));
+        // Refetch events to get the latest data
+        onEventsChange();
       }
     } catch (error) {
       console.error("Failed to delete event:", error);
