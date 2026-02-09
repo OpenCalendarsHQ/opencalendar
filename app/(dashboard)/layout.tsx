@@ -88,7 +88,12 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       const syncPromises = groups
         .filter((group) => group.provider !== "local")
         .map(async (group) => {
-          const endpoint = group.provider === "google" ? "/api/sync/google" : "/api/sync/icloud";
+          let endpoint = "/api/sync/icloud";
+          if (group.provider === "google") {
+            endpoint = "/api/sync/google";
+          } else if (group.provider === "microsoft") {
+            endpoint = "/api/sync/microsoft/callback";
+          }
           try {
             await fetch(endpoint, {
               method: "POST",

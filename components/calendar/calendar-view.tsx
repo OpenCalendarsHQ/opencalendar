@@ -7,6 +7,7 @@ import { MonthView } from "./month-view";
 import { EventModal } from "./event-modal";
 import { RecurringEventDialog } from "./recurring-event-dialog";
 import { useSwipe } from "@/hooks/use-swipe";
+import { useWheelNavigation } from "@/hooks/use-wheel-navigation";
 import { useCalendar } from "@/lib/calendar-context";
 import type { CalendarEvent, CalendarViewType, Todo } from "@/lib/types";
 import { setHours } from "@/lib/utils/date";
@@ -354,6 +355,15 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
   const swipeHandlers = useSwipe({
     onSwipeLeft: calendar.navigateForward,
     onSwipeRight: calendar.navigateBack,
+  });
+
+  // Horizontal scroll navigation - swipe left to go back, swipe right to go forward
+  useWheelNavigation({
+    onScrollLeft: calendar.navigateBack,
+    onScrollRight: calendar.navigateForward,
+    enabled: viewType !== "month", // Only enable for day and week views
+    threshold: 150, // Higher threshold = less sensitive
+    cooldown: 400, // Longer cooldown = slower navigation
   });
 
   return (

@@ -36,7 +36,7 @@ export function TimeGrid({ children, columnCount, dates }: TimeGridProps) {
   }, []);
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+    <div ref={scrollRef} data-scroll-container className="flex-1 overflow-y-auto overflow-x-hidden">
       <div className="relative" style={{ height: 24 * HOUR_HEIGHT }}>
         {/* Hour lines */}
         {HOURS.map((hour) => (

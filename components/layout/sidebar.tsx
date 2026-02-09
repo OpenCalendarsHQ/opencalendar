@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
 import {
   ChevronDown,
@@ -36,6 +36,14 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
+function MicrosoftIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z" fill="#00a4ef" />
+    </svg>
+  );
+}
+
 interface SidebarProps {
   selectedDate: Date;
   onDateSelect: (date: Date) => void;
@@ -56,6 +64,7 @@ interface SidebarProps {
 const providerIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   google: GoogleIcon,
   icloud: AppleIcon,
+  microsoft: MicrosoftIcon,
   local: Monitor,
 };
 
@@ -68,6 +77,15 @@ export function Sidebar({
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(calendarGroups.map((g) => g.id)));
   const [newTodoText, setNewTodoText] = useState("");
   const [showCompleted, setShowCompleted] = useState(false);
+
+  // Auto-expand new calendar groups
+  useEffect(() => {
+    setExpandedGroups((prev) => {
+      const newSet = new Set(prev);
+      calendarGroups.forEach((g) => newSet.add(g.id));
+      return newSet;
+    });
+  }, [calendarGroups]);
 
   const toggleGroup = (id: string) => {
     setExpandedGroups((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });

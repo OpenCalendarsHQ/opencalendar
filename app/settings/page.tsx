@@ -37,9 +37,17 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
+function MicrosoftIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z" fill="#00a4ef" />
+    </svg>
+  );
+}
+
 interface ConnectedAccount {
   id: string;
-  provider: "google" | "icloud";
+  provider: "google" | "icloud" | "microsoft";
   email: string;
   lastSyncAt: string | null;
   status: "active" | "error";
@@ -66,9 +74,11 @@ export default function SettingsPage() {
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
     try {
       const res = await fetch("/api/calendars");
       if (res.ok) {
@@ -79,7 +89,7 @@ export default function SettingsPage() {
               .filter((g: Record<string, unknown>) => g.provider !== "local")
               .map((g: Record<string, unknown>) => ({
                 id: g.id as string,
-                provider: g.provider as "google" | "icloud",
+                provider: g.provider as "google" | "icloud" | "microsoft",
                 email: g.email as string,
                 lastSyncAt: g.lastSyncAt as string | null,
                 status: "active" as const,
@@ -93,10 +103,45 @@ export default function SettingsPage() {
     }
   };
 
-  useEffect(() => { fetchAccounts(); }, []);
+  useEffect(() => {
+    fetchAccounts();
+
+    // Check for syncing flag or connected flag in URL
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get('connected');
+    const syncing = params.get('syncing');
+
+    if (syncing === 'true' || connected) {
+      // Show success message
+      if (connected === 'google') {
+        setSuccess('Google Calendar succesvol verbonden - synchronisatie loopt...');
+      } else if (connected === 'microsoft') {
+        setSuccess('Microsoft Calendar succesvol verbonden - synchronisatie loopt...');
+      } else if (syncing === 'true') {
+        setSuccess('Account verbonden - synchronisatie loopt...');
+      }
+
+      // Poll for updates while syncing (without showing loading spinner)
+      const interval = setInterval(() => {
+        fetchAccounts(false);
+      }, 2000); // Refresh every 2 seconds
+
+      // Stop polling and clear message after 30 seconds
+      setTimeout(() => {
+        clearInterval(interval);
+        setSuccess(null);
+      }, 30000);
+
+      return () => clearInterval(interval);
+    }
+  }, []);
 
   const handleConnectGoogle = () => {
     window.location.href = "/api/sync/google?action=connect";
+  };
+
+  const handleConnectMicrosoft = () => {
+    window.location.href = "/api/sync/microsoft?action=connect";
   };
 
   const handleConnectICloud = async () => {
@@ -116,8 +161,16 @@ export default function SettingsPage() {
         return;
       }
       if (res.ok) {
-        // Redirect to home with syncing flag - sync will continue in background
-        router.push("/?syncing=true");
+        // Close modal and refresh accounts
+        setShowICloudModal(false);
+        setICloudEmail("");
+        setICloudPassword("");
+        // Start polling for updates
+        window.history.replaceState(null, "", "/settings?syncing=true");
+        const interval = setInterval(() => {
+          fetchAccounts(false);
+        }, 2000);
+        setTimeout(() => clearInterval(interval), 30000);
       } else {
         setError((data.error as string) || "Verbinding mislukt.");
       }
@@ -150,17 +203,38 @@ export default function SettingsPage() {
 
   const handleSync = async (accountId: string, provider: string) => {
     setIsSyncing(accountId);
+    setError(null);
     try {
-      const endpoint = provider === "google" ? "/api/sync/google" : "/api/sync/icloud";
+      let endpoint = "/api/sync/icloud";
+      if (provider === "google") {
+        endpoint = "/api/sync/google";
+      } else if (provider === "microsoft") {
+        endpoint = "/api/sync/microsoft/callback";
+      }
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "sync", accountId }),
       });
+
       if (res.ok) {
         await fetchAccounts();
+      } else if (res.status === 401) {
+        // Invalid credentials error
+        const data = await res.json().catch(() => ({}));
+        const errorData = data as { error?: string; message?: string };
+        if (errorData.error === "invalid_credentials") {
+          setError(errorData.message || "Je inloggegevens zijn verlopen. Verwijder het account en voeg het opnieuw toe.");
+        } else {
+          setError("Authenticatie mislukt. Probeer opnieuw in te loggen.");
+        }
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError((data as { error?: string }).error || "Synchronisatie mislukt.");
       }
-    } catch { /* ignore */ } finally {
+    } catch {
+      setError("Netwerkfout tijdens synchronisatie.");
+    } finally {
       setIsSyncing(null);
     }
   };
@@ -191,16 +265,38 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
+        {success && (
+          <div className="mb-3 rounded-md border border-success/20 bg-success/5 px-3 py-2 text-xs text-success flex items-center gap-2">
+            <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+            <span>{success}</span>
           </div>
-        ) : accounts.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center">
-            <p className="text-xs text-muted-foreground">Geen accounts verbonden</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">Voeg een account toe om te synchroniseren.</p>
-          </div>
-        ) : (
+        )}
+
+        <div className="min-h-[120px]">
+          {isLoading ? (
+            <div className="space-y-1">
+              {[1, 2].map((i) => (
+                <div key={i} className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 animate-pulse">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-8 w-8 rounded-md bg-muted" />
+                    <div className="space-y-1.5">
+                      <div className="h-3.5 w-32 rounded bg-muted" />
+                      <div className="h-3 w-24 rounded bg-muted" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-0.5">
+                    <div className="h-8 w-8 rounded-md bg-muted" />
+                    <div className="h-8 w-8 rounded-md bg-muted" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : accounts.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center">
+              <p className="text-xs text-muted-foreground">Geen accounts verbonden</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">Voeg een account toe om te synchroniseren.</p>
+            </div>
+          ) : (
           <div className="space-y-1">
             {accounts.map((account) => (
               <div key={account.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
@@ -208,6 +304,8 @@ export default function SettingsPage() {
                   <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
                     {account.provider === "icloud" ? (
                       <AppleIcon className="h-4 w-4 text-foreground" />
+                    ) : account.provider === "microsoft" ? (
+                      <MicrosoftIcon className="h-4 w-4" />
                     ) : (
                       <GoogleIcon className="h-4 w-4" />
                     )}
@@ -218,7 +316,7 @@ export default function SettingsPage() {
                       <CheckCircle2 className="h-3 w-3 shrink-0 text-success" />
                     </div>
                     <div className="text-[11px] text-muted-foreground">
-                      {account.provider === "google" ? "Google Calendar" : "iCloud Calendar"}
+                      {account.provider === "google" ? "Google Calendar" : account.provider === "microsoft" ? "Microsoft Calendar" : "iCloud Calendar"}
                       {account.calendarCount > 0 && ` · ${account.calendarCount} kalender${account.calendarCount !== 1 ? "s" : ""}`}
                     </div>
                   </div>
@@ -248,7 +346,8 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
-        )}
+          )}
+        </div>
 
         {/* Account toevoegen */}
         <div className="mt-3">
@@ -260,6 +359,16 @@ export default function SettingsPage() {
               </div>
               <div>
                 <div className="text-xs font-medium text-foreground">Google Calendar</div>
+                <div className="text-[11px] text-muted-foreground">OAuth sync</div>
+              </div>
+            </button>
+            <button onClick={handleConnectMicrosoft}
+              className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 text-left hover:bg-muted">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                <MicrosoftIcon className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="text-xs font-medium text-foreground">Microsoft Calendar</div>
                 <div className="text-[11px] text-muted-foreground">OAuth sync</div>
               </div>
             </button>

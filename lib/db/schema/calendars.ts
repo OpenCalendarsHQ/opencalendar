@@ -16,6 +16,7 @@ import { user } from "./auth";
 export const calendarProviderEnum = pgEnum("calendar_provider", [
   "google",
   "icloud",
+  "microsoft",
   "local",
 ]);
 
@@ -38,8 +39,8 @@ export const calendarAccounts = pgTable("calendar_accounts", {
 }, (table) => ({
   // PERFORMANCE: Index on userId for fast lookup by user (used in every calendar query)
   userIdIdx: index("calendar_accounts_user_id_idx").on(table.userId),
-  // PERFORMANCE: Composite unique constraint on userId + email to prevent duplicate accounts
-  userEmailUnique: uniqueIndex("calendar_accounts_user_email_unique").on(table.userId, table.email),
+  // PERFORMANCE: Composite unique constraint on userId + provider (one account per provider per user)
+  userProviderUnique: uniqueIndex("calendar_accounts_user_provider_unique").on(table.userId, table.provider),
 }));
 
 // Individual calendars within an account

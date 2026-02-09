@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { calendarAccounts, calendars } from "@/lib/db/schema";
 import { auth } from "@/lib/auth/server";
 import { ensureUserExists } from "@/lib/auth/ensure-user";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import {
   getAuthorizationUrl,
   exchangeCodeForTokens,
@@ -61,6 +61,8 @@ export async function GET(request: NextRequest) {
       const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
       const { data: profile } = await oauth2.userinfo.get();
 
+      const email = profile.email || "unknown@gmail.com";
+
       // SECURITY: Encrypt tokens before storing in database
       const encryptedAccessToken = tokens.access_token
         ? encrypt(tokens.access_token)
@@ -69,18 +71,31 @@ export async function GET(request: NextRequest) {
         ? encrypt(tokens.refresh_token)
         : null;
 
-      // Save the account with encrypted tokens
+      // Use upsert to handle both insert and update (one Google account per user)
       const [newAccount] = await db
         .insert(calendarAccounts)
         .values({
           userId,
           provider: "google",
-          email: profile.email || "unknown@gmail.com",
+          email,
           accessToken: encryptedAccessToken,
           refreshToken: encryptedRefreshToken,
           tokenExpiresAt: tokens.expiry_date
             ? new Date(tokens.expiry_date)
             : null,
+        })
+        .onConflictDoUpdate({
+          target: [calendarAccounts.userId, calendarAccounts.provider],
+          set: {
+            email,
+            accessToken: encryptedAccessToken,
+            refreshToken: encryptedRefreshToken,
+            tokenExpiresAt: tokens.expiry_date
+              ? new Date(tokens.expiry_date)
+              : null,
+            isActive: true,
+            updatedAt: new Date(),
+          },
         })
         .returning();
 
@@ -186,6 +201,20 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("POST /api/sync/google error:", error);
+
+    // Check for authentication errors
+    if (error instanceof Error && (
+      error.message.includes("invalid_grant") ||
+      error.message.includes("invalid_client") ||
+      error.message.includes("unauthorized") ||
+      error.message.includes("401")
+    )) {
+      return NextResponse.json({
+        error: "invalid_credentials",
+        message: "Je Google-inloggegevens zijn verlopen. Verwijder het account en voeg het opnieuw toe.",
+      }, { status: 401 });
+    }
+
     return NextResponse.json(
       { error: "Synchronisatie mislukt" },
       { status: 500 }
