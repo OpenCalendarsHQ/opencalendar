@@ -45,10 +45,11 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Protected routes - redirect unauthenticated users
+  // IMPORTANT: Don't redirect API routes - they should return 401 instead
   if (
     !user &&
     !request.nextUrl.pathname.startsWith("/auth") &&
-    !request.nextUrl.pathname.startsWith("/api/auth") &&
+    !request.nextUrl.pathname.startsWith("/api") &&
     !request.nextUrl.pathname.startsWith("/welcome")
   ) {
     // Redirect unauthenticated users to welcome page

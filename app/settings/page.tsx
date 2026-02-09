@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Loader2,
   CheckSquare,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 
 // Inline Apple SVG icon
@@ -55,19 +56,19 @@ interface ConnectedAccount {
   calendarCount: number;
 }
 
-const settingsItems = [
-  { href: "/settings/account", icon: Shield, title: "Account & Beveiliging", description: "Wachtwoord, 2FA en sessies" },
-  { href: "/settings/appearance", icon: Palette, title: "Weergave", description: "Startdag, tijdformaat, weeknummers" },
-  { href: "/settings/region", icon: Globe, title: "Taal & regio", description: "Tijdzone en datumnotatie" },
-  { href: "/settings/tasks", icon: CheckSquare, title: "Taken integraties", description: "Notion en GitHub verbinden" },
-];
+type TabType = "calendars" | "account" | "appearance" | "region" | "tasks";
 
-const comingSoonItems = [
-  { icon: Bell, title: "Meldingen", description: "Herinneringen en notificaties" },
+const tabs = [
+  { id: "calendars" as TabType, label: "Kalender accounts", icon: CalendarIcon },
+  { id: "account" as TabType, label: "Account", icon: Shield },
+  { id: "appearance" as TabType, label: "Weergave", icon: Palette },
+  { id: "region" as TabType, label: "Taal & regio", icon: Globe },
+  { id: "tasks" as TabType, label: "Taken", icon: CheckSquare },
 ];
 
 export default function SettingsPage() {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<TabType>("calendars");
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
   const [showICloudModal, setShowICloudModal] = useState(false);
   const [iCloudEmail, setICloudEmail] = useState("");
@@ -242,7 +243,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-6 md:px-6 md:py-8">
+    <div className="mx-auto max-w-3xl px-4 py-6 md:px-6 md:py-8">
       {/* Header */}
       <div className="mb-6 flex items-center gap-3">
         <Link href="/" className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
@@ -254,191 +255,228 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* === Verbonden accounts sectie === */}
-      <section className="mb-8">
-        <h2 className="mb-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-          Verbonden accounts
-        </h2>
+      {/* Tabs */}
+      <div className="mb-6 border-b border-border">
+        <div className="flex gap-1 overflow-x-auto">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-xs font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? "border-foreground text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-        {error && (
-          <div className="mb-3 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-            {error}
-            <button onClick={() => setError(null)} className="ml-2 underline">Sluiten</button>
-          </div>
-        )}
+      {/* Tab Content */}
+      <div className="min-h-[400px]">
+        {/* Kalender accounts tab */}
+        {activeTab === "calendars" && (
+          <div>
+            {error && (
+              <div className="mb-3 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                {error}
+                <button onClick={() => setError(null)} className="ml-2 underline">Sluiten</button>
+              </div>
+            )}
 
-        {success && (
-          <div className="mb-3 rounded-md border border-success/20 bg-success/5 px-3 py-2 text-xs text-success flex items-center gap-2">
-            <Loader2 className="h-3 w-3 animate-spin shrink-0" />
-            <span>{success}</span>
-          </div>
-        )}
+            {success && (
+              <div className="mb-3 rounded-md border border-success/20 bg-success/5 px-3 py-2 text-xs text-success flex items-center gap-2">
+                <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                <span>{success}</span>
+              </div>
+            )}
 
-        <div className="min-h-[120px]">
-          {isLoading ? (
-            <div className="space-y-1">
-              {[1, 2].map((i) => (
-                <div key={i} className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 animate-pulse">
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 rounded-md bg-muted" />
-                    <div className="space-y-1.5">
-                      <div className="h-3.5 w-32 rounded bg-muted" />
-                      <div className="h-3 w-24 rounded bg-muted" />
+            <div className="mb-4">
+              <h2 className="mb-2 text-sm font-medium text-foreground">Verbonden accounts</h2>
+              <p className="text-xs text-muted-foreground">
+                Synchroniseer je kalenders met Google, Microsoft of iCloud
+              </p>
+            </div>
+
+            <div className="min-h-[120px]">
+              {isLoading ? (
+                <div className="space-y-2">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="flex items-center justify-between rounded-lg border border-border px-3 py-3 animate-pulse">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-8 w-8 rounded-md bg-muted" />
+                        <div className="space-y-1.5">
+                          <div className="h-3.5 w-32 rounded bg-muted" />
+                          <div className="h-3 w-24 rounded bg-muted" />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-0.5">
+                        <div className="h-8 w-8 rounded-md bg-muted" />
+                        <div className="h-8 w-8 rounded-md bg-muted" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : accounts.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center">
+                  <CalendarIcon className="mx-auto h-8 w-8 text-muted-foreground/50" />
+                  <p className="mt-2 text-xs text-muted-foreground">Geen accounts verbonden</p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">Voeg een account toe om te synchroniseren</p>
+                </div>
+              ) : (
+              <div className="space-y-2">
+                {accounts.map((account) => (
+                  <div key={account.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                        {account.provider === "icloud" ? (
+                          <AppleIcon className="h-4 w-4 text-foreground" />
+                        ) : account.provider === "microsoft" ? (
+                          <MicrosoftIcon className="h-4 w-4" />
+                        ) : (
+                          <GoogleIcon className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 text-sm text-foreground">
+                          <span className="truncate">{account.email}</span>
+                          <CheckCircle2 className="h-3 w-3 shrink-0 text-success" />
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {account.provider === "google" ? "Google Calendar" : account.provider === "microsoft" ? "Microsoft Calendar" : "iCloud Calendar"}
+                          {account.calendarCount > 0 && ` · ${account.calendarCount} kalender${account.calendarCount !== 1 ? "s" : ""}`}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        onClick={() => handleSync(account.id, account.provider)}
+                        disabled={isSyncing === account.id}
+                        className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                        title="Synchroniseren"
+                      >
+                        <RefreshCw className={`h-3.5 w-3.5 ${isSyncing === account.id ? "animate-spin" : ""}`} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(account.id, account.email)}
+                        disabled={isDeleting === account.id}
+                        className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-50"
+                        title="Verwijder"
+                      >
+                        {isDeleting === account.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-0.5">
-                    <div className="h-8 w-8 rounded-md bg-muted" />
-                    <div className="h-8 w-8 rounded-md bg-muted" />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+              )}
             </div>
-          ) : accounts.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center">
-              <p className="text-xs text-muted-foreground">Geen accounts verbonden</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">Voeg een account toe om te synchroniseren.</p>
-            </div>
-          ) : (
-          <div className="space-y-1">
-            {accounts.map((account) => (
-              <div key={account.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
-                <div className="flex items-center gap-2.5">
+
+            {/* Account toevoegen */}
+            <div className="mt-4">
+              <h3 className="mb-2 text-xs font-medium text-muted-foreground">Account toevoegen</h3>
+              <div className="grid gap-2 sm:grid-cols-3">
+                <button onClick={handleConnectGoogle}
+                  className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-3 text-left hover:bg-muted">
                   <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                    {account.provider === "icloud" ? (
-                      <AppleIcon className="h-4 w-4 text-foreground" />
-                    ) : account.provider === "microsoft" ? (
-                      <MicrosoftIcon className="h-4 w-4" />
-                    ) : (
-                      <GoogleIcon className="h-4 w-4" />
-                    )}
+                    <GoogleIcon className="h-4 w-4" />
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 text-sm text-foreground">
-                      <span className="truncate">{account.email}</span>
-                      <CheckCircle2 className="h-3 w-3 shrink-0 text-success" />
-                    </div>
-                    <div className="text-[11px] text-muted-foreground">
-                      {account.provider === "google" ? "Google Calendar" : account.provider === "microsoft" ? "Microsoft Calendar" : "iCloud Calendar"}
-                      {account.calendarCount > 0 && ` · ${account.calendarCount} kalender${account.calendarCount !== 1 ? "s" : ""}`}
-                    </div>
+                  <div>
+                    <div className="text-xs font-medium text-foreground">Google</div>
+                    <div className="text-[10px] text-muted-foreground">OAuth sync</div>
                   </div>
-                </div>
-                <div className="flex items-center gap-0.5">
-                  <button
-                    onClick={() => handleSync(account.id, account.provider)}
-                    disabled={isSyncing === account.id}
-                    className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
-                    title="Synchroniseren"
-                  >
-                    <RefreshCw className={`h-3.5 w-3.5 ${isSyncing === account.id ? "animate-spin" : ""}`} />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(account.id, account.email)}
-                    disabled={isDeleting === account.id}
-                    className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-50"
-                    title="Verwijder"
-                  >
-                    {isDeleting === account.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                </div>
+                </button>
+                <button onClick={handleConnectMicrosoft}
+                  className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-3 text-left hover:bg-muted">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                    <MicrosoftIcon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium text-foreground">Microsoft</div>
+                    <div className="text-[10px] text-muted-foreground">OAuth sync</div>
+                  </div>
+                </button>
+                <button onClick={() => { setShowICloudModal(true); setError(null); }}
+                  className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-3 text-left hover:bg-muted">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                    <AppleIcon className="h-4 w-4 text-foreground" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium text-foreground">iCloud</div>
+                    <div className="text-[10px] text-muted-foreground">App-wachtwoord</div>
+                  </div>
+                </button>
               </div>
-            ))}
+            </div>
           </div>
-          )}
-        </div>
+        )}
 
-        {/* Account toevoegen */}
-        <div className="mt-3">
-          <div className="grid gap-1.5 sm:grid-cols-2">
-            <button onClick={handleConnectGoogle}
-              className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 text-left hover:bg-muted">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                <GoogleIcon className="h-4 w-4" />
-              </div>
+        {/* Account tab */}
+        {activeTab === "account" && (
+          <div>
+            <Link href="/settings/account"
+              className="flex items-center justify-between rounded-lg border border-border px-4 py-3 hover:bg-muted">
               <div>
-                <div className="text-xs font-medium text-foreground">Google Calendar</div>
-                <div className="text-[11px] text-muted-foreground">OAuth sync</div>
+                <div className="text-sm font-medium text-foreground">Account & Beveiliging</div>
+                <div className="text-xs text-muted-foreground">Wachtwoord, 2FA en sessies</div>
               </div>
-            </button>
-            <button onClick={handleConnectMicrosoft}
-              className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 text-left hover:bg-muted">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                <MicrosoftIcon className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="text-xs font-medium text-foreground">Microsoft Calendar</div>
-                <div className="text-[11px] text-muted-foreground">OAuth sync</div>
-              </div>
-            </button>
-            <button onClick={() => { setShowICloudModal(true); setError(null); }}
-              className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 text-left hover:bg-muted">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                <AppleIcon className="h-4 w-4 text-foreground" />
-              </div>
-              <div>
-                <div className="text-xs font-medium text-foreground">iCloud Calendar</div>
-                <div className="text-[11px] text-muted-foreground">App-wachtwoord</div>
-              </div>
-            </button>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
           </div>
-        </div>
-      </section>
+        )}
 
-      {/* === Overige instellingen === */}
-      <section className="mb-8">
-        <h2 className="mb-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-          Voorkeuren
-        </h2>
-        <div className="space-y-px">
-          {settingsItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link key={item.title} href={item.href}
-                className="flex items-center gap-3 rounded-lg px-3 py-3 hover:bg-muted">
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm text-foreground">{item.title}</div>
-                  <div className="text-xs text-muted-foreground">{item.description}</div>
-                </div>
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* === Binnenkort === */}
-      <section>
-        <h2 className="mb-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-          Binnenkort
-        </h2>
-        <div className="space-y-px">
-          {comingSoonItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.title}
-                className="flex items-center gap-3 rounded-lg px-3 py-3 opacity-40">
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 text-sm text-foreground">
-                    {item.title}
-                    <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">Binnenkort</span>
-                  </div>
-                  <div className="text-xs text-muted-foreground">{item.description}</div>
-                </div>
+        {/* Weergave tab */}
+        {activeTab === "appearance" && (
+          <div>
+            <Link href="/settings/appearance"
+              className="flex items-center justify-between rounded-lg border border-border px-4 py-3 hover:bg-muted">
+              <div>
+                <div className="text-sm font-medium text-foreground">Weergave</div>
+                <div className="text-xs text-muted-foreground">Startdag, tijdformaat, weeknummers</div>
               </div>
-            );
-          })}
-        </div>
-      </section>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+          </div>
+        )}
+
+        {/* Taal & regio tab */}
+        {activeTab === "region" && (
+          <div>
+            <Link href="/settings/region"
+              className="flex items-center justify-between rounded-lg border border-border px-4 py-3 hover:bg-muted">
+              <div>
+                <div className="text-sm font-medium text-foreground">Taal & regio</div>
+                <div className="text-xs text-muted-foreground">Tijdzone en datumnotatie</div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+          </div>
+        )}
+
+        {/* Taken tab */}
+        {activeTab === "tasks" && (
+          <div>
+            <Link href="/settings/tasks"
+              className="flex items-center justify-between rounded-lg border border-border px-4 py-3 hover:bg-muted">
+              <div>
+                <div className="text-sm font-medium text-foreground">Taken integraties</div>
+                <div className="text-xs text-muted-foreground">Notion en GitHub verbinden</div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+          </div>
+        )}
+      </div>
 
       {/* iCloud Modal */}
       {showICloudModal && (
