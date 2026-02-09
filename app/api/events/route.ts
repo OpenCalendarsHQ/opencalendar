@@ -387,13 +387,20 @@ export async function PUT(request: NextRequest) {
         const oldProviderInfo = await getCalendarProviderInfo(existingEvent.calendarId);
         if (oldProviderInfo && !oldProviderInfo.isReadOnly) {
           try {
+            console.log(`[Event Move] Deleting event ${id} from old ${oldProviderInfo.provider} calendar ${existingEvent.calendarId}`);
             if (oldProviderInfo.provider === "icloud") {
               await deleteICloudEvent(oldProviderInfo.accountId, id);
             } else if (oldProviderInfo.provider === "google") {
               await deleteGoogleEvent(oldProviderInfo.accountId, existingEvent.calendarId, id);
             }
+            console.log(`[Event Move] Successfully deleted from old calendar`);
           } catch (syncError) {
-            console.error(`Failed to delete event from old ${oldProviderInfo.provider} calendar:`, syncError);
+            console.error(`[Event Move] FAILED to delete event from old ${oldProviderInfo.provider} calendar:`, syncError);
+            // Don't continue if deletion failed - this prevents duplicates
+            return NextResponse.json(
+              { error: `Failed to delete event from old calendar: ${syncError}` },
+              { status: 500 }
+            );
           }
         }
       }
@@ -411,6 +418,7 @@ export async function PUT(request: NextRequest) {
         };
 
         try {
+          console.log(`[Event Move] Creating event in new ${newProviderInfo.provider} calendar ${data.calendarId}`);
           if (newProviderInfo.provider === "icloud") {
             const externalUid = await createICloudEvent(newProviderInfo.accountId, data.calendarId, syncData);
             await db.update(events).set({ icsUid: externalUid }).where(eq(events.id, id));
@@ -420,8 +428,13 @@ export async function PUT(request: NextRequest) {
               await db.update(events).set({ externalId }).where(eq(events.id, id));
             }
           }
+          console.log(`[Event Move] Successfully created in new calendar`);
         } catch (syncError) {
-          console.error(`Failed to create event in new ${newProviderInfo.provider} calendar:`, syncError);
+          console.error(`[Event Move] FAILED to create event in new ${newProviderInfo.provider} calendar:`, syncError);
+          return NextResponse.json(
+            { error: `Failed to create event in new calendar: ${syncError}` },
+            { status: 500 }
+          );
         }
       }
     } else {

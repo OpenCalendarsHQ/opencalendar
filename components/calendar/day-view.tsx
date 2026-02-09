@@ -16,9 +16,10 @@ interface DayViewProps {
   onTimeSlotClick: (date: Date, hour: number) => void;
   onToggleTodo: (id: string) => void;
   onDragCreate?: (date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => void;
+  onTaskDrop?: (task: any, date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => void;
 }
 
-export const DayView = memo(function DayView({ currentDate, events, todos, onEventClick, onTimeSlotClick, onToggleTodo, onDragCreate }: DayViewProps) {
+export const DayView = memo(function DayView({ currentDate, events, todos, onEventClick, onTimeSlotClick, onToggleTodo, onDragCreate, onTaskDrop }: DayViewProps) {
   // Timed events for this day (including clipped multi-day timed events)
   const dayEvents = useMemo(
     () => splitMultiDayTimedEvents(events, currentDate),
@@ -74,7 +75,7 @@ export const DayView = memo(function DayView({ currentDate, events, todos, onEve
         </div>
       </div>
 
-      <TimeGrid columnCount={1} dates={[currentDate]} onDragCreate={handleDragCreate}>
+      <TimeGrid columnCount={1} dates={[currentDate]} onDragCreate={handleDragCreate} onTaskDrop={onTaskDrop}>
         <div className="relative flex-1">
           {layoutEvents.map((event) => {
             const top = getTimePosition(event.startTime, HOUR_HEIGHT);

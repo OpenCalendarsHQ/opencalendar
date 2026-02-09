@@ -15,6 +15,7 @@ import {
   RefreshCw,
   CheckCircle2,
   Loader2,
+  CheckSquare,
 } from "lucide-react";
 
 // Inline Apple SVG icon
@@ -58,6 +59,7 @@ const settingsItems = [
   { href: "/settings/account", icon: Shield, title: "Account & Beveiliging", description: "Wachtwoord, 2FA en sessies" },
   { href: "/settings/appearance", icon: Palette, title: "Weergave", description: "Startdag, tijdformaat, weeknummers" },
   { href: "/settings/region", icon: Globe, title: "Taal & regio", description: "Tijdzone en datumnotatie" },
+  { href: "/settings/tasks", icon: CheckSquare, title: "Taken integraties", description: "Notion en GitHub verbinden" },
 ];
 
 const comingSoonItems = [

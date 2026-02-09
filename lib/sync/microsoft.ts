@@ -352,22 +352,33 @@ export async function syncMicrosoftEvents(
       if (msEvent.isCancelled) continue;
 
       const externalId = msEvent.id;
+      const iCalUId = msEvent.iCalUId || null;
       seenExternalIds.add(externalId);
 
       // Parse dates
       const startTime = new Date(msEvent.start.dateTime);
       const endTime = new Date(msEvent.end.dateTime);
 
-      // Upsert event
+      // Upsert event - use iCalUId for deduplication if available, fallback to externalId
+      // iCalUId is more stable across systems than Microsoft's event ID
       const [existing] = await db
         .select()
         .from(events)
         .where(
           and(
             eq(events.calendarId, calendarId),
-            eq(events.externalId, externalId)
+            iCalUId
+              ? eq(events.icsUid, iCalUId)
+              : eq(events.externalId, externalId)
           )
         );
+
+      // Log if we found a match by iCalUId but externalId changed
+      if (existing && iCalUId && existing.externalId !== externalId) {
+        console.log(`[Microsoft Sync] Event ID changed: ${msEvent.subject} (iCalUId: ${iCalUId})`);
+        console.log(`  Old ID: ${existing.externalId}`);
+        console.log(`  New ID: ${externalId}`);
+      }
 
       const eventData = {
         title: msEvent.subject || "(Geen titel)",
@@ -387,9 +398,13 @@ export async function syncMicrosoftEvents(
 
       if (existing) {
         eventId = existing.id;
+        // Update externalId in case Microsoft ID changed
         await db
           .update(events)
-          .set(eventData)
+          .set({
+            ...eventData,
+            externalId,
+          })
           .where(eq(events.id, existing.id));
       } else {
         const [newEvent] = await db

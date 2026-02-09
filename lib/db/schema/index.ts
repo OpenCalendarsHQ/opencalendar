@@ -30,3 +30,12 @@ export {
 
 // User settings
 export { userSettings } from "./settings";
+
+// Task tables
+export {
+  taskProviderEnum,
+  taskProviders,
+  tasks,
+  taskProvidersRelations,
+  tasksRelations,
+} from "./tasks";

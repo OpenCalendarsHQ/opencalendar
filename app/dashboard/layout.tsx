@@ -12,6 +12,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSession } from "@/lib/auth/client";
 import type { CalendarGroup } from "@/lib/types";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { DragProvider } from "@/lib/drag-context";
 
 function DashboardInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -255,7 +256,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <ErrorBoundary>
       <CalendarProvider>
-        <DashboardInner>{children}</DashboardInner>
+        <DragProvider>
+          <DashboardInner>{children}</DashboardInner>
+        </DragProvider>
       </CalendarProvider>
     </ErrorBoundary>
   );

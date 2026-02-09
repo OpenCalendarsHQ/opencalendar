@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { MiniCalendar } from "@/components/calendar/mini-calendar";
 import { ColorPicker } from "@/components/ui/color-picker";
+import { TaskList } from "@/components/tasks/task-list";
 import type { CalendarGroup, Todo, TodoList, SidebarTab } from "@/lib/types";
 
 function AppleIcon({ className }: { className?: string }) {
@@ -187,38 +188,7 @@ export function Sidebar({
             })}
           </>
         ) : (
-          <>
-            <div className="mb-2 flex items-center gap-1.5 rounded-md border border-border px-2 py-1.5">
-              <Plus className="h-3 w-3 text-muted-foreground" />
-              <input type="text" value={newTodoText} onChange={(e) => setNewTodoText(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddTodo()}
-                placeholder="Nieuwe taak..." className="flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground" />
-            </div>
-            <div className="space-y-px">
-              {incompleteTodos.length === 0 && (
-                <div className="py-4 text-center text-[11px] text-muted-foreground">Geen openstaande taken</div>
-              )}
-              {incompleteTodos.map((todo) => (
-                <TodoItem key={todo.id} todo={todo} onToggle={onToggleTodo} onDelete={onDeleteTodo} />
-              ))}
-            </div>
-            {completedTodos.length > 0 && (
-              <div className="mt-2">
-                <button onClick={() => setShowCompleted(!showCompleted)}
-                  className="flex items-center gap-1 px-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground">
-                  {showCompleted ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                  Voltooid ({completedTodos.length})
-                </button>
-                {showCompleted && (
-                  <div className="mt-1 space-y-px">
-                    {completedTodos.map((todo) => (
-                      <TodoItem key={todo.id} todo={todo} onToggle={onToggleTodo} onDelete={onDeleteTodo} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </>
+          <TaskList />
         )}
       </div>
     </aside>

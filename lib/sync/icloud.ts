@@ -196,18 +196,29 @@ export async function syncICloudEvents(
       if (!parsed) continue;
 
       const externalId = obj.url;
+      const icsUid = parsed.uid || null;
       seenExternalIds.add(externalId);
 
-      // Upsert event
+      // Upsert event - use icsUid for deduplication if available, fallback to externalId
+      // icsUid is more stable than the CalDAV URL which can change
       const [existing] = await db
         .select()
         .from(events)
         .where(
           and(
             eq(events.calendarId, calendarId),
-            eq(events.externalId, externalId)
+            icsUid
+              ? eq(events.icsUid, icsUid)
+              : eq(events.externalId, externalId)
           )
         );
+
+      // Log if we found a match by icsUid but externalId changed (URL changed)
+      if (existing && icsUid && existing.externalId !== externalId) {
+        console.log(`[iCloud Sync] Event URL changed: ${parsed.title} (icsUid: ${icsUid})`);
+        console.log(`  Old URL: ${existing.externalId}`);
+        console.log(`  New URL: ${externalId}`);
+      }
 
       const eventData = {
         title: parsed.title || "(Geen titel)",
@@ -229,11 +240,14 @@ export async function syncICloudEvents(
 
       if (existing) {
         eventId = existing.id;
-        // Only update if etag changed
-        if (existing.etag !== obj.etag) {
+        // Only update if etag changed or externalId changed (URL might have changed)
+        if (existing.etag !== obj.etag || existing.externalId !== externalId) {
           await db
             .update(events)
-            .set(eventData)
+            .set({
+              ...eventData,
+              externalId, // Update externalId in case URL changed
+            })
             .where(eq(events.id, existing.id));
         }
       } else {

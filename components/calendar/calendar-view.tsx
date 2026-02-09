@@ -97,6 +97,41 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
     setIsModalOpen(true);
   }, []);
 
+  // Handle task drop from sidebar
+  const handleTaskDrop = useCallback(async (task: any, date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => {
+    const startTime = setMinutes(setHours(new Date(date), startHour), startMinute);
+    const endTime = setMinutes(setHours(new Date(date), endHour), endMinute);
+    startTime.setSeconds(0, 0);
+    endTime.setSeconds(0, 0);
+
+    try {
+      // Schedule the task by creating a calendar event
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "schedule",
+          taskId: task.id,
+          eventData: {
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            isAllDay: false,
+            color: "#8b5cf6", // Purple for tasks
+          },
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh events to show the new scheduled task
+        onEventsChange();
+      } else {
+        console.error("Failed to schedule task");
+      }
+    } catch (error) {
+      console.error("Error scheduling task:", error);
+    }
+  }, [onEventsChange]);
+
   const handleDayClick = useCallback((date: Date) => {
     onDateChange(date);
     onViewTypeChange("day");
@@ -382,6 +417,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
           onEventClick={handleEventClick}
           onTimeSlotClick={handleTimeSlotClick}
           onDragCreate={handleDragCreate}
+          onTaskDrop={handleTaskDrop}
         />
       )}
       {viewType === "day" && (
@@ -393,6 +429,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
           onTimeSlotClick={handleTimeSlotClick}
           onToggleTodo={onToggleTodo}
           onDragCreate={handleDragCreate}
+          onTaskDrop={handleTaskDrop}
         />
       )}
       {viewType === "month" && (

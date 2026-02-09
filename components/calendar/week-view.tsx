@@ -24,6 +24,7 @@ interface WeekViewProps {
   onEventClick: (event: CalendarEvent) => void;
   onTimeSlotClick: (date: Date, hour: number) => void;
   onDragCreate?: (date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => void;
+  onTaskDrop?: (task: any, date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => void;
 }
 
 const DayColumn = memo(function DayColumn({
@@ -53,7 +54,7 @@ const DayColumn = memo(function DayColumn({
   );
 });
 
-export const WeekView = memo(function WeekView({ currentDate, events, todos, onEventClick, onTimeSlotClick, onDragCreate }: WeekViewProps) {
+export const WeekView = memo(function WeekView({ currentDate, events, todos, onEventClick, onTimeSlotClick, onDragCreate, onTaskDrop }: WeekViewProps) {
   const { settings } = useSettings();
   const weekDays = useMemo(() => getWeekDays(currentDate, settings.weekStartsOn), [currentDate, settings.weekStartsOn]);
 
@@ -222,7 +223,7 @@ export const WeekView = memo(function WeekView({ currentDate, events, todos, onE
       </div>
 
       {/* Time grid */}
-      <TimeGrid columnCount={7} dates={weekDays} onDragCreate={handleDragCreate}>
+      <TimeGrid columnCount={7} dates={weekDays} onDragCreate={handleDragCreate} onTaskDrop={onTaskDrop}>
         {weekDays.map((day) => {
           const dayKey = toDateKey(day);
           const layoutEvents = layoutByDay.get(dayKey) || [];

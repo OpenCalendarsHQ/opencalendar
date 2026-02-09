@@ -7,7 +7,7 @@ import { randomBytes } from "crypto";
 
 interface OAuthStateData {
   userId: string;
-  provider: "google" | "icloud";
+  provider: "google" | "icloud" | "github" | "notion";
   createdAt: number;
 }
 
@@ -28,12 +28,12 @@ setInterval(() => {
 /**
  * Generate a secure random state token for OAuth flow
  * @param userId - The user initiating the OAuth flow
- * @param provider - The OAuth provider (google, icloud)
+ * @param provider - The OAuth provider (google, icloud, github, notion)
  * @returns A secure random state token
  */
 export function generateOAuthState(
   userId: string,
-  provider: "google" | "icloud"
+  provider: "google" | "icloud" | "github" | "notion"
 ): string {
   // Generate cryptographically secure random state (32 bytes = 256 bits)
   const state = randomBytes(32).toString("base64url");
@@ -56,7 +56,7 @@ export function generateOAuthState(
  */
 export function validateOAuthState(
   state: string,
-  expectedProvider: "google" | "icloud"
+  expectedProvider: "google" | "icloud" | "github" | "notion"
 ): string | null {
   const data = stateStore.get(state);
 
