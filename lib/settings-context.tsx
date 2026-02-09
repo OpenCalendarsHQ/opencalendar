@@ -102,6 +102,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           if (data) {
             setSettings({ ...DEFAULT_SETTINGS, ...data });
           }
+        } else if (res.status === 401) {
+          // Not authenticated - silently use defaults (e.g., on landing page)
+        } else {
+          console.error("Failed to load settings:", res.status);
         }
       } catch (error) {
         console.error("Failed to load settings:", error);
