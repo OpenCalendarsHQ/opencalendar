@@ -287,7 +287,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // If action is delete and task is manual, permanently delete it
-    if (action === "delete" && task.taskProviders.provider === "manual") {
+    if (action === "delete" && task.task_providers.provider === "manual") {
       // Delete linked calendar event if exists
       if (task.tasks.scheduledEventId) {
         await db.delete(events).where(eq(events.id, task.tasks.scheduledEventId));
