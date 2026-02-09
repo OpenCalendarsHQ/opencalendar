@@ -12,6 +12,8 @@ import {
   CalendarDays,
   CheckSquare,
   Trash2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { MiniCalendar } from "@/components/calendar/mini-calendar";
 import { ColorPicker } from "@/components/ui/color-picker";
@@ -232,15 +234,35 @@ function CalendarItem({ cal, onToggle, onChangeColor }: {
 
   return (
     <div className="group relative flex items-center gap-2 rounded-md px-1.5 py-1 text-xs hover:bg-muted">
-      <button
-        className={`h-2.5 w-2.5 shrink-0 rounded-sm ${cal.isVisible ? "" : "border border-border"}`}
-        style={{ backgroundColor: cal.isVisible ? cal.color : undefined }}
-        onClick={() => onToggle(cal.id)}
+      {/* Color indicator */}
+      <div
+        className="h-2.5 w-2.5 shrink-0 rounded-sm"
+        style={{ backgroundColor: cal.color }}
       />
-      <span className={`flex-1 truncate ${cal.isVisible ? "text-foreground" : "text-muted-foreground"}`}>{cal.name}</span>
+
+      {/* Calendar name */}
+      <span className={`flex-1 truncate ${cal.isVisible ? "text-foreground" : "text-muted-foreground line-through"}`}>
+        {cal.name}
+      </span>
+
+      {/* Visibility toggle (Eye icon) */}
+      <button
+        onClick={() => onToggle(cal.id)}
+        className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-accent"
+        title={cal.isVisible ? "Verberg kalender" : "Toon kalender"}
+      >
+        {cal.isVisible ? (
+          <Eye className="h-3 w-3 text-muted-foreground" />
+        ) : (
+          <EyeOff className="h-3 w-3 text-muted-foreground" />
+        )}
+      </button>
+
+      {/* Color picker button */}
       <button
         onClick={(e) => { e.stopPropagation(); setShowPicker(!showPicker); }}
-        className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100"
+        className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-accent"
+        title="Wijzig kleur"
       >
         <div className="h-2.5 w-2.5 rounded-full border border-border" style={{ backgroundColor: cal.color }} />
       </button>

@@ -14,7 +14,6 @@ import {
   endOfMonth,
   addDays,
 } from "date-fns";
-import type { CalendarEvent } from "@/lib/types";
 import { Loader2 } from "lucide-react";
 
 function DashboardContent() {
@@ -24,7 +23,8 @@ function DashboardContent() {
   const [rawEvents, setRawEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  const { currentDate, viewType, weekStartsOn, setCurrentDate, setViewType, registerCreateEvent, registerOpenEvent } = useCalendar();
+  const [error, setError] = useState<string | null>(null);
+  const { currentDate, viewType, weekStartsOn, setCurrentDate, setViewType, registerCreateEvent, registerOpenEvent, registerRefreshEvents } = useCalendar();
   const { todos, toggleTodo } = useTodos();
   const hasSynced = useRef(false);
   const hasInitialized = useRef(false);
@@ -85,25 +85,59 @@ function DashboardContent() {
   const fetchEvents = useCallback(
     async (signal?: AbortSignal) => {
       try {
+        setError(null); // Clear previous errors
         const url = `/api/events?start=${encodeURIComponent(dateRange.start)}&end=${encodeURIComponent(dateRange.end)}`;
         const res = await fetch(url, { signal });
-        if (res.ok) {
+
+        // Handle authentication errors (expired session)
+        if (res.status === 401) {
+          setError("Sessie verlopen. Log opnieuw in.");
+          router.push("/auth/sign-in");
+          return 0;
+        }
+
+        // Handle rate limiting
+        if (res.status === 429) {
           const data = await res.json();
-          if (Array.isArray(data)) {
-            // Store raw events (including RRULE metadata)
-            // Client-side hook will expand recurring events
-            setRawEvents(data);
-            setLoading(false);
-            return data.length;
-          }
+          setError(`Te veel verzoeken. Probeer het over ${Math.ceil((new Date(data.resetAt).getTime() - Date.now()) / 1000)}s opnieuw.`);
+          setLoading(false);
+          return 0;
+        }
+
+        // Handle other errors
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({ error: "Onbekende fout" }));
+          setError(data.error || `Fout bij ophalen van events (${res.status})`);
+          setLoading(false);
+          return 0;
+        }
+
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          // Store raw events (including RRULE metadata)
+          // Client-side hook will expand recurring events
+          setRawEvents(data);
+          setLoading(false);
+          return data.length;
+        } else {
+          setError("Ongeldig antwoord van server");
+          setLoading(false);
+          return 0;
         }
       } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return 0;
+        // Ignore abort errors (expected when switching views)
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return 0;
+        }
+
+        // Handle network errors
+        console.error("Fetch events error:", err);
+        setError("Netwerkfout. Controleer je internetverbinding.");
+        setLoading(false);
+        return 0;
       }
-      setLoading(false);
-      return 0;
     },
-    [dateRange]
+    [dateRange, router]
   );
 
   // Auto-sync on first load if no events (background, non-blocking)
@@ -112,9 +146,23 @@ function DashboardContent() {
     hasSynced.current = true;
     try {
       const res = await fetch("/api/calendars");
-      if (!res.ok) return;
+
+      // Handle authentication errors
+      if (res.status === 401) {
+        router.push("/auth/sign-in");
+        return;
+      }
+
+      if (!res.ok) {
+        console.warn("Failed to fetch calendars for sync:", res.status);
+        return;
+      }
+
       const groups = await res.json();
-      if (!Array.isArray(groups)) return;
+      if (!Array.isArray(groups)) {
+        console.warn("Invalid calendars response:", groups);
+        return;
+      }
 
       // Sync all accounts in parallel for better performance
       const syncPromises = groups
@@ -126,16 +174,19 @@ function DashboardContent() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: "sync", accountId: group.id }),
-          }).catch(() => {}); // Ignore errors - sync is best-effort
+          }).catch((err) => {
+            console.warn(`Sync failed for ${group.provider} account ${group.id}:`, err);
+          });
         });
 
       // Wait for all syncs to complete, then refresh events
       await Promise.all(syncPromises);
       await fetchEvents();
-    } catch {
-      /* ignore */
+    } catch (err) {
+      console.error("Trigger sync error:", err);
+      // Don't show error to user - sync is best-effort background operation
     }
-  }, [fetchEvents]);
+  }, [fetchEvents, router]);
 
   // Fetch events when date range changes or session becomes available
   useEffect(() => {
@@ -232,16 +283,48 @@ function DashboardContent() {
     };
   }, [fetchEvents, isSyncing]);
 
-  // Register create event function with context
+  // Register create event and refresh functions with context
   useEffect(() => {
     if (calendarRef.current) {
       registerCreateEvent(() => calendarRef.current?.openCreateModal());
       registerOpenEvent((eventId) => calendarRef.current?.openEventModal(eventId));
     }
-  }, [registerCreateEvent, registerOpenEvent]);
+    registerRefreshEvents(() => fetchEvents());
+  }, [registerCreateEvent, registerOpenEvent, registerRefreshEvents, fetchEvents]);
 
   return (
     <>
+      {/* Error notification */}
+      {error && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 backdrop-blur-sm px-4 py-2 shadow-lg">
+            <svg
+              className="h-4 w-4 text-destructive"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span className="text-sm font-medium text-destructive">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="ml-2 text-destructive hover:text-destructive/80 transition-colors"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sync notification */}
       {isSyncing && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex items-center gap-2 rounded-full border border-border bg-popover/95 backdrop-blur-sm px-4 py-2 shadow-lg">
@@ -250,6 +333,7 @@ function DashboardContent() {
           </div>
         </div>
       )}
+
       <CalendarView
         ref={calendarRef}
         currentDate={currentDate}

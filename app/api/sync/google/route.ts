@@ -99,13 +99,18 @@ export async function GET(request: NextRequest) {
         })
         .returning();
 
-      // Sync calendars + events immediately
+      // Sync calendars + events immediately (visible calendars only)
       try {
         await syncGoogleCalendars(newAccount.id);
         const cals = await db
           .select()
           .from(calendars)
-          .where(eq(calendars.accountId, newAccount.id));
+          .where(
+            and(
+              eq(calendars.accountId, newAccount.id),
+              eq(calendars.isVisible, true)
+            )
+          );
         await Promise.allSettled(
           cals.map((cal) => syncGoogleEvents(newAccount.id, cal.id))
         );
@@ -167,11 +172,16 @@ export async function POST(request: NextRequest) {
     // Sync calendars first
     await syncGoogleCalendars(accountId);
 
-    // Then sync events for all calendars
+    // Then sync events for visible calendars only (skip hidden calendars)
     const cals = await db
       .select()
       .from(calendars)
-      .where(eq(calendars.accountId, accountId));
+      .where(
+        and(
+          eq(calendars.accountId, accountId),
+          eq(calendars.isVisible, true)
+        )
+      );
 
     const results = await Promise.allSettled(
       cals.map((cal) => syncGoogleEvents(accountId, cal.id))

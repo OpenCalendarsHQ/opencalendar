@@ -121,22 +121,26 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Single optimized JOIN query: events + calendars + accounts
-    // Filters by userId at the account level (security), with date range
-    const conditions = [
+    // Base conditions (security, visibility, user ownership)
+    const baseConditions = [
       eq(calendarAccounts.userId, session.user.id),
       eq(calendarAccounts.isActive, true),
       eq(calendars.isVisible, true),
-      gte(events.endTime, startDate),
-      lte(events.startTime, endDate),
     ];
 
     if (calendarId) {
-      conditions.push(eq(events.calendarId, calendarId));
+      baseConditions.push(eq(events.calendarId, calendarId));
     }
 
-    // Single optimized query with LEFT JOIN for recurrence rules
-    const result = await db
+    // IMPORTANT: For recurring events, we DON'T filter by the original event's date
+    // because occurrences may fall within the range even if the original event doesn't.
+    // Client-side expansion (useRecurringEvents hook) handles the actual filtering.
+    // We fetch TWO sets of events:
+    // 1. Non-recurring events: filtered by date range (performance optimization)
+    // 2. Recurring events: NO date filter (they may have occurrences in range)
+
+    // Fetch non-recurring events with date filter
+    const nonRecurringEvents = await db
       .select({
         id: events.id,
         title: events.title,
@@ -157,7 +161,46 @@ export async function GET(request: NextRequest) {
       .innerJoin(calendars, eq(events.calendarId, calendars.id))
       .innerJoin(calendarAccounts, eq(calendars.accountId, calendarAccounts.id))
       .leftJoin(eventRecurrences, eq(events.id, eventRecurrences.eventId))
-      .where(and(...conditions));
+      .where(
+        and(
+          ...baseConditions,
+          eq(events.isRecurring, false),
+          gte(events.endTime, startDate),
+          lte(events.startTime, endDate)
+        )
+      );
+
+    // Fetch recurring events WITHOUT date filter
+    const recurringEvents = await db
+      .select({
+        id: events.id,
+        title: events.title,
+        description: events.description,
+        startTime: events.startTime,
+        endTime: events.endTime,
+        isAllDay: events.isAllDay,
+        location: events.location,
+        eventColor: events.color,
+        calendarColor: calendars.color,
+        calendarId: events.calendarId,
+        status: events.status,
+        isRecurring: events.isRecurring,
+        rrule: eventRecurrences.rrule,
+        exDates: eventRecurrences.exDates,
+      })
+      .from(events)
+      .innerJoin(calendars, eq(events.calendarId, calendars.id))
+      .innerJoin(calendarAccounts, eq(calendars.accountId, calendarAccounts.id))
+      .leftJoin(eventRecurrences, eq(events.id, eventRecurrences.eventId))
+      .where(
+        and(
+          ...baseConditions,
+          eq(events.isRecurring, true)
+        )
+      );
+
+    // Combine results
+    const result = [...nonRecurringEvents, ...recurringEvents];
 
     // Format the results and deduplicate (LEFT JOIN can create duplicates if there are multiple recurrence entries)
     const seen = new Set<string>();

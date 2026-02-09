@@ -69,11 +69,16 @@ export async function POST(request: NextRequest) {
         try {
           await syncICloudCalendars(newAccount.id);
 
-          // Now sync events for all calendars
+          // Now sync events for visible calendars only
           const cals = await db
             .select()
             .from(calendars)
-            .where(eq(calendars.accountId, newAccount.id));
+            .where(
+              and(
+                eq(calendars.accountId, newAccount.id),
+                eq(calendars.isVisible, true)
+              )
+            );
 
           await Promise.allSettled(
             cals.map((cal) => syncICloudEvents(newAccount.id, cal.id))
@@ -116,11 +121,16 @@ export async function POST(request: NextRequest) {
         // Sync calendars
         await syncICloudCalendars(accountId);
 
-        // Sync events for all calendars
+        // Sync events for visible calendars only (skip hidden calendars)
         const cals = await db
           .select()
           .from(calendars)
-          .where(eq(calendars.accountId, accountId));
+          .where(
+            and(
+              eq(calendars.accountId, accountId),
+              eq(calendars.isVisible, true)
+            )
+          );
 
         const results = await Promise.allSettled(
           cals.map((cal) => syncICloudEvents(accountId, cal.id))

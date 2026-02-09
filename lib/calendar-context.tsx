@@ -18,6 +18,8 @@ interface CalendarContextValue {
   createEvent: () => void;
   registerOpenEvent: (fn: (eventId: string) => void) => void;
   openEvent: (eventId: string) => void;
+  registerRefreshEvents: (fn: () => void) => void;
+  refreshEvents: () => void;
   commandMenuOpen: boolean;
   setCommandMenuOpen: Dispatch<SetStateAction<boolean>>;
   toggleCommandMenu: () => void;
@@ -32,6 +34,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
   const createEventRef = useRef<(() => void) | null>(null);
   const openEventRef = useRef<((eventId: string) => void) | null>(null);
+  const refreshEventsRef = useRef<(() => void) | null>(null);
 
   const navigateBack = useCallback(() => {
     setCurrentDate((prev) => {
@@ -73,6 +76,14 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     setCommandMenuOpen((prev) => !prev);
   }, []);
 
+  const registerRefreshEvents = useCallback((fn: () => void) => {
+    refreshEventsRef.current = fn;
+  }, []);
+
+  const refreshEvents = useCallback(() => {
+    refreshEventsRef.current?.();
+  }, []);
+
   return (
     <CalendarContext.Provider
       value={{
@@ -88,6 +99,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         createEvent,
         registerOpenEvent,
         openEvent,
+        registerRefreshEvents,
+        refreshEvents,
         commandMenuOpen,
         setCommandMenuOpen,
         toggleCommandMenu,

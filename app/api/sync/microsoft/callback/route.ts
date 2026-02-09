@@ -95,11 +95,16 @@ export async function GET(request: NextRequest) {
       try {
         await syncMicrosoftCalendars(accountId);
 
-        // Now sync events for all calendars
+        // Now sync events for visible calendars only
         const cals = await db
           .select()
           .from(calendars)
-          .where(eq(calendars.accountId, accountId));
+          .where(
+            and(
+              eq(calendars.accountId, accountId),
+              eq(calendars.isVisible, true)
+            )
+          );
 
         await Promise.allSettled(
           cals.map((cal) => syncMicrosoftEvents(accountId, cal.id))
@@ -169,11 +174,16 @@ export async function POST(request: NextRequest) {
     // Sync calendars
     await syncMicrosoftCalendars(accountId);
 
-    // Sync events for all calendars
+    // Sync events for visible calendars only (skip hidden calendars)
     const cals = await db
       .select()
       .from(calendars)
-      .where(eq(calendars.accountId, accountId));
+      .where(
+        and(
+          eq(calendars.accountId, accountId),
+          eq(calendars.isVisible, true)
+        )
+      );
 
     const results = await Promise.allSettled(
       cals.map((cal) => syncMicrosoftEvents(accountId, cal.id))

@@ -50,15 +50,20 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         }),
       }))
     );
-    // Persist to API
+    // Persist to API and refresh events
     setTimeout(() => {
       fetch("/api/calendars", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: calendarId, isVisible: newVisibility }),
-      }).catch(() => {});
+      })
+        .then(() => {
+          // Refresh calendar view to show/hide events immediately
+          calendar.refreshEvents();
+        })
+        .catch(() => {});
     }, 0);
-  }, []);
+  }, [calendar]);
 
   const handleChangeCalendarColor = useCallback((calendarId: string, color: string) => {
     setCalendarGroups((prev) =>
@@ -69,13 +74,18 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         ),
       }))
     );
-    // Persist to API
+    // Persist to API and refresh events to show new colors
     fetch("/api/calendars", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: calendarId, color }),
-    }).catch(() => {});
-  }, []);
+    })
+      .then(() => {
+        // Refresh calendar view to show new colors immediately
+        calendar.refreshEvents();
+      })
+      .catch(() => {});
+  }, [calendar]);
 
   const handleSync = useCallback(async () => {
     try {
