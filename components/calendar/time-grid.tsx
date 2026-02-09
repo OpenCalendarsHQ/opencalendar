@@ -68,7 +68,7 @@ export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, o
 
     const rect = gridEl.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top + container.scrollTop;
+    const y = e.clientY - rect.top;
 
     const colWidth = rect.width / columnCount;
     const columnIndex = Math.max(0, Math.min(columnCount - 1, Math.floor(x / colWidth)));
@@ -116,7 +116,7 @@ export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, o
       if (!gridEl) return;
 
       const rect = gridEl.getBoundingClientRect();
-      const y = e.clientY - rect.top + container.scrollTop;
+      const y = e.clientY - rect.top;
       const minutes = snapToGrid(Math.max(0, Math.min(24 * 60, positionToMinutes(y))));
 
       setDrag((prev) => prev ? { ...prev, currentMinutes: minutes } : null);
