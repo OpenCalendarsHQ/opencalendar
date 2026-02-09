@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use tauri::State;
+use tauri::{Emitter, Manager, State};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct AuthTokens {
@@ -68,6 +68,25 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            println!("Single instance callback - args: {:?}, cwd: {:?}", args, cwd);
+
+            // Try to focus the existing window
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_focus();
+            }
+
+            // Check if there's a deep link in the args
+            for arg in args {
+                if arg.starts_with("opencalendar://") {
+                    println!("Deep link from new instance: {}", arg);
+                    // Emit the deep link to the existing instance
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.emit("deep-link://new-url", vec![arg.clone()]);
+                    }
+                }
+            }
+        }))
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
             get_token,
@@ -82,6 +101,11 @@ pub fn run() {
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
                 app.deep_link().register("opencalendar")?;
+
+                // Listen for deep links and emit them to the frontend
+                app.deep_link().on_open_url(move |event| {
+                    println!("Deep link received in main instance: {:?}", event.urls());
+                });
             }
             Ok(())
         })

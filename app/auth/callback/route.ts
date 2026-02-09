@@ -4,7 +4,14 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/";
+  let next = searchParams.get("next") ?? "/";
+
+  // Decode the next parameter if it's URL encoded
+  try {
+    next = decodeURIComponent(next);
+  } catch {
+    next = "/";
+  }
 
   console.log("Auth callback received:", {
     code: code ? `${code.substring(0, 10)}...` : null,

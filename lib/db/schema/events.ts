@@ -28,8 +28,8 @@ export const events = pgTable("events", {
   externalId: text("external_id"), // ID from external provider
   title: text("title").notNull().default("(Geen titel)"),
   description: text("description"),
-  startTime: timestamp("start_time").notNull(),
-  endTime: timestamp("end_time").notNull(),
+  startTime: timestamp("start_time", { withTimezone: true }).notNull(),
+  endTime: timestamp("end_time", { withTimezone: true }).notNull(),
   isAllDay: boolean("is_all_day").notNull().default(false),
   location: text("location"),
   status: eventStatusEnum("status").notNull().default("confirmed"),
@@ -41,8 +41,8 @@ export const events = pgTable("events", {
   color: text("color"), // Override color (null = use calendar color)
   url: text("url"), // Conference/meeting URL
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   // PERFORMANCE: Most critical index - used in every event query
   calendarIdIdx: index("events_calendar_id_idx").on(table.calendarId),
@@ -60,7 +60,7 @@ export const eventRecurrences = pgTable("event_recurrences", {
     .notNull()
     .references(() => events.id, { onDelete: "cascade" }),
   rrule: text("rrule").notNull(), // RFC 5545 RRULE string
-  recurUntil: timestamp("recur_until"), // End date of recurrence
+  recurUntil: timestamp("recur_until", { withTimezone: true }), // End date of recurrence
   recurCount: integer("recur_count"), // Number of occurrences
   exDates: jsonb("ex_dates").$type<string[]>(), // Excluded dates (ISO strings)
 }, (table) => ({
@@ -74,9 +74,9 @@ export const eventInstances = pgTable("event_instances", {
   eventId: uuid("event_id")
     .notNull()
     .references(() => events.id, { onDelete: "cascade" }),
-  originalStart: timestamp("original_start").notNull(), // Original scheduled start
-  startTime: timestamp("start_time").notNull(), // Actual start (may differ if moved)
-  endTime: timestamp("end_time").notNull(),
+  originalStart: timestamp("original_start", { withTimezone: true }).notNull(), // Original scheduled start
+  startTime: timestamp("start_time", { withTimezone: true }).notNull(), // Actual start (may differ if moved)
+  endTime: timestamp("end_time", { withTimezone: true }).notNull(),
   isCancelled: boolean("is_cancelled").notNull().default(false),
   overrides: jsonb("overrides").$type<{
     title?: string;

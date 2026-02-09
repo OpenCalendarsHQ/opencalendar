@@ -30,12 +30,12 @@ export const calendarAccounts = pgTable("calendar_accounts", {
   email: text("email").notNull(),
   accessToken: text("access_token"), // Encrypted OAuth token (Google) or app password (iCloud)
   refreshToken: text("refresh_token"), // Google OAuth refresh token
-  tokenExpiresAt: timestamp("token_expires_at"),
+  tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
   providerData: jsonb("provider_data").$type<Record<string, unknown>>(), // Extra provider-specific data
-  lastSyncAt: timestamp("last_sync_at"),
+  lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
   isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   // PERFORMANCE: Index on userId for fast lookup by user (used in every calendar query)
   userIdIdx: index("calendar_accounts_user_id_idx").on(table.userId),
@@ -57,8 +57,8 @@ export const calendars = pgTable("calendars", {
   isReadOnly: boolean("is_read_only").notNull().default(false),
   isPrimary: boolean("is_primary").notNull().default(false),
   timezone: text("timezone").default("Europe/Amsterdam"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   // PERFORMANCE: Index on accountId for fast lookup by account (used in calendar queries)
   accountIdIdx: index("calendars_account_id_idx").on(table.accountId),

@@ -40,6 +40,6 @@ export const userSettings = pgTable("user_settings", {
   enableNotifications: boolean("enable_notifications").notNull().default(false),
 
   // Timestamps
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

@@ -28,11 +28,11 @@ export const syncStates = pgTable("sync_states", {
   }),
   syncToken: text("sync_token"), // Google Calendar sync token
   ctag: text("ctag"), // CalDAV collection tag
-  lastSyncAt: timestamp("last_sync_at"),
+  lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
   syncStatus: syncStatusEnum("sync_status").notNull().default("idle"),
   errorMessage: text("error_message"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   // PERFORMANCE: Index on accountId for sync queries
   accountIdIdx: index("sync_states_account_id_idx").on(table.accountId),
