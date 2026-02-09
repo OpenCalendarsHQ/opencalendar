@@ -124,7 +124,21 @@ export default function WelcomePage() {
               Arjan den Hartog
             </Link>
           </p>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 text-sm">
+              <Link
+                href="/privacy"
+                className="text-zinc-400 transition-colors hover:text-white"
+              >
+                Privacy
+              </Link>
+              <Link
+                href="/terms"
+                className="text-zinc-400 transition-colors hover:text-white"
+              >
+                Terms
+              </Link>
+            </div>
             <Link
               href="https://github.com/ArjandenHartog/opencalendar"
               target="_blank"

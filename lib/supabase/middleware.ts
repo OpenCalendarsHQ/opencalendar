@@ -50,7 +50,9 @@ export async function updateSession(request: NextRequest) {
     !user &&
     !request.nextUrl.pathname.startsWith("/auth") &&
     !request.nextUrl.pathname.startsWith("/api") &&
-    !request.nextUrl.pathname.startsWith("/welcome")
+    !request.nextUrl.pathname.startsWith("/welcome") &&
+    !request.nextUrl.pathname.startsWith("/privacy") &&
+    !request.nextUrl.pathname.startsWith("/terms")
   ) {
     // Redirect unauthenticated users to welcome page
     const url = request.nextUrl.clone();
