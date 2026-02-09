@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
@@ -115,9 +115,21 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Close mobile sidebar on navigation
-  useEffect(() => {
-    setMobileSidebarOpen(false);
-  }, [calendar.currentDate, calendar.viewType]);
+  const prevDateRef = useRef(calendar.currentDate);
+  const prevViewRef = useRef(calendar.viewType);
+
+  // Track changes and close sidebar (no setState in effect, just refs)
+  if (
+    (prevDateRef.current !== calendar.currentDate ||
+     prevViewRef.current !== calendar.viewType) &&
+    mobileSidebarOpen
+  ) {
+    // Schedule state update for next render
+    queueMicrotask(() => setMobileSidebarOpen(false));
+  }
+
+  prevDateRef.current = calendar.currentDate;
+  prevViewRef.current = calendar.viewType;
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background safe-top">

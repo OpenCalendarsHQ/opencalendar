@@ -1,16 +1,21 @@
 "use client";
 
 import { UserButton } from "@neondatabase/auth/react";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+
+// Client-side only check using useSyncExternalStore
+const useIsClient = () => {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+};
 
 export function UserButtonWrapper({ size }: { size?: "icon" | "sm" | "lg" }) {
-  const [mounted, setMounted] = useState(false);
+  const isClient = useIsClient();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
+  if (!isClient) {
     // Render a placeholder during SSR to avoid hydration mismatch
     return (
       <button className="h-10 w-10 rounded-full bg-muted" aria-label="User menu" />

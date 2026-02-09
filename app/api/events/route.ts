@@ -52,7 +52,9 @@ const eventSchema = z.object({
 // GET /api/events?start=...&end=...&calendarId=...
 export async function GET(request: NextRequest) {
   try {
-    const { data: session } = await auth.api.getSession({ headers: request.headers });
+    const { data: session } = await auth.getSession({
+      fetchOptions: { headers: request.headers }
+    });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
@@ -194,7 +196,9 @@ export async function GET(request: NextRequest) {
 // POST /api/events
 export async function POST(request: NextRequest) {
   try {
-    const { data: session } = await auth.api.getSession({ headers: request.headers });
+    const { data: session } = await auth.getSession({
+      fetchOptions: { headers: request.headers }
+    });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
@@ -276,7 +280,9 @@ export async function POST(request: NextRequest) {
 // PUT /api/events (update)
 export async function PUT(request: NextRequest) {
   try {
-    const { data: session } = await auth.api.getSession({ headers: request.headers });
+    const { data: session } = await auth.getSession({
+      fetchOptions: { headers: request.headers }
+    });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
@@ -438,7 +444,9 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/events?id=...
 export async function DELETE(request: NextRequest) {
   try {
-    const { data: session } = await auth.api.getSession({ headers: request.headers });
+    const { data: session } = await auth.getSession({
+      fetchOptions: { headers: request.headers }
+    });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }

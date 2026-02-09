@@ -8,7 +8,9 @@ import { eq, inArray } from "drizzle-orm";
 // GET /api/calendars - Get all calendars for the current user
 export async function GET(request: NextRequest) {
   try {
-    const { data: session } = await auth.api.getSession({ headers: request.headers });
+    const { data: session } = await auth.getSession({
+      fetchOptions: { headers: request.headers }
+    });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
@@ -78,7 +80,9 @@ export async function GET(request: NextRequest) {
 // POST /api/calendars - Create a local calendar
 export async function POST(request: NextRequest) {
   try {
-    const { data: session } = await auth.api.getSession({ headers: request.headers });
+    const { data: session } = await auth.getSession({
+      fetchOptions: { headers: request.headers }
+    });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
@@ -135,7 +139,9 @@ export async function POST(request: NextRequest) {
 // PATCH /api/calendars - Update calendar color/visibility/name
 export async function PATCH(request: NextRequest) {
   try {
-    const { data: session } = await auth.api.getSession({ headers: request.headers });
+    const { data: session } = await auth.getSession({
+      fetchOptions: { headers: request.headers }
+    });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
@@ -179,7 +185,9 @@ export async function PATCH(request: NextRequest) {
 // DELETE /api/calendars?accountId=... - Delete a connected account and all its data
 export async function DELETE(request: NextRequest) {
   try {
-    const { data: session } = await auth.api.getSession({ headers: request.headers });
+    const { data: session } = await auth.getSession({
+      fetchOptions: { headers: request.headers }
+    });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }

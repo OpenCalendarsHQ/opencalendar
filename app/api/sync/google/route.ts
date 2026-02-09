@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
 
   // Step 1: Initiate OAuth flow
   if (action === "connect") {
-    const { data: session } = await auth.api.getSession({ headers: request.headers });
+    const { data: session } = await auth.getSession({
+      fetchOptions: { headers: request.headers }
+    });
     if (!session?.user) {
       return NextResponse.redirect(new URL("/auth/sign-in", request.url));
     }
@@ -117,7 +119,9 @@ export async function GET(request: NextRequest) {
 // POST /api/sync/google - Trigger sync for an account
 export async function POST(request: NextRequest) {
   try {
-    const { data: session } = await auth.api.getSession({ headers: request.headers });
+    const { data: session } = await auth.getSession({
+      fetchOptions: { headers: request.headers }
+    });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }

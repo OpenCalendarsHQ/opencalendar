@@ -13,7 +13,9 @@ import {
 // POST /api/sync/icloud - Connect iCloud account or trigger sync
 export async function POST(request: NextRequest) {
   try {
-    const { data: session } = await auth.api.getSession({ headers: request.headers });
+    const { data: session } = await auth.getSession({
+      fetchOptions: { headers: request.headers }
+    });
     if (!session?.user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }

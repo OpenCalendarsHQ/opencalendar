@@ -7,7 +7,9 @@ import { eq } from "drizzle-orm";
 // GET /api/settings - Fetch user settings
 export async function GET(request: NextRequest) {
   try {
-    const { data: session } = await auth.api.getSession({ headers: request.headers });
+    const { data: session } = await auth.getSession({
+      fetchOptions: { headers: request.headers }
+    });
     if (!session?.user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
@@ -38,7 +40,9 @@ export async function GET(request: NextRequest) {
 // PUT /api/settings - Update user settings
 export async function PUT(request: NextRequest) {
   try {
-    const { data: session } = await auth.api.getSession({ headers: request.headers });
+    const { data: session } = await auth.getSession({
+      fetchOptions: { headers: request.headers }
+    });
     if (!session?.user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
