@@ -20,6 +20,52 @@ export default function AppearanceSettingsPage() {
       </div>
 
       <div className="space-y-6">
+        {/* Theme */}
+        <SettingSection title="Thema" description="Kies tussen licht, donker of automatisch op basis van systeem">
+          <div className="flex gap-2">
+            {([
+              { value: "light" as const, label: "Licht" },
+              { value: "dark" as const, label: "Donker" },
+              { value: "auto" as const, label: "Automatisch" },
+            ]).map((opt) => (
+              <OptionButton
+                key={opt.value}
+                label={opt.label}
+                selected={settings.theme === opt.value}
+                onClick={() => updateSettings({ theme: opt.value })}
+              />
+            ))}
+          </div>
+        </SettingSection>
+
+        {/* Color scheme */}
+        <SettingSection title="Kleurenschema" description="Kies een kleurthema voor de app">
+          <div className="flex gap-2">
+            {([
+              { value: "default" as const, label: "Standaard" },
+              { value: "blue" as const, label: "Blauw" },
+              { value: "purple" as const, label: "Paars" },
+              { value: "green" as const, label: "Groen" },
+              { value: "orange" as const, label: "Oranje" },
+            ]).map((opt) => (
+              <OptionButton
+                key={opt.value}
+                label={opt.label}
+                selected={settings.colorScheme === opt.value}
+                onClick={() => updateSettings({ colorScheme: opt.value })}
+              />
+            ))}
+          </div>
+        </SettingSection>
+
+        {/* Compact mode */}
+        <SettingSection title="Compacte modus" description="Dichtere UI voor meer informatie op het scherm">
+          <ToggleSwitch
+            checked={settings.compactMode}
+            onChange={(checked) => updateSettings({ compactMode: checked })}
+          />
+        </SettingSection>
+
         {/* First day of week */}
         <SettingSection title="Eerste dag van de week" description="Kies of de week begint op maandag of zondag">
           <div className="flex gap-2">

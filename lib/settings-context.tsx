@@ -10,6 +10,7 @@ import {
 } from "react";
 
 export interface AppSettings {
+  // Basic display
   weekStartsOn: 0 | 1; // 0 = Sunday, 1 = Monday
   timeFormat: "24h" | "12h";
   timezone: string;
@@ -17,9 +18,33 @@ export interface AppSettings {
   defaultView: "day" | "week" | "month";
   defaultEventDuration: 30 | 60 | 90 | 120; // minutes
   showDeclinedEvents: boolean;
+
+  // Theme & appearance
+  theme: "light" | "dark" | "auto";
+  colorScheme: "default" | "blue" | "purple" | "green" | "orange";
+  compactMode: boolean;
+
+  // Working hours & time slots
+  showWorkingHours: boolean;
+  workingHoursStart: number; // 0-23 (hour)
+  workingHoursEnd: number; // 0-23 (hour)
+  dayStartHour: number; // 0-23 (start of visible day)
+  dayEndHour: number; // 0-23 (end of visible day)
+  timeSlotInterval: 15 | 30 | 60; // minutes
+  showWeekends: boolean;
+
+  // Calendar preferences
+  defaultCalendarId: string | null;
+  eventColorSource: "calendar" | "event"; // Use calendar color or event's own color
+  showMiniCalendar: boolean;
+
+  // Notifications (for later)
+  defaultReminders: number[]; // minutes before event: [15, 60, 1440]
+  enableNotifications: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
+  // Basic display
   weekStartsOn: 1, // Monday (European default)
   timeFormat: "24h",
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Amsterdam",
@@ -27,6 +52,29 @@ const DEFAULT_SETTINGS: AppSettings = {
   defaultView: "week",
   defaultEventDuration: 60,
   showDeclinedEvents: false,
+
+  // Theme & appearance
+  theme: "auto",
+  colorScheme: "default",
+  compactMode: false,
+
+  // Working hours & time slots
+  showWorkingHours: true,
+  workingHoursStart: 9,
+  workingHoursEnd: 17,
+  dayStartHour: 6,
+  dayEndHour: 22,
+  timeSlotInterval: 30,
+  showWeekends: true,
+
+  // Calendar preferences
+  defaultCalendarId: null,
+  eventColorSource: "calendar",
+  showMiniCalendar: true,
+
+  // Notifications (for later)
+  defaultReminders: [15, 60], // 15 min and 1 hour before
+  enableNotifications: false,
 };
 
 const STORAGE_KEY = "opencalendar-settings";
