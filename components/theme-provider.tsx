@@ -1,13 +1,18 @@
 "use client";
 
-import { useEffect } from "react";
-import { useSettings } from "@/lib/settings-context";
+import { useEffect, useContext } from "react";
+import { SettingsContext } from "@/lib/settings-context";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { settings } = useSettings();
+  // Use context directly to avoid throwing error if SettingsProvider is not available
+  const context = useContext(SettingsContext);
+  const settings = context?.settings;
 
   // Apply theme class to html element and sync to localStorage
   useEffect(() => {
+    // Skip if settings are not available (not in SettingsProvider context)
+    if (!settings) return;
+
     const root = document.documentElement;
 
     // Remove existing theme classes
@@ -35,10 +40,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       mediaQuery.addEventListener("change", handleChange);
       return () => mediaQuery.removeEventListener("change", handleChange);
     }
-  }, [settings.theme]);
+  }, [settings]);
 
   // Apply color scheme and sync to localStorage
   useEffect(() => {
+    // Skip if settings are not available (not in SettingsProvider context)
+    if (!settings) return;
+
     const root = document.documentElement;
 
     // Remove existing color scheme classes
@@ -47,10 +55,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Add new color scheme class
     root.classList.add(`scheme-${settings.colorScheme}`);
     localStorage.setItem("colorScheme", settings.colorScheme);
-  }, [settings.colorScheme]);
+  }, [settings]);
 
   // Apply compact mode and sync to localStorage
   useEffect(() => {
+    // Skip if settings are not available (not in SettingsProvider context)
+    if (!settings) return;
+
     const root = document.documentElement;
 
     if (settings.compactMode) {
@@ -60,7 +71,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.remove("compact");
       localStorage.setItem("compactMode", "false");
     }
-  }, [settings.compactMode]);
+  }, [settings]);
 
   return <>{children}</>;
 }

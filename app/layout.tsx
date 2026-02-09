@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
-import { GeistPixelSquare } from "geist/font/pixel";
+// Only import fonts that are actually used
+// import { GeistMono } from "geist/font/mono";
+// import { GeistPixelSquare } from "geist/font/pixel";
 import { Providers } from "@/components/providers";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import "./globals.css";
@@ -56,7 +57,7 @@ export default function RootLayout({
   return (
     <html lang="nl" suppressHydrationWarning>
       <body
-        className={`${GeistSans.variable} ${GeistMono.variable} ${GeistPixelSquare.variable} font-sans antialiased`}
+        className={`${GeistSans.variable} font-sans antialiased`}
       >
         <script
           dangerouslySetInnerHTML={{

@@ -13,6 +13,7 @@ import { useSession } from "@/lib/auth/client";
 import type { CalendarGroup } from "@/lib/types";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { DragProvider } from "@/lib/drag-context";
+import { SettingsProvider } from "@/lib/settings-context";
 
 function DashboardInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -255,11 +256,13 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary>
-      <CalendarProvider>
-        <DragProvider>
-          <DashboardInner>{children}</DashboardInner>
-        </DragProvider>
-      </CalendarProvider>
+      <SettingsProvider>
+        <CalendarProvider>
+          <DragProvider>
+            <DashboardInner>{children}</DashboardInner>
+          </DragProvider>
+        </CalendarProvider>
+      </SettingsProvider>
     </ErrorBoundary>
   );
 }

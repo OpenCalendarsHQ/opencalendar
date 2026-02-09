@@ -4,7 +4,12 @@ import { useEffect } from "react";
 
 export function ServiceWorkerRegister() {
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
+    // Only register service worker in production (not on localhost)
+    if (
+      "serviceWorker" in navigator &&
+      process.env.NODE_ENV === "production" &&
+      window.location.protocol === "https:"
+    ) {
       navigator.serviceWorker
         .register("/sw.js")
         .then((registration) => {
