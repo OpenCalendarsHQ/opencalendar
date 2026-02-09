@@ -44,7 +44,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </Link>
 
         <div className="relative z-10">
-          <h1 className="mb-4 text-5xl font-bold leading-tight text-white">
+          <h1 className="mb-4 text-5xl font-pixel font-bold leading-tight text-white">
             Build <span className="text-blue-400">better schedules</span><br />
             with OpenCalendar
           </h1>

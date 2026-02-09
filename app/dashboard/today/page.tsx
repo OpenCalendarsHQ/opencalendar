@@ -120,7 +120,7 @@ export default function TodayPage() {
         <div>
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Taken</span>
-            <Link href="/tasks" className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground">
+            <Link href="/dashboard/tasks" className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground">
               Alle taken <ArrowRight className="h-3 w-3" />
             </Link>
           </div>

@@ -244,8 +244,8 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         onCreateEvent={calendar.createEvent}
         onNavigateToSettings={() => router.push("/settings")}
         onNavigateToday={calendar.navigateToday}
-        onNavigateToTasks={() => router.push("/tasks")}
-        onNavigateToFocus={() => router.push("/today")}
+        onNavigateToTasks={() => router.push("/dashboard/tasks")}
+        onNavigateToFocus={() => router.push("/dashboard/today")}
         onEventClick={calendar.openEvent}
       />
     </div>
