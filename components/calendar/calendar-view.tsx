@@ -82,8 +82,51 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
     onViewTypeChange("day");
   }, [onDateChange, onViewTypeChange]);
 
-  const handleSaveEvent = useCallback(async (eventData: Partial<CalendarEvent>) => {
+  const handleSaveEvent = useCallback(async (eventData: Partial<CalendarEvent> & {
+    isSingleOccurrenceEdit?: boolean;
+    originalRecurringEventId?: string;
+    originalOccurrenceDate?: string;
+  }) => {
     try {
+      // Check if this is a single occurrence edit of a recurring event
+      if (eventData.isSingleOccurrenceEdit && eventData.originalRecurringEventId && eventData.originalOccurrenceDate) {
+        // Step 1: Add EXDATE to the original recurring event
+        const exRes = await fetch("/api/events/exception", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventId: eventData.originalRecurringEventId,
+            exceptionDate: eventData.originalOccurrenceDate,
+          }),
+        });
+
+        if (!exRes.ok) {
+          console.error("Failed to add exception date");
+          return;
+        }
+
+        // Step 2: Create a new single event with the edited details
+        const createRes = await fetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            calendarId: eventData.calendarId,
+            title: eventData.title || "(Geen titel)",
+            description: eventData.description,
+            startTime: eventData.startTime?.toISOString(),
+            endTime: eventData.endTime?.toISOString(),
+            isAllDay: eventData.isAllDay || false,
+            location: eventData.location,
+            color: eventData.color,
+          }),
+        });
+
+        if (createRes.ok) {
+          onEventsChange();
+        }
+        return;
+      }
+
       if (isNewEvent) {
         // Create new event via API
         const res = await fetch("/api/events", {
@@ -129,7 +172,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
     } catch (error) {
       console.error("Failed to save event:", error);
     }
-  }, [events, isNewEvent, onEventsChange]);
+  }, [isNewEvent, onEventsChange]);
 
   const handleDeleteEvent = useCallback(async (eventId: string) => {
     try {
@@ -162,9 +205,20 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
   const handleEditThisOccurrence = useCallback(() => {
     if (!pendingEvent) return;
     setShowRecurringDialog(false);
-    // For now, just open the event modal for this occurrence
-    // TODO: Implement single occurrence editing
-    setSelectedEvent(pendingEvent);
+
+    // For single occurrence editing, we'll:
+    // 1. Mark this occurrence for exception (will be added on save)
+    // 2. Create a new single event with these details
+    // Store the originalId and occurrence date so we can add EXDATE on save
+    const eventForEditing = {
+      ...pendingEvent,
+      // Mark this as a single occurrence edit
+      isSingleOccurrenceEdit: true,
+      originalRecurringEventId: pendingEvent.originalId || pendingEvent.id,
+      originalOccurrenceDate: pendingEvent.startTime.toISOString(),
+    };
+
+    setSelectedEvent(eventForEditing);
     setIsNewEvent(false);
     setIsModalOpen(true);
     setPendingEvent(null);
@@ -197,10 +251,43 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
   const handleDeleteThisOccurrence = useCallback(async () => {
     if (!pendingEvent) return;
     setShowRecurringDialog(false);
-    // TODO: Implement single occurrence deletion (requires exception dates)
-    console.log("Delete single occurrence not yet implemented");
+
+    try {
+      // Find the original recurring event
+      const originalId = pendingEvent.originalId || pendingEvent.id;
+      const originalEvent = rawEvents.find((e) => e.id === originalId);
+
+      if (!originalEvent) {
+        console.error("Original recurring event not found");
+        setPendingEvent(null);
+        return;
+      }
+
+      // Add this occurrence's start date as an exception (EXDATE)
+      // Format as ISO date string
+      const exceptionDate = pendingEvent.startTime.toISOString();
+
+      // Update the event with the new EXDATE
+      const res = await fetch("/api/events/exception", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId: originalId,
+          exceptionDate,
+        }),
+      });
+
+      if (res.ok) {
+        onEventsChange();
+      } else {
+        console.error("Failed to add exception date");
+      }
+    } catch (error) {
+      console.error("Failed to delete single occurrence:", error);
+    }
+
     setPendingEvent(null);
-  }, [pendingEvent]);
+  }, [pendingEvent, rawEvents, onEventsChange]);
 
   const handleDeleteAllOccurrences = useCallback(async () => {
     if (!pendingEvent) return;

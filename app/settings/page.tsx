@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Palette,
@@ -56,6 +57,7 @@ const comingSoonItems = [
 ];
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
   const [showICloudModal, setShowICloudModal] = useState(false);
   const [iCloudEmail, setICloudEmail] = useState("");
@@ -114,11 +116,8 @@ export default function SettingsPage() {
         return;
       }
       if (res.ok) {
-        setShowICloudModal(false);
-        setICloudEmail("");
-        setICloudPassword("");
-        setError(null);
-        await fetchAccounts();
+        // Redirect to home with syncing flag - sync will continue in background
+        router.push("/?syncing=true");
       } else {
         setError((data.error as string) || "Verbinding mislukt.");
       }
@@ -336,11 +335,16 @@ export default function SettingsPage() {
           <div className="fixed inset-0 bg-black/20" onClick={() => setShowICloudModal(false)} />
           <div className="relative w-full max-w-sm rounded-t-xl border border-border bg-popover p-5 shadow-lg safe-bottom md:rounded-lg">
             <h2 className="text-sm font-medium text-foreground">iCloud Calendar verbinden</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Gebruik een{" "}
-              <a href="https://support.apple.com/en-us/102654" target="_blank" rel="noopener noreferrer"
-                className="underline hover:text-foreground">app-specifiek wachtwoord</a>.
-            </p>
+            <div className="mt-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+              <p className="font-medium text-foreground">Hoe krijg ik een app-wachtwoord?</p>
+              <ol className="mt-2 space-y-1 list-decimal list-inside">
+                <li>Ga naar <a href="https://account.apple.com/account/manage" target="_blank" rel="noopener noreferrer"
+                  className="text-foreground underline hover:text-foreground/80">account.apple.com</a></li>
+                <li>Log in met je Apple ID</li>
+                <li>Ga naar &quot;Beveiliging&quot; → &quot;App-specifieke wachtwoorden&quot;</li>
+                <li>Genereer een nieuw wachtwoord voor &quot;OpenCalendar&quot;</li>
+              </ol>
+            </div>
             {error && (
               <div className="mt-3 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">{error}</div>
             )}

@@ -424,6 +424,22 @@ export async function updateICloudEvent(
     throw new Error("Event not synced to iCloud or missing ICS data");
   }
 
+  // Get recurrence data if this is a recurring event
+  let rrule: string | null = null;
+  let exDates: string[] | null = null;
+
+  if (event.isRecurring) {
+    const [recurrence] = await db
+      .select()
+      .from(eventRecurrences)
+      .where(eq(eventRecurrences.eventId, eventId));
+
+    if (recurrence) {
+      rrule = recurrence.rrule;
+      exDates = recurrence.exDates as string[] | null;
+    }
+  }
+
   // Rebuild ICS with updated fields
   const uid = event.icsUid || crypto.randomUUID();
   const startTime = eventData.startTime || event.startTime;
@@ -438,6 +454,8 @@ export async function updateICloudEvent(
     isAllDay,
     location: eventData.location || event.location,
     description: eventData.description || event.description,
+    rrule,
+    exDates: exDates || undefined,
     sequence: 1, // Increment sequence on update
     alarms: [{ trigger: "-PT15M" }],
   });

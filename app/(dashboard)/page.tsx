@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarView, type CalendarViewRef } from "@/components/calendar/calendar-view";
 import { useCalendar } from "@/lib/calendar-context";
 import { useTodos } from "@/hooks/use-todos";
@@ -15,18 +15,22 @@ import {
   addDays,
 } from "date-fns";
 import type { CalendarEvent } from "@/lib/types";
+import { Loader2 } from "lucide-react";
 
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, isPending } = useSession();
   const [rawEvents, setRawEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const { currentDate, viewType, weekStartsOn, setCurrentDate, setViewType, registerCreateEvent, registerOpenEvent } = useCalendar();
   const { todos, toggleTodo } = useTodos();
   const hasSynced = useRef(false);
   const hasInitialized = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const calendarRef = useRef<CalendarViewRef>(null);
+  const syncingStartTime = useRef<number>(0);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -34,6 +38,16 @@ export default function DashboardPage() {
       router.push("/auth/sign-in");
     }
   }, [session, isPending, router]);
+
+  // Detect if we just added an account and should start rapid polling
+  useEffect(() => {
+    if (searchParams.get("syncing") === "true") {
+      setIsSyncing(true);
+      syncingStartTime.current = Date.now();
+      // Clear the URL parameter
+      router.replace("/", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   // Compute visible date range based on current view
   const dateRange = useMemo(() => {
@@ -143,8 +157,44 @@ export default function DashboardPage() {
     return () => controller.abort();
   }, [fetchEvents, triggerSync, session, isPending]);
 
-  // Periodic refresh (every 5 minutes) - only when tab is visible
+  // Rapid polling during initial sync (every 2 seconds for 60 seconds)
   useEffect(() => {
+    if (!isSyncing) return;
+
+    let pollInterval: NodeJS.Timeout | null = null;
+    let checkInterval: NodeJS.Timeout | null = null;
+
+    const pollEvents = async () => {
+      const eventCount = await fetchEvents();
+      // If we got events, stop rapid polling after a short delay
+      if (eventCount > 0) {
+        setTimeout(() => {
+          setIsSyncing(false);
+        }, 3000); // Wait 3s to catch any remaining events
+      }
+    };
+
+    // Poll every 2 seconds
+    pollInterval = setInterval(pollEvents, 2000);
+
+    // Stop rapid polling after 60 seconds max
+    checkInterval = setInterval(() => {
+      const elapsed = Date.now() - syncingStartTime.current;
+      if (elapsed > 60000) {
+        setIsSyncing(false);
+      }
+    }, 1000);
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+      if (checkInterval) clearInterval(checkInterval);
+    };
+  }, [isSyncing, fetchEvents]);
+
+  // Periodic refresh (every 5 minutes) - only when tab is visible and not rapid polling
+  useEffect(() => {
+    if (isSyncing) return; // Skip normal polling during rapid sync
+
     let interval: NodeJS.Timeout | null = null;
 
     const startInterval = () => {
@@ -180,7 +230,7 @@ export default function DashboardPage() {
       stopInterval();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [fetchEvents]);
+  }, [fetchEvents, isSyncing]);
 
   // Register create event function with context
   useEffect(() => {
@@ -191,17 +241,27 @@ export default function DashboardPage() {
   }, [registerCreateEvent, registerOpenEvent]);
 
   return (
-    <CalendarView
-      ref={calendarRef}
-      currentDate={currentDate}
-      viewType={viewType}
-      events={events}
-      rawEvents={rawEvents}
-      todos={todos}
-      onEventsChange={() => fetchEvents()}
-      onDateChange={setCurrentDate}
-      onViewTypeChange={setViewType}
-      onToggleTodo={toggleTodo}
-    />
+    <>
+      {isSyncing && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2 rounded-full border border-border bg-popover/95 backdrop-blur-sm px-4 py-2 shadow-lg">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+            <span className="text-xs font-medium text-foreground">Kalenders synchroniseren...</span>
+          </div>
+        </div>
+      )}
+      <CalendarView
+        ref={calendarRef}
+        currentDate={currentDate}
+        viewType={viewType}
+        events={events}
+        rawEvents={rawEvents}
+        todos={todos}
+        onEventsChange={() => fetchEvents()}
+        onDateChange={setCurrentDate}
+        onViewTypeChange={setViewType}
+        onToggleTodo={toggleTodo}
+      />
+    </>
   );
 }

@@ -54,53 +54,41 @@ export async function POST(request: NextRequest) {
         })
         .returning();
 
-      // Sync calendars AND events immediately
-      let syncedCalendars = 0;
-      let syncedEvents = 0;
-      const syncErrors: string[] = [];
+      // Start background sync (fire-and-forget)
+      // Don't await - let it run in the background
+      (async () => {
+        try {
+          await syncICloudCalendars(newAccount.id);
 
-      try {
-        await syncICloudCalendars(newAccount.id);
+          // Now sync events for all calendars
+          const cals = await db
+            .select()
+            .from(calendars)
+            .where(eq(calendars.accountId, newAccount.id));
 
-        // Now sync events for all calendars
-        const cals = await db
-          .select()
-          .from(calendars)
-          .where(eq(calendars.accountId, newAccount.id));
+          await Promise.allSettled(
+            cals.map((cal) => syncICloudEvents(newAccount.id, cal.id))
+          );
 
-        syncedCalendars = cals.length;
+          // Update last sync time
+          await db
+            .update(calendarAccounts)
+            .set({ lastSyncAt: new Date(), updatedAt: new Date() })
+            .where(eq(calendarAccounts.id, newAccount.id));
 
-        const results = await Promise.allSettled(
-          cals.map((cal) => syncICloudEvents(newAccount.id, cal.id))
-        );
+          console.log(`✅ Background sync completed for ${email}: ${cals.length} calendars`);
+        } catch (error) {
+          console.error("Background iCloud sync failed:", error);
+        }
+      })();
 
-        results.forEach((r, i) => {
-          if (r.status === "fulfilled") {
-            syncedEvents++;
-          } else {
-            syncErrors.push(`${cals[i].name}: ${r.reason?.message || "Onbekende fout"}`);
-            console.error(`Event sync failed for calendar ${cals[i].name}:`, r.reason);
-          }
-        });
-
-        // Update last sync time
-        await db
-          .update(calendarAccounts)
-          .set({ lastSyncAt: new Date(), updatedAt: new Date() })
-          .where(eq(calendarAccounts.id, newAccount.id));
-      } catch (error) {
-        console.error("Initial iCloud sync failed:", error);
-        syncErrors.push(error instanceof Error ? error.message : "Sync mislukt");
-      }
-
+      // Return immediately - sync continues in background
       return NextResponse.json({
         id: newAccount.id,
         email: newAccount.email,
         provider: "icloud",
-        syncedCalendars,
-        syncedEvents,
-        syncErrors,
-        message: `iCloud verbonden: ${syncedCalendars} kalender(s), ${syncedEvents} gesynchroniseerd`,
+        message: "iCloud verbonden - synchronisatie loopt op de achtergrond",
+        syncing: true,
       });
     }
 

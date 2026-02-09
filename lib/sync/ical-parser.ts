@@ -510,6 +510,7 @@ export interface ICSEventInput {
   status?: ParsedEvent["status"];
   timezone?: string | null;
   rrule?: string | null;
+  exDates?: (Date | string)[] | null;
   organizer?: { email: string; name?: string } | null;
   attendees?: { email: string; name?: string; rsvp?: boolean }[];
   alarms?: { trigger: string; description?: string }[];
@@ -604,6 +605,27 @@ export function generateICS(events: ICSEventInput[]): string {
 
     if (evt.rrule) {
       lines.push(`RRULE:${evt.rrule}`);
+    }
+
+    // Exception dates (EXDATE)
+    if (evt.exDates && evt.exDates.length > 0) {
+      // Group EXDATEs: all-day vs timed
+      // For simplicity, we'll format each as UTC datetime or date-only
+      const exDateStrs = evt.exDates.map((d) => {
+        const date = typeof d === "string" ? new Date(d) : d;
+        if (evt.isAllDay) {
+          return formatICSDate(date);
+        } else {
+          return formatICSDateTimeUTC(date);
+        }
+      });
+
+      // Combine all exception dates in one EXDATE line (comma-separated)
+      if (evt.isAllDay) {
+        lines.push(`EXDATE;VALUE=DATE:${exDateStrs.join(",")}`);
+      } else {
+        lines.push(`EXDATE:${exDateStrs.join(",")}`);
+      }
     }
 
     if (evt.transparency === "transparent") {
