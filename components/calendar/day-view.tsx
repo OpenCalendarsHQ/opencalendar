@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, memo, useCallback } from "react";
 import { formatDateFull, isToday, getTimePosition, getEventHeight } from "@/lib/utils/date";
 import { TimeGrid, HOUR_HEIGHT } from "./time-grid";
 import { EventCard, AllDayEventCard } from "./event-card";
@@ -15,9 +15,10 @@ interface DayViewProps {
   onEventClick: (event: CalendarEvent) => void;
   onTimeSlotClick: (date: Date, hour: number) => void;
   onToggleTodo: (id: string) => void;
+  onDragCreate?: (date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => void;
 }
 
-export function DayView({ currentDate, events, todos, onEventClick, onTimeSlotClick, onToggleTodo }: DayViewProps) {
+export const DayView = memo(function DayView({ currentDate, events, todos, onEventClick, onTimeSlotClick, onToggleTodo, onDragCreate }: DayViewProps) {
   // Timed events for this day (including clipped multi-day timed events)
   const dayEvents = useMemo(
     () => splitMultiDayTimedEvents(events, currentDate),
@@ -41,6 +42,12 @@ export function DayView({ currentDate, events, todos, onEventClick, onTimeSlotCl
   }, [todos, currentDate]);
 
   const today = isToday(currentDate);
+
+  const handleDragCreate = useCallback((date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => {
+    if (onDragCreate) {
+      onDragCreate(date, startHour, startMinute, endHour, endMinute);
+    }
+  }, [onDragCreate]);
 
   return (
     <div className="flex h-full flex-col">
@@ -67,14 +74,8 @@ export function DayView({ currentDate, events, todos, onEventClick, onTimeSlotCl
         </div>
       </div>
 
-      <TimeGrid columnCount={1} dates={[currentDate]}>
-        <div className="relative flex-1"
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const y = e.clientY - rect.top;
-            const hour = Math.floor(y / HOUR_HEIGHT);
-            onTimeSlotClick(currentDate, Math.min(23, Math.max(0, hour)));
-          }}>
+      <TimeGrid columnCount={1} dates={[currentDate]} onDragCreate={handleDragCreate}>
+        <div className="relative flex-1">
           {layoutEvents.map((event) => {
             const top = getTimePosition(event.startTime, HOUR_HEIGHT);
             const height = Math.max(getEventHeight(event.startTime, event.endTime, HOUR_HEIGHT), 20);
@@ -84,4 +85,4 @@ export function DayView({ currentDate, events, todos, onEventClick, onTimeSlotCl
       </TimeGrid>
     </div>
   );
-}
+});

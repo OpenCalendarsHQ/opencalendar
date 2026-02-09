@@ -4,7 +4,7 @@ import { events, eventRecurrences, calendars, calendarAccounts } from "@/lib/db/
 import { verifyRequest } from "@/lib/auth/verify-request";
 import { eq, and } from "drizzle-orm";
 import { updateICloudEvent } from "@/lib/sync/icloud";
-import { updateGoogleEvent } from "@/lib/sync/google";
+import { patchGoogleRecurringEventExdate } from "@/lib/sync/google";
 
 /**
  * POST /api/events/exception
@@ -107,13 +107,17 @@ export async function POST(request: NextRequest) {
       try {
         // Update the event on the external provider with the new EXDATE
         if (calendarInfo.provider === "icloud") {
-          // updateICloudEvent will automatically include the EXDATE from the database
           await updateICloudEvent(calendarInfo.accountId, event.calendarId, eventId, {});
-          console.log(`✅ EXDATE synced to iCloud for event ${eventId}`);
+          console.log(`EXDATE synced to iCloud for event ${eventId}`);
         } else if (calendarInfo.provider === "google") {
-          // Google Calendar handles recurring exceptions differently
-          // For now, rely on periodic sync
-          console.log(`EXDATE added to event ${eventId}, Google sync pending`);
+          // Cancel the specific occurrence on Google Calendar
+          await patchGoogleRecurringEventExdate(
+            calendarInfo.accountId,
+            event.calendarId,
+            eventId,
+            normalizedExDate
+          );
+          console.log(`EXDATE synced to Google for event ${eventId}`);
         }
       } catch (syncError) {
         console.error(`Failed to sync EXDATE to ${calendarInfo.provider}:`, syncError);

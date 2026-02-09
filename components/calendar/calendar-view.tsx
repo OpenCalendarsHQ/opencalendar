@@ -10,7 +10,7 @@ import { useSwipe } from "@/hooks/use-swipe";
 import { useWheelNavigation } from "@/hooks/use-wheel-navigation";
 import { useCalendar } from "@/lib/calendar-context";
 import type { CalendarEvent, CalendarViewType, Todo } from "@/lib/types";
-import { setHours } from "@/lib/utils/date";
+import { setHours, setMinutes } from "@/lib/utils/date";
 
 interface CalendarViewProps {
   currentDate: Date;
@@ -63,8 +63,27 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
   }, []);
 
   const handleTimeSlotClick = useCallback((date: Date, hour: number) => {
-    const startTime = setHours(date, hour);
-    const endTime = setHours(date, hour + 1);
+    const startTime = setMinutes(setHours(date, hour), 0);
+    const endTime = setMinutes(setHours(date, hour + 1), 0);
+    setSelectedEvent({
+      id: `new-${Date.now()}`,
+      title: "",
+      startTime,
+      endTime,
+      color: "#6366f1",
+      calendarId: "cal-1",
+      isAllDay: false,
+    });
+    setIsNewEvent(true);
+    setIsModalOpen(true);
+  }, []);
+
+  // Drag-to-create: precise start/end with minute-level granularity
+  const handleDragCreate = useCallback((date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => {
+    const startTime = setMinutes(setHours(new Date(date), startHour), startMinute);
+    const endTime = setMinutes(setHours(new Date(date), endHour), endMinute);
+    startTime.setSeconds(0, 0);
+    endTime.setSeconds(0, 0);
     setSelectedEvent({
       id: `new-${Date.now()}`,
       title: "",
@@ -145,7 +164,6 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
           }),
         });
         if (res.ok) {
-          // Refetch events to get the latest data with RRULE metadata
           onEventsChange();
         }
       } else {
@@ -166,7 +184,6 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
           }),
         });
         if (res.ok) {
-          // Refetch events to get the latest data with RRULE metadata
           onEventsChange();
         }
       }
@@ -194,7 +211,6 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
         method: "DELETE",
       });
       if (res.ok) {
-        // Refetch events to get the latest data
         onEventsChange();
       }
     } catch (error) {
@@ -207,13 +223,8 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
     if (!pendingEvent) return;
     setShowRecurringDialog(false);
 
-    // For single occurrence editing, we'll:
-    // 1. Mark this occurrence for exception (will be added on save)
-    // 2. Create a new single event with these details
-    // Store the originalId and occurrence date so we can add EXDATE on save
     const eventForEditing = {
       ...pendingEvent,
-      // Mark this as a single occurrence edit
       isSingleOccurrenceEdit: true,
       originalRecurringEventId: pendingEvent.originalId || pendingEvent.id,
       originalOccurrenceDate: pendingEvent.startTime.toISOString(),
@@ -264,11 +275,8 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
         return;
       }
 
-      // Add this occurrence's start date as an exception (EXDATE)
-      // Format as ISO date string
       const exceptionDate = pendingEvent.startTime.toISOString();
 
-      // Update the event with the new EXDATE
       const res = await fetch("/api/events/exception", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -295,7 +303,6 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
     setShowRecurringDialog(false);
 
     try {
-      // If this IS the original event, use its ID; otherwise use originalId
       const realId = pendingEvent.rrule ? pendingEvent.id : (pendingEvent.originalId || pendingEvent.id);
       const res = await fetch(`/api/events?id=${realId}`, {
         method: "DELETE",
@@ -312,8 +319,8 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
   // Expose create for external trigger
   const openCreateModal = useCallback(() => {
     const now = new Date();
-    const startTime = setHours(now, now.getHours() + 1);
-    const endTime = setHours(now, now.getHours() + 2);
+    const startTime = setMinutes(setHours(now, now.getHours() + 1), 0);
+    const endTime = setMinutes(setHours(now, now.getHours() + 2), 0);
     setSelectedEvent({
       id: `new-${Date.now()}`,
       title: "",
@@ -331,7 +338,6 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
   const openEventModal = useCallback((eventId: string) => {
     const event = events.find((e) => e.id === eventId || e.originalId === eventId);
     if (event) {
-      // If this is a multi-day segment, find the original full event
       let targetEvent = event;
       if (event.originalId) {
         const original = events.find((e) => e.id === event.originalId);
@@ -357,13 +363,13 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
     onSwipeRight: calendar.navigateBack,
   });
 
-  // Horizontal scroll navigation - swipe left to go back, swipe right to go forward
+  // Horizontal scroll navigation
   useWheelNavigation({
     onScrollLeft: calendar.navigateBack,
     onScrollRight: calendar.navigateForward,
-    enabled: viewType !== "month", // Only enable for day and week views
-    threshold: 150, // Higher threshold = less sensitive
-    cooldown: 400, // Longer cooldown = slower navigation
+    enabled: viewType !== "month",
+    threshold: 150,
+    cooldown: 400,
   });
 
   return (
@@ -375,6 +381,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
           todos={todos}
           onEventClick={handleEventClick}
           onTimeSlotClick={handleTimeSlotClick}
+          onDragCreate={handleDragCreate}
         />
       )}
       {viewType === "day" && (
@@ -385,6 +392,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
           onEventClick={handleEventClick}
           onTimeSlotClick={handleTimeSlotClick}
           onToggleTodo={onToggleTodo}
+          onDragCreate={handleDragCreate}
         />
       )}
       {viewType === "month" && (

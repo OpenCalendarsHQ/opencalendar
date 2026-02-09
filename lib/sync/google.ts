@@ -585,3 +585,87 @@ export async function deleteGoogleEvent(
     eventId: localEvent.externalId,
   });
 }
+
+/**
+ * Cancel a specific occurrence of a recurring event on Google Calendar.
+ * Google handles recurring exceptions by cancelling individual instances
+ * (identified by originalStartTime), not by adding EXDATE to the parent event.
+ */
+export async function patchGoogleRecurringEventExdate(
+  accountId: string,
+  calendarId: string,
+  eventId: string,
+  exceptionDateISO: string
+) {
+  const calendarClient = await getCalendarClient(accountId);
+
+  const [cal] = await db
+    .select()
+    .from(calendars)
+    .where(eq(calendars.id, calendarId));
+
+  if (!cal?.externalId) {
+    throw new Error("Calendar external ID not found");
+  }
+
+  const [localEvent] = await db
+    .select()
+    .from(events)
+    .where(eq(events.id, eventId));
+
+  if (!localEvent?.externalId) {
+    throw new Error("Event external ID not found");
+  }
+
+  // List instances of the recurring event to find the one matching the exception date
+  try {
+    const exDate = new Date(exceptionDateISO);
+    const dayBefore = new Date(exDate);
+    dayBefore.setDate(dayBefore.getDate() - 1);
+    const dayAfter = new Date(exDate);
+    dayAfter.setDate(dayAfter.getDate() + 1);
+
+    const { data } = await calendarClient.events.instances({
+      calendarId: cal.externalId,
+      eventId: localEvent.externalId,
+      timeMin: dayBefore.toISOString(),
+      timeMax: dayAfter.toISOString(),
+      maxResults: 10,
+    });
+
+    const instances = data.items || [];
+
+    // Find the instance closest to the exception date
+    const targetTime = exDate.getTime();
+    let bestInstance = instances[0];
+    let bestDiff = Infinity;
+
+    for (const instance of instances) {
+      const instanceStart = instance.start?.dateTime
+        ? new Date(instance.start.dateTime).getTime()
+        : instance.start?.date
+        ? new Date(instance.start.date).getTime()
+        : 0;
+
+      const diff = Math.abs(instanceStart - targetTime);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestInstance = instance;
+      }
+    }
+
+    if (bestInstance?.id) {
+      // Cancel this specific instance
+      await calendarClient.events.patch({
+        calendarId: cal.externalId,
+        eventId: bestInstance.id,
+        requestBody: {
+          status: "cancelled",
+        },
+      });
+    }
+  } catch (error) {
+    console.error("Failed to cancel Google recurring event instance:", error);
+    throw error;
+  }
+}

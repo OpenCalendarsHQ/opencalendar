@@ -1,19 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, memo, useCallback } from "react";
 import {
   getWeekDays, formatWeekDay, formatDayNumber, isToday,
   getTimePosition, getEventHeight, getWeekNumber,
 } from "@/lib/utils/date";
 import { useSettings } from "@/lib/settings-context";
 import { TimeGrid, HOUR_HEIGHT } from "./time-grid";
-import { EventCard, AllDayEventCard, MultiDayEventCard } from "./event-card";
+import { EventCard, AllDayEventCard } from "./event-card";
 import { computeEventLayout } from "@/lib/utils/event-layout";
 import {
   splitMultiDayTimedEvents,
   computeMultiDaySpans,
   isMultiDayEvent,
-  isEventOnDay,
   toDateKey,
 } from "@/lib/utils/multi-day";
 import type { CalendarEvent, Todo } from "@/lib/types";
@@ -24,9 +23,37 @@ interface WeekViewProps {
   todos: Todo[];
   onEventClick: (event: CalendarEvent) => void;
   onTimeSlotClick: (date: Date, hour: number) => void;
+  onDragCreate?: (date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => void;
 }
 
-export function WeekView({ currentDate, events, todos, onEventClick, onTimeSlotClick }: WeekViewProps) {
+const DayColumn = memo(function DayColumn({
+  dayKey,
+  layoutEvents,
+  onEventClick,
+}: {
+  dayKey: string;
+  layoutEvents: ReturnType<typeof computeEventLayout>;
+  onEventClick: (event: CalendarEvent) => void;
+}) {
+  return (
+    <div className="relative flex-1">
+      {layoutEvents.map((event) => {
+        const top = getTimePosition(event.startTime, HOUR_HEIGHT);
+        const height = Math.max(getEventHeight(event.startTime, event.endTime, HOUR_HEIGHT), 20);
+        return (
+          <EventCard
+            key={event.id}
+            event={event}
+            style={{ top: `${top}px`, height: `${height}px` }}
+            onClick={onEventClick}
+          />
+        );
+      })}
+    </div>
+  );
+});
+
+export const WeekView = memo(function WeekView({ currentDate, events, todos, onEventClick, onTimeSlotClick, onDragCreate }: WeekViewProps) {
   const { settings } = useSettings();
   const weekDays = useMemo(() => getWeekDays(currentDate, settings.weekStartsOn), [currentDate, settings.weekStartsOn]);
 
@@ -56,7 +83,6 @@ export function WeekView({ currentDate, events, todos, onEventClick, onTimeSlotC
     const map = new Map<string, ReturnType<typeof computeEventLayout>>();
     weekDays.forEach((day) => {
       const dayKey = toDateKey(day);
-      // Get single-day timed events + clipped multi-day timed events for this day
       const dayEvents = splitMultiDayTimedEvents(events, day);
       map.set(dayKey, computeEventLayout(dayEvents));
     });
@@ -76,6 +102,12 @@ export function WeekView({ currentDate, events, todos, onEventClick, onTimeSlotC
   }, [weekDays, todos]);
 
   const weekNumber = settings.showWeekNumbers ? getWeekNumber(currentDate, settings.weekStartsOn) : null;
+
+  const handleDragCreate = useCallback((date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => {
+    if (onDragCreate) {
+      onDragCreate(date, startHour, startMinute, endHour, endMinute);
+    }
+  }, [onDragCreate]);
 
   return (
     <div className="flex h-full flex-col">
@@ -190,38 +222,21 @@ export function WeekView({ currentDate, events, todos, onEventClick, onTimeSlotC
       </div>
 
       {/* Time grid */}
-      <TimeGrid columnCount={7} dates={weekDays}>
+      <TimeGrid columnCount={7} dates={weekDays} onDragCreate={handleDragCreate}>
         {weekDays.map((day) => {
           const dayKey = toDateKey(day);
           const layoutEvents = layoutByDay.get(dayKey) || [];
 
           return (
-            <div
+            <DayColumn
               key={dayKey}
-              className="relative flex-1"
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const y = e.clientY - rect.top + (e.currentTarget.closest('[class*="overflow-y"]')?.scrollTop || 0);
-                const hour = Math.floor(y / HOUR_HEIGHT);
-                onTimeSlotClick(day, Math.min(23, Math.max(0, hour)));
-              }}
-            >
-              {layoutEvents.map((event) => {
-                const top = getTimePosition(event.startTime, HOUR_HEIGHT);
-                const height = Math.max(getEventHeight(event.startTime, event.endTime, HOUR_HEIGHT), 20);
-                return (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    style={{ top: `${top}px`, height: `${height}px` }}
-                    onClick={onEventClick}
-                  />
-                );
-              })}
-            </div>
+              dayKey={dayKey}
+              layoutEvents={layoutEvents}
+              onEventClick={onEventClick}
+            />
           );
         })}
       </TimeGrid>
     </div>
   );
-}
+});

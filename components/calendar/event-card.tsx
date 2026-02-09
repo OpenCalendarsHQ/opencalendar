@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { formatTime } from "@/lib/utils/date";
 import { useSettings } from "@/lib/settings-context";
 import { MapPin } from "lucide-react";
@@ -13,7 +14,7 @@ interface EventCardProps {
   onClick: (event: CalendarEvent) => void;
 }
 
-export function EventCard({ event, style, onClick }: EventCardProps) {
+export const EventCard = memo(function EventCard({ event, style, onClick }: EventCardProps) {
   const { settings } = useSettings();
   const use24h = settings.timeFormat === "24h";
   const duration =
@@ -28,6 +29,8 @@ export function EventCard({ event, style, onClick }: EventCardProps) {
   return (
     <EventHoverCard event={event}>
       <button
+        data-event
+        onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
           onClick(event);
@@ -64,7 +67,7 @@ export function EventCard({ event, style, onClick }: EventCardProps) {
       </button>
     </EventHoverCard>
   );
-}
+});
 
 /** Multi-day event banner shown in all-day / header section */
 interface MultiDayEventCardProps {
@@ -75,13 +78,15 @@ interface MultiDayEventCardProps {
   onClick: (event: CalendarEvent) => void;
 }
 
-export function MultiDayEventCard({ event, span, startCol, totalCols, onClick }: MultiDayEventCardProps) {
+export const MultiDayEventCard = memo(function MultiDayEventCard({ event, span, startCol, totalCols, onClick }: MultiDayEventCardProps) {
   const widthPercent = (span / totalCols) * 100;
   const leftPercent = (startCol / totalCols) * 100;
 
   return (
     <EventHoverCard event={event}>
       <button
+        data-event
+        onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
           onClick(event);
@@ -98,17 +103,19 @@ export function MultiDayEventCard({ event, span, startCol, totalCols, onClick }:
       </button>
     </EventHoverCard>
   );
-}
+});
 
 interface AllDayEventCardProps {
   event: CalendarEvent;
   onClick: (event: CalendarEvent) => void;
 }
 
-export function AllDayEventCard({ event, onClick }: AllDayEventCardProps) {
+export const AllDayEventCard = memo(function AllDayEventCard({ event, onClick }: AllDayEventCardProps) {
   return (
     <EventHoverCard event={event}>
       <button
+        data-event
+        onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
           onClick(event);
@@ -120,6 +127,6 @@ export function AllDayEventCard({ event, onClick }: AllDayEventCardProps) {
       </button>
     </EventHoverCard>
   );
-}
+});
 
 export type { CalendarEvent };

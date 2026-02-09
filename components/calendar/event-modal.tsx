@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { X, MapPin, AlignLeft, Clock, Trash2, Calendar, ExternalLink } from "lucide-react";
 import { format } from "@/lib/utils/date";
 import type { CalendarEvent } from "@/lib/types";
@@ -82,8 +82,30 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
       setEndTime(format(event.endTime, "HH:mm"));
       setIsAllDay(event.isAllDay);
       setCalendarId(event.calendarId || "");
+      // Reset map state when event changes
+      setShowMap(false);
+      setMapCoords(null);
     }
   }, [event]);
+
+  // Auto-adjust end time when start time changes on the same day
+  const handleStartTimeChange = useCallback((newStartTime: string) => {
+    setStartTime(newStartTime);
+    if (startDate === endDate && newStartTime >= endTime) {
+      const [h, m] = newStartTime.split(":").map(Number);
+      const endMinutes = h * 60 + m + 60;
+      const endH = Math.min(23, Math.floor(endMinutes / 60));
+      const endM = endMinutes % 60;
+      setEndTime(`${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`);
+    }
+  }, [startDate, endDate, endTime]);
+
+  const handleStartDateChange = useCallback((newStartDate: string) => {
+    setStartDate(newStartDate);
+    if (newStartDate > endDate) {
+      setEndDate(newStartDate);
+    }
+  }, [endDate]);
 
   // Geocode location when showing map
   useEffect(() => {
@@ -112,15 +134,18 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
 
   const handleSave = () => {
     const startDateTime = isAllDay
-      ? new Date(`${startDate}T00:00`)
-      : new Date(`${startDate}T${startTime}`);
+      ? new Date(`${startDate}T00:00:00`)
+      : new Date(`${startDate}T${startTime}:00`);
     const endDateTime = isAllDay
-      ? new Date(`${endDate}T23:59`)
-      : new Date(`${endDate}T${endTime}`);
+      ? new Date(`${endDate}T23:59:59`)
+      : new Date(`${endDate}T${endTime}:00`);
+
+    // Validate: end must be after start for timed events
+    if (!isAllDay && endDateTime <= startDateTime) {
+      endDateTime.setTime(startDateTime.getTime() + 60 * 60 * 1000);
+    }
 
     const selectedCalendar = calendars.find(c => c.id === calendarId);
-
-    // For recurring event occurrences, use the originalId to edit the parent event
     const eventIdToSave = (event as any)?.originalId || event?.id;
 
     onSave({
@@ -137,8 +162,16 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
     onClose();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      handleSave();
+    } else if (e.key === "Escape") {
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center md:items-start md:pt-[12vh]">
+    <div className="fixed inset-0 z-50 flex items-end justify-center md:items-start md:pt-[12vh]" onKeyDown={handleKeyDown}>
       <div className="fixed inset-0 bg-black/20" onClick={onClose} />
 
       <div className="relative w-full max-h-[90dvh] overflow-y-auto rounded-t-xl border border-border bg-popover shadow-lg md:max-w-md md:rounded-lg md:rounded-t-lg safe-bottom">
@@ -192,15 +225,17 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
           <div className="flex items-center gap-2.5">
             <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <div className="flex flex-wrap items-center gap-1.5">
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+              <input type="date" value={startDate} onChange={(e) => handleStartDateChange(e.target.value)}
                 className="rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground" />
               {!isAllDay && (
-                <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)}
+                <input type="time" value={startTime} onChange={(e) => handleStartTimeChange(e.target.value)}
+                  step="900"
                   className="rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground" />
               )}
               <span className="text-xs text-muted-foreground">–</span>
               {!isAllDay && (
                 <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)}
+                  step="900"
                   className="rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground" />
               )}
               <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
@@ -221,7 +256,7 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
                 value={location}
                 onChange={(e) => {
                   setLocation(e.target.value);
-                  setMapCoords(null); // Reset coords when location changes
+                  setMapCoords(null);
                 }}
                 placeholder="Locatie toevoegen (bijv. Adres, Stad, Land)"
                 className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground"

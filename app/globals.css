@@ -356,3 +356,20 @@ input[type="checkbox"]:checked::after {
     --time-gutter: 44px;
   }
 }
+
+/* GPU-accelerated event cards for smooth rendering */
+[data-event] {
+  will-change: transform;
+  contain: layout style;
+}
+
+/* Drag preview optimization */
+.pointer-events-none {
+  will-change: top, height;
+}
+
+/* Prevent text selection during drag on time grid */
+[data-grid-area] {
+  -webkit-user-select: none;
+  user-select: none;
+}

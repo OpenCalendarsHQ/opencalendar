@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 import { getMonthDays, formatWeekDay, formatDayNumber, isToday, isSameMonth, getWeekDays, getWeekNumber } from "@/lib/utils/date";
 import { useSettings } from "@/lib/settings-context";
 import { isEventOnDay, toDateKey } from "@/lib/utils/multi-day";
@@ -14,7 +14,7 @@ interface MonthViewProps {
   onDayClick: (date: Date) => void;
 }
 
-export function MonthView({ currentDate, events, todos, onEventClick, onDayClick }: MonthViewProps) {
+export const MonthView = memo(function MonthView({ currentDate, events, todos, onEventClick, onDayClick }: MonthViewProps) {
   const { settings } = useSettings();
   const monthDays = useMemo(() => getMonthDays(currentDate, settings.weekStartsOn), [currentDate, settings.weekStartsOn]);
   const weekDayHeaders = useMemo(
@@ -128,4 +128,4 @@ export function MonthView({ currentDate, events, todos, onEventClick, onDayClick
       </div>
     </div>
   );
-}
+});
