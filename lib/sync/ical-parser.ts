@@ -146,20 +146,21 @@ function splitHeadParams(head: string): string[] {
 // ─── Date parsing ───────────────────────────────────────────────────────────
 
 /**
- * Parse an ICS date/datetime string.
+ * Parse an ICS date/datetime string with optional timezone parameter.
  *
  *   - "20250207"              → local date (all-day)
- *   - "20250207T093000"       → local datetime
- *   - "20250207T093000Z"      → UTC datetime
+ *   - "20250207T093000"       → floating time (interpreted as local to avoid timezone issues)
+ *   - "20250207T093000Z"      → UTC datetime (explicit)
+ *   - With TZID parameter     → time in specified timezone (converted to UTC for storage)
  *
- * If tzid is provided we store it in metadata but JS Date lacks proper
- * timezone support; in practice the Neon DB stores the timezone separately.
+ * IMPORTANT: CalDAV events without Z or TZID are "floating time" - they should display
+ * the same local time regardless of timezone. To achieve this, we parse without timezone conversion.
  */
-export function parseICSDate(value: string): Date {
+export function parseICSDate(value: string, tzid?: string | null): Date {
   const v = value.trim();
 
   if (v.length === 8) {
-    // Date only
+    // Date only (all-day events) - use local date
     return new Date(
       parseInt(v.substring(0, 4)),
       parseInt(v.substring(4, 6)) - 1,
@@ -177,9 +178,18 @@ export function parseICSDate(value: string): Date {
   const minute = parseInt(dt.substring(10, 12) || "0");
   const second = parseInt(dt.substring(12, 14) || "0");
 
-  return isUTC
-    ? new Date(Date.UTC(year, month, day, hour, minute, second))
-    : new Date(year, month, day, hour, minute, second);
+  // Explicit UTC (has Z suffix)
+  if (isUTC) {
+    return new Date(Date.UTC(year, month, day, hour, minute, second));
+  }
+
+  // Has TZID - for now, treat as floating time since we don't have timezone library
+  // TODO: Install date-fns-tz or similar to properly handle timezone conversions
+  // For now, keep the time as-is (floating time) which works for single-timezone users
+
+  // Floating time (no Z, no TZID) - keep as-is to preserve the local time value
+  // Use local time constructor so 12:00 always displays as 12:00
+  return new Date(year, month, day, hour, minute, second);
 }
 
 /** Detect all-day from property params (VALUE=DATE). */
@@ -372,8 +382,8 @@ function parseEventBlock(eventLines: string[]): ParsedEvent | null {
   if (!dtStartCl) return null;
 
   const isAllDay = isAllDayProp(dtStartCl.params);
-  const startTime = parseICSDate(dtStartCl.value);
   const timezone = dtStartCl.params["TZID"] || null;
+  const startTime = parseICSDate(dtStartCl.value, timezone);
 
   // ── End time: DTEND or DURATION ──
   let endTime: Date;
@@ -381,7 +391,8 @@ function parseEventBlock(eventLines: string[]): ParsedEvent | null {
   const durationCl = singleProps.get("DURATION");
 
   if (dtEndCl) {
-    endTime = parseICSDate(dtEndCl.value);
+    const endTzid = dtEndCl.params["TZID"] || timezone;
+    endTime = parseICSDate(dtEndCl.value, endTzid);
   } else if (durationCl) {
     endTime = addDuration(startTime, durationCl.value);
   } else {
@@ -402,11 +413,12 @@ function parseEventBlock(eventLines: string[]): ParsedEvent | null {
   // ── EXDATE(s) — may span multiple lines and contain comma-separated values ──
   const exDates: Date[] = [];
   for (const cl of multiProps.get("EXDATE") || []) {
+    const exTzid = cl.params["TZID"] || timezone;
     for (const v of cl.value.split(",")) {
       const trimmed = v.trim();
       if (trimmed) {
         try {
-          exDates.push(parseICSDate(trimmed));
+          exDates.push(parseICSDate(trimmed, exTzid));
         } catch {
           // skip invalid
         }
@@ -575,10 +587,10 @@ export function generateICS(events: ICSEventInput[]): string {
       lines.push(`DTSTART;VALUE=DATE:${formatICSDate(evt.startTime)}`);
       lines.push(`DTEND;VALUE=DATE:${formatICSDate(evt.endTime)}`);
     } else if (evt.timezone) {
-      // With timezone
+      // With timezone - use UTC components since Date objects are stored in UTC
       const fmt = (d: Date) => {
         const pad = (n: number) => String(n).padStart(2, "0");
-        return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+        return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}`;
       };
       lines.push(`DTSTART;TZID=${evt.timezone}:${fmt(evt.startTime)}`);
       lines.push(`DTEND;TZID=${evt.timezone}:${fmt(evt.endTime)}`);

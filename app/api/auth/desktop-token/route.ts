@@ -1,23 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth/server";
+import { createClient } from "@/lib/supabase/server";
 import { generateAccessToken, generateRefreshToken } from "@/lib/auth/jwt";
 import { ensureUserExists } from "@/lib/auth/ensure-user";
 
 /**
  * POST /api/auth/desktop-token
  *
- * Generate JWT tokens for desktop app after successful Neon Auth login.
+ * Generate JWT tokens for desktop app after successful Supabase Auth login.
  * This endpoint should be called by the web app after OAuth flow completes,
  * then redirect to opencalendar://auth-callback?token=JWT&refresh_token=JWT
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify that user is authenticated via Neon Auth session
-    const { data: session } = await auth.getSession({
-      fetchOptions: { headers: request.headers },
-    });
+    // Verify that user is authenticated via Supabase Auth session
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json(
         { error: "Not authenticated" },
         { status: 401 }
@@ -25,25 +26,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Ensure user exists in our database
-    await ensureUserExists(session.user);
+    await ensureUserExists({
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.name || null,
+      image: user.user_metadata?.avatar_url || null,
+    });
 
     // Generate JWT tokens
-    const accessToken = generateAccessToken(
-      session.user.id,
-      session.user.email || ""
-    );
-    const refreshToken = generateRefreshToken(
-      session.user.id,
-      session.user.email || ""
-    );
+    const accessToken = generateAccessToken(user.id, user.email || "");
+    const refreshToken = generateRefreshToken(user.id, user.email || "");
 
     return NextResponse.json({
       token: accessToken,
       refreshToken,
-      userId: session.user.id,
-      email: session.user.email,
-      name: session.user.name,
-      image: session.user.image,
+      userId: user.id,
+      email: user.email,
+      name: user.user_metadata?.name || null,
+      image: user.user_metadata?.avatar_url || null,
     });
   } catch (error) {
     console.error("Desktop token generation error:", error);
@@ -75,27 +75,28 @@ export async function GET() {
       <title>OpenCalendar - Desktop Login</title>
       <style>
         body {
-          font-family: system-ui, -apple-system, sans-serif;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
           display: flex;
           align-items: center;
           justify-content: center;
           min-height: 100vh;
           margin: 0;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: #fafafa;
         }
         .container {
           background: white;
           padding: 2rem;
-          border-radius: 1rem;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          border-radius: 0.5rem;
+          border: 1px solid #e5e5e5;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           text-align: center;
           max-width: 400px;
         }
         .spinner {
-          width: 50px;
-          height: 50px;
-          border: 4px solid #f3f3f3;
-          border-top: 4px solid #667eea;
+          width: 48px;
+          height: 48px;
+          border: 4px solid #e5e5e5;
+          border-top: 4px solid #171717;
           border-radius: 50%;
           animation: spin 1s linear infinite;
           margin: 0 auto 1rem;
@@ -106,18 +107,22 @@ export async function GET() {
         }
         h1 {
           margin: 0 0 0.5rem;
-          color: #333;
+          color: #171717;
+          font-size: 1.25rem;
+          font-weight: 600;
         }
         p {
-          color: #666;
+          color: #737373;
           margin: 0;
+          font-size: 0.875rem;
         }
         .error {
-          color: #ef4444;
-          background: #fee;
+          color: #dc2626;
+          background: #fee2e2;
           padding: 1rem;
           border-radius: 0.5rem;
           margin-top: 1rem;
+          font-size: 0.875rem;
         }
       </style>
     </head>

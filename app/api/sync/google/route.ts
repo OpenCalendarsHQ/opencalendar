@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendarAccounts, calendars } from "@/lib/db/schema";
-import { auth } from "@/lib/auth/server";
+import { getUser } from "@/lib/auth/server";
 import { ensureUserExists } from "@/lib/auth/ensure-user";
 import { eq, and } from "drizzle-orm";
 import {
@@ -24,16 +24,19 @@ export async function GET(request: NextRequest) {
 
   // Step 1: Initiate OAuth flow
   if (action === "connect") {
-    const { data: session } = await auth.getSession({
-      fetchOptions: { headers: request.headers }
-    });
-    if (!session?.user) {
+    const user = await getUser();
+    if (!user) {
       return NextResponse.redirect(new URL("/auth/sign-in", request.url));
     }
-    await ensureUserExists(session.user);
+    await ensureUserExists({
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.full_name || user.user_metadata?.name,
+      image: user.user_metadata?.avatar_url,
+    });
 
     // SECURITY: Generate secure random state token to prevent CSRF attacks
-    const secureState = generateOAuthState(session.user.id, "google");
+    const secureState = generateOAuthState(user.id, "google");
     const authUrl = getAuthorizationUrl(secureState);
     return NextResponse.redirect(authUrl);
   }
@@ -162,7 +165,7 @@ export async function POST(request: NextRequest) {
       .from(calendarAccounts)
       .where(eq(calendarAccounts.id, accountId));
 
-    if (!account || account.userId !== session.user.id) {
+    if (!account || account.userId !== user.id) {
       return NextResponse.json(
         { error: "Account niet gevonden" },
         { status: 404 }

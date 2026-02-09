@@ -1,7 +1,36 @@
-"use client";
+import { createClient } from "@/lib/supabase/client";
+import { useEffect, useState } from "react";
+import { User } from "@supabase/supabase-js";
 
-import { createAuthClient } from "@neondatabase/auth/next";
+export function useSupabase() {
+  return createClient();
+}
 
-export const authClient = createAuthClient();
+export function useSession() {
+  const [user, setUser] = useState<User | null>(null);
+  const [isPending, setIsPending] = useState(true);
+  const supabase = createClient();
 
-export const { useSession } = authClient;
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      setIsPending(false);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setIsPending(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
+
+  return {
+    data: user,
+    isPending,
+  };
+}

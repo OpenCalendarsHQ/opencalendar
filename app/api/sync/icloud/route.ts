@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calendarAccounts, calendars } from "@/lib/db/schema";
-import { auth } from "@/lib/auth/server";
+import { getUser } from "@/lib/auth/server";
 import { ensureUserExists } from "@/lib/auth/ensure-user";
 import { eq, and } from "drizzle-orm";
 import {
@@ -13,14 +13,17 @@ import {
 // POST /api/sync/icloud - Connect iCloud account or trigger sync
 export async function POST(request: NextRequest) {
   try {
-    const { data: session } = await auth.getSession({
-      fetchOptions: { headers: request.headers }
-    });
-    if (!session?.user) {
+    const user = await getUser();
+    if (!user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
 
-    await ensureUserExists(session.user);
+    await ensureUserExists({
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.full_name || user.user_metadata?.name,
+      image: user.user_metadata?.avatar_url,
+    });
 
     const body = await request.json();
     const { action, email, appPassword, accountId } = body;
@@ -47,7 +50,7 @@ export async function POST(request: NextRequest) {
       const [newAccount] = await db
         .insert(calendarAccounts)
         .values({
-          userId: session.user.id,
+          userId: user.id,
           provider: "icloud",
           email,
           accessToken: appPassword,
@@ -113,7 +116,7 @@ export async function POST(request: NextRequest) {
         .from(calendarAccounts)
         .where(eq(calendarAccounts.id, accountId));
 
-      if (!account || account.userId !== session.user.id) {
+      if (!account || account.userId !== user.id) {
         return NextResponse.json({ error: "Account niet gevonden" }, { status: 404 });
       }
 

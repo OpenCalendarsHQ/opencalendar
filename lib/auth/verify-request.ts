@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { auth } from "./server";
+import { createClient } from "@/lib/supabase/server";
 import { verifyToken } from "./jwt";
 
 export interface AuthUser {
@@ -15,7 +15,7 @@ export interface AuthResult {
 }
 
 /**
- * Verify authentication from either JWT Bearer token or Neon Auth session
+ * Verify authentication from either JWT Bearer token or Supabase Auth session
  * This allows both web app (session cookies) and desktop app (JWT) to use the same API
  */
 export async function verifyRequest(request: NextRequest): Promise<AuthResult> {
@@ -40,18 +40,19 @@ export async function verifyRequest(request: NextRequest): Promise<AuthResult> {
     }
   }
 
-  // Fallback to Neon Auth session (web app)
-  const { data: session } = await auth.getSession({
-    fetchOptions: { headers: request.headers },
-  });
+  // Fallback to Supabase Auth session (web app)
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (session?.user) {
+  if (user) {
     return {
       user: {
-        id: session.user.id,
-        email: session.user.email || "",
-        name: session.user.name,
-        image: session.user.image,
+        id: user.id,
+        email: user.email || "",
+        name: user.user_metadata?.name || null,
+        image: user.user_metadata?.avatar_url || null,
       },
       source: "session",
     };

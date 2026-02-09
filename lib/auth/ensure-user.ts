@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 
 /**
  * Ensure the authenticated user exists in our local `user` table.
- * Neon Auth manages sessions externally, but our calendar tables
+ * Supabase Auth manages sessions externally, but our calendar tables
  * reference `user.id` via foreign keys. This bridges the gap.
  */
 export async function ensureUserExists(sessionUser: {

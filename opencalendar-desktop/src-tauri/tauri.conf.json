@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "opencalendar-desktop",
+  "productName": "OpenCalendar",
   "version": "0.1.0",
-  "identifier": "com.arjan.opencalendar-desktop",
+  "identifier": "com.arjan.opencalendar",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,9 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "opencalendar-desktop",
-        "width": 800,
-        "height": 600
+        "title": "OpenCalendar",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600
       }
     ],
     "security": {
@@ -31,5 +33,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "deep-link": {
+      "mobile": [],
+      "desktop": {
+        "schemes": ["opencalendar"]
+      }
+    }
   }
 }
