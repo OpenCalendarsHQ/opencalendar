@@ -51,8 +51,8 @@ export async function verifyRequest(request: NextRequest): Promise<AuthResult> {
       user: {
         id: user.id,
         email: user.email || "",
-        name: user.user_metadata?.name || null,
-        image: user.user_metadata?.avatar_url || null,
+        name: user.user_metadata?.name || user.user_metadata?.full_name || null,
+        image: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
       },
       source: "session",
     };

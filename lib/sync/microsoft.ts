@@ -340,9 +340,11 @@ export async function syncMicrosoftEvents(
     const endDate = new Date();
     endDate.setFullYear(endDate.getFullYear() + 1);
 
+    // Use /events instead of /calendarView to get master recurring events with RRULE
+    // CalendarView expands recurring events into instances, which we handle client-side
     const response = await graphRequest<{ value: MicrosoftEvent[] }>(
       accessToken,
-      `/me/calendars/${cal.externalId}/calendarView?startDateTime=${startDate.toISOString()}&endDateTime=${endDate.toISOString()}&$top=1000`
+      `/me/calendars/${cal.externalId}/events?$top=1000`
     );
 
     // Track which external IDs we've seen (for deletion detection)

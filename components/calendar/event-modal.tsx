@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { X, MapPin, AlignLeft, Clock, Trash2, Calendar, ExternalLink } from "lucide-react";
 import { format } from "@/lib/utils/date";
 import type { CalendarEvent } from "@/lib/types";
+import { RecurrenceEditor } from "./recurrence-editor";
 
 interface EventModalProps {
   event: CalendarEvent | null;
@@ -35,6 +36,7 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
   const [isAllDay, setIsAllDay] = useState(false);
   const [calendarId, setCalendarId] = useState("");
   const [calendars, setCalendars] = useState<CalendarOption[]>([]);
+  const [rrule, setRrule] = useState<string | null>(null);
 
   // Fetch calendars
   useEffect(() => {
@@ -82,6 +84,7 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
       setEndTime(format(event.endTime, "HH:mm"));
       setIsAllDay(event.isAllDay);
       setCalendarId(event.calendarId || "");
+      setRrule(event.rrule || null);
       // Reset map state when event changes
       setShowMap(false);
       setMapCoords(null);
@@ -158,6 +161,8 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
       isAllDay,
       color: selectedCalendar?.color || "#737373",
       calendarId: calendarId || event?.calendarId || "local",
+      rrule,
+      isRecurring: rrule !== null,
     });
     onClose();
   };
@@ -195,7 +200,7 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
 
         {/* Body */}
         <div className="space-y-3 p-4">
-          {!isNew && (event as any)?.originalId && (
+          {!isNew && event?.rrule && (
             <div className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
               Dit is een herhalend evenement. Wijzigingen gelden voor alle herhalingen.
             </div>
@@ -247,6 +252,13 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
             <input type="checkbox" checked={isAllDay} onChange={(e) => setIsAllDay(e.target.checked)} />
             <span className="text-xs text-foreground">Hele dag</span>
           </label>
+
+          {/* Recurrence editor */}
+          <RecurrenceEditor
+            rrule={rrule}
+            startDate={new Date(startDate)}
+            onChange={setRrule}
+          />
 
           <div className="space-y-2">
             <div className="flex items-center gap-2.5">

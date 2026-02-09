@@ -205,6 +205,8 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
             isAllDay: eventData.isAllDay || false,
             location: eventData.location,
             color: eventData.color,
+            rrule: (eventData as any).rrule || null,
+            isRecurring: (eventData as any).isRecurring || false,
           }),
         }).then(res => {
           if (res.ok) {
@@ -230,6 +232,8 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
             isAllDay: eventData.isAllDay,
             location: eventData.location,
             color: eventData.color,
+            rrule: (eventData as any).rrule || null,
+            isRecurring: (eventData as any).isRecurring || false,
           }),
         }).then(res => {
           if (res.ok) {

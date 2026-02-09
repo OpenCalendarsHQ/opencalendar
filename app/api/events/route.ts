@@ -8,6 +8,7 @@ import { z } from "zod";
 import { createICloudEvent, updateICloudEvent, deleteICloudEvent } from "@/lib/sync/icloud";
 import { createGoogleEvent, updateGoogleEvent, deleteGoogleEvent } from "@/lib/sync/google";
 import { rateLimit, rateLimitConfigs } from "@/lib/rate-limit";
+import { parseRRule } from "@/lib/utils/rrule";
 
 // Type for event sync data to avoid using 'any'
 interface EventSyncData {
@@ -47,6 +48,8 @@ const eventSchema = z.object({
   location: z.string().optional(),
   color: z.string().optional(),
   timezone: z.string().default("Europe/Amsterdam"),
+  rrule: z.string().nullable().optional(),
+  isRecurring: z.boolean().optional(),
 });
 
 // GET /api/events?start=...&end=...&calendarId=...
@@ -276,8 +279,28 @@ export async function POST(request: NextRequest) {
         location: validated.location,
         color: validated.color,
         timezone: validated.timezone,
+        isRecurring: validated.isRecurring || false,
       })
       .returning();
+
+    // If this is a recurring event, save the RRULE
+    if (validated.rrule && validated.isRecurring) {
+      try {
+        // Parse RRULE to extract until/count if present
+        const parsed = parseRRule(validated.rrule);
+
+        await db.insert(eventRecurrences).values({
+          eventId: newEvent.id,
+          rrule: validated.rrule,
+          recurUntil: parsed.until || null,
+          recurCount: parsed.count || null,
+          exDates: [],
+        });
+      } catch (error) {
+        console.error("Failed to save recurrence rule:", error);
+        // Don't fail the whole request if just the recurrence fails
+      }
+    }
 
     // Sync to external provider (non-blocking: don't fail if sync fails)
     const providerInfo = await getCalendarProviderInfo(validated.calendarId);
@@ -368,6 +391,7 @@ export async function PUT(request: NextRequest) {
     if (data.isAllDay !== undefined) updateData.isAllDay = data.isAllDay;
     if (data.location !== undefined) updateData.location = data.location;
     if (data.color !== undefined) updateData.color = data.color;
+    if (data.isRecurring !== undefined) updateData.isRecurring = data.isRecurring;
     if (calendarChanged) {
       updateData.calendarId = data.calendarId;
       // Reset external IDs when moving between calendars
@@ -378,6 +402,48 @@ export async function PUT(request: NextRequest) {
     const [updated] = await db.update(events).set(updateData).where(eq(events.id, id)).returning();
     if (!updated) {
       return NextResponse.json({ error: "Event niet gevonden" }, { status: 404 });
+    }
+
+    // Update recurrence rule if provided
+    if (data.rrule !== undefined) {
+      if (data.rrule && data.isRecurring) {
+        // User wants to add or update recurrence
+        try {
+          const parsed = parseRRule(data.rrule);
+
+          // Check if recurrence already exists
+          const [existing] = await db
+            .select()
+            .from(eventRecurrences)
+            .where(eq(eventRecurrences.eventId, id));
+
+          if (existing) {
+            // Update existing recurrence
+            await db
+              .update(eventRecurrences)
+              .set({
+                rrule: data.rrule,
+                recurUntil: parsed.until || null,
+                recurCount: parsed.count || null,
+              })
+              .where(eq(eventRecurrences.eventId, id));
+          } else {
+            // Create new recurrence
+            await db.insert(eventRecurrences).values({
+              eventId: id,
+              rrule: data.rrule,
+              recurUntil: parsed.until || null,
+              recurCount: parsed.count || null,
+              exDates: [],
+            });
+          }
+        } catch (error) {
+          console.error("Failed to update recurrence rule:", error);
+        }
+      } else {
+        // User wants to remove recurrence
+        await db.delete(eventRecurrences).where(eq(eventRecurrences.eventId, id));
+      }
     }
 
     // Handle calendar change: delete from old, create in new

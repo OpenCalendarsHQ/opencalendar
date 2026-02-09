@@ -18,7 +18,30 @@ export async function ensureUserExists(sessionUser: {
     .from(user)
     .where(eq(user.id, sessionUser.id));
 
-  if (existing) return existing;
+  if (existing) {
+    // Update user info if it has changed (e.g., avatar_url, name)
+    const needsUpdate =
+      existing.image !== sessionUser.image ||
+      existing.name !== (sessionUser.name || "Gebruiker") ||
+      existing.email !== (sessionUser.email || "");
+
+    if (needsUpdate) {
+      const [updated] = await db
+        .update(user)
+        .set({
+          name: sessionUser.name || "Gebruiker",
+          email: sessionUser.email || "",
+          image: sessionUser.image || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(user.id, sessionUser.id))
+        .returning();
+
+      return updated;
+    }
+
+    return existing;
+  }
 
   const [created] = await db
     .insert(user)

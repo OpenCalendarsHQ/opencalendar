@@ -216,7 +216,7 @@ export async function syncGoogleEvents(
 
     const params: calendar_v3.Params$Resource$Events$List = {
       calendarId: cal.externalId,
-      singleEvents: true,
+      singleEvents: false, // Get parent recurring events with RRULE, not expanded instances
       maxResults: 2500,
     };
 
@@ -294,6 +294,12 @@ export async function syncGoogleEvents(
         // Check if this event has recurrence rules (RRULE)
         const hasRecurrence = gEvent.recurrence && gEvent.recurrence.length > 0;
         const isRecurringInstance = !!gEvent.recurringEventId;
+
+        // Skip recurring instances - we only want the parent recurring event
+        // The client-side expansion (useRecurringEvents) will generate the instances
+        if (isRecurringInstance) {
+          continue;
+        }
 
         const eventData = {
           title: gEvent.summary || "(Geen titel)",

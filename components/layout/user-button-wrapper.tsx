@@ -42,14 +42,24 @@ export function UserButtonWrapper() {
     .substring(0, 2)
     .toUpperCase() ?? "U";
 
+  const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+
   return (
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="h-10 w-10 rounded-full bg-neutral-900 text-white font-medium text-sm hover:bg-neutral-800 transition-colors flex items-center justify-center"
+        className="h-10 w-10 rounded-full bg-neutral-900 text-white font-medium text-sm hover:bg-neutral-800 transition-colors flex items-center justify-center overflow-hidden"
         aria-label="User menu"
       >
-        {initials}
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={user.email || "User"}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          initials
+        )}
       </button>
 
       {isOpen && (
@@ -59,13 +69,26 @@ export function UserButtonWrapper() {
             onClick={() => setIsOpen(false)}
           />
           <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg border border-neutral-200 shadow-lg z-50">
-            <div className="p-4 border-b border-neutral-200">
-              <p className="text-sm font-medium text-neutral-900 truncate">
-                {user.email}
-              </p>
-              <p className="text-xs text-neutral-500 mt-1">
-                {user.user_metadata?.full_name || "OpenCalendar gebruiker"}
-              </p>
+            <div className="p-4 border-b border-neutral-200 flex items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-neutral-900 text-white font-medium text-sm flex items-center justify-center overflow-hidden shrink-0">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={user.email || "User"}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  initials
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-neutral-900 truncate">
+                  {user.email}
+                </p>
+                <p className="text-xs text-neutral-500 mt-1">
+                  {user.user_metadata?.full_name || "OpenCalendar gebruiker"}
+                </p>
+              </div>
             </div>
             <div className="p-2">
               <a
