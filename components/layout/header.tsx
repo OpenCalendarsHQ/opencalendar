@@ -87,7 +87,7 @@ export function Header({
   // Mobile header layout
   if (isMobile) {
     return (
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-2 safe-left safe-right">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border px-2 safe-left safe-right">
         {/* Left: Menu + Date */}
         <div className="flex items-center gap-1.5">
           <button
@@ -97,9 +97,14 @@ export function Header({
           >
             <Menu className="h-5 w-5" />
           </button>
-          <span className="text-sm font-medium capitalize text-foreground">
-            {formatMonthYear(currentDate)}
-          </span>
+          <div className="flex flex-col">
+            <span className="text-sm font-medium capitalize text-foreground">
+              {formatMonthYear(currentDate)}
+            </span>
+            <span className="text-[10px] capitalize text-muted-foreground">
+              {formatTodayDate(new Date())}
+            </span>
+          </div>
         </div>
 
         {/* Center: Navigation arrows */}
@@ -147,12 +152,17 @@ export function Header({
 
   // Desktop header layout
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border px-3">
       {/* Left: Date + Sync Status */}
       <div className="flex items-center gap-3">
-        <span className="text-sm font-medium capitalize text-foreground">
-          {formatMonthYear(currentDate)}
-        </span>
+        <div className="flex flex-col">
+          <span className="text-sm font-medium capitalize text-foreground">
+            {formatMonthYear(currentDate)}
+          </span>
+          <span className="text-[10px] capitalize text-muted-foreground">
+            {formatTodayDate(new Date())}
+          </span>
+        </div>
 
         {onSync && (
           <button
