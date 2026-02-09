@@ -11,7 +11,7 @@ import {
   Menu,
 } from "lucide-react";
 import { UserButtonWrapper } from "./user-button-wrapper";
-import { formatMonthYear } from "@/lib/utils/date";
+import { formatMonthYear, formatTodayDate } from "@/lib/utils/date";
 import type { CalendarViewType } from "@/lib/types";
 import Link from "next/link";
 

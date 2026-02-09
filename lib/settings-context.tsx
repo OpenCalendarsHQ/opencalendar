@@ -103,11 +103,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             setSettings({ ...DEFAULT_SETTINGS, ...data });
           }
         } else if (res.status === 401) {
-          // Not authenticated - silently use defaults (e.g., on landing page)
+          // Not authenticated - silently use defaults (e.g., on landing/welcome page)
+          // Don't log error, this is expected when not logged in
         } else {
-          console.error("Failed to load settings:", res.status);
+          // Log error for unexpected status codes, but don't try to parse response as JSON
+          console.error("Failed to load settings: HTTP", res.status);
         }
       } catch (error) {
+        // Only log network errors or JSON parse errors from successful responses
         console.error("Failed to load settings:", error);
       } finally {
         setIsLoading(false);
@@ -121,7 +124,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings((prev) => {
       const next = { ...prev, ...partial };
 
-      // Debounce database save (500ms)
+      // Debounce database save (150ms for faster feedback)
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
       }
@@ -136,7 +139,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           console.error("Failed to save settings:", error);
         }
-      }, 500);
+      }, 150);
 
       return next;
     });

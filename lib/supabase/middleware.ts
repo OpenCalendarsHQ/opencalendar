@@ -37,16 +37,30 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protected routes
+  // Handle root route redirects
+  if (request.nextUrl.pathname === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = user ? "/dashboard" : "/welcome";
+    return NextResponse.redirect(url);
+  }
+
+  // Protected routes - redirect unauthenticated users
   if (
     !user &&
     !request.nextUrl.pathname.startsWith("/auth") &&
     !request.nextUrl.pathname.startsWith("/api/auth") &&
-    request.nextUrl.pathname !== "/"
+    !request.nextUrl.pathname.startsWith("/welcome")
   ) {
-    // Redirect unauthenticated users to sign-in
+    // Redirect unauthenticated users to welcome page
     const url = request.nextUrl.clone();
-    url.pathname = "/auth/sign-in";
+    url.pathname = "/welcome";
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect authenticated users away from auth/welcome pages
+  if (user && (request.nextUrl.pathname.startsWith("/auth") || request.nextUrl.pathname.startsWith("/welcome"))) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 

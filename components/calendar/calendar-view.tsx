@@ -183,8 +183,11 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
       }
 
       if (isNewEvent) {
-        // Create new event via API
-        const res = await fetch("/api/events", {
+        // Optimistic update: trigger refetch immediately
+        onEventsChange();
+
+        // Create new event via API (background, non-blocking)
+        fetch("/api/events", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -197,13 +200,18 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
             location: eventData.location,
             color: eventData.color,
           }),
+        }).then(res => {
+          if (res.ok) {
+            // Refetch to ensure consistency
+            onEventsChange();
+          }
         });
-        if (res.ok) {
-          onEventsChange();
-        }
       } else {
-        // Update existing event via API
-        const res = await fetch("/api/events", {
+        // Optimistic update: trigger refetch immediately
+        onEventsChange();
+
+        // Update existing event via API (background, non-blocking)
+        fetch("/api/events", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -217,10 +225,12 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
             location: eventData.location,
             color: eventData.color,
           }),
+        }).then(res => {
+          if (res.ok) {
+            // Refetch to ensure consistency
+            onEventsChange();
+          }
         });
-        if (res.ok) {
-          onEventsChange();
-        }
       }
     } catch (error) {
       console.error("Failed to save event:", error);
@@ -241,13 +251,18 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
         return;
       }
 
-      // Regular event - delete directly
-      const res = await fetch(`/api/events?id=${eventId}`, {
+      // Optimistic update: trigger refetch immediately
+      onEventsChange();
+
+      // Regular event - delete directly (background, non-blocking)
+      fetch(`/api/events?id=${eventId}`, {
         method: "DELETE",
+      }).then(res => {
+        if (res.ok) {
+          // Refetch to ensure consistency
+          onEventsChange();
+        }
       });
-      if (res.ok) {
-        onEventsChange();
-      }
     } catch (error) {
       console.error("Failed to delete event:", error);
     }

@@ -47,10 +47,13 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
 
+    // Remove timestamp fields and IDs from body (they should not be sent by client)
+    const { createdAt, updatedAt, id, userId, ...settingsData } = body;
+
     // Stringify JSON fields
     const dataToSave = {
-      ...body,
-      defaultReminders: JSON.stringify(body.defaultReminders || [15, 60]),
+      ...settingsData,
+      defaultReminders: JSON.stringify(settingsData.defaultReminders || [15, 60]),
       updatedAt: new Date(),
     };
 

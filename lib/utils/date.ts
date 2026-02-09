@@ -79,6 +79,10 @@ export function formatMonthYear(date: Date): string {
   return format(date, "MMMM yyyy", { locale: nl });
 }
 
+export function formatTodayDate(date: Date): string {
+  return format(date, "EEEE d MMMM", { locale: nl });
+}
+
 export function formatWeekDay(date: Date): string {
   return format(date, "EEE", { locale: nl });
 }
@@ -130,8 +134,15 @@ export function getHourLabel(hour: number, use24h: boolean = true): string {
 }
 
 /**
- * Get the ISO week number for a date.
+ * Get the ISO 8601 week number for a date (Dutch/European standard).
+ * Week 1 is the first week with Thursday in it.
+ * Weeks always start on Monday (ISO 8601 standard).
  */
 export function getWeekNumber(date: Date, weekStartsOn: 0 | 1 = 1): number {
-  return getWeek(date, { weekStartsOn });
+  // ISO 8601 standard: week 1 is the first week with Thursday (day 4)
+  // Always use Monday as start of week for ISO 8601 compliance (Dutch standard)
+  return getWeek(date, {
+    weekStartsOn: 1,
+    firstWeekContainsDate: 4,
+  });
 }

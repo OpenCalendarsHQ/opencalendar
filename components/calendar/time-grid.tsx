@@ -231,7 +231,7 @@ export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, o
       label = `${fmtH(startH)} – ${fmtH(endH)}`;
     }
 
-    return { top, height, left: `${left}%`, width: `calc(${colWidth}% - 4px)`, label };
+    return { top, height, left: `${left}%`, width: `calc(${colWidth}% - 8px)`, label, marginLeft: "4px" };
   })() : null;
 
   return (
@@ -283,7 +283,7 @@ export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, o
               height: `${dragPreview.height}px`,
               left: dragPreview.left,
               width: dragPreview.width,
-              marginLeft: "2px",
+              marginLeft: dragPreview.marginLeft,
             }}
           >
             <div className="h-full w-full rounded-[4px] border-2 border-accent/60 bg-accent/15 px-2 py-1">
@@ -302,8 +302,8 @@ export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, o
               top: `${minutesToPosition(taskDragOver.minutes)}px`,
               height: `${minutesToPosition(60)}px`,
               left: `${(taskDragOver.columnIndex / columnCount) * 100}%`,
-              width: `calc(${(1 / columnCount) * 100}% - 4px)`,
-              marginLeft: "2px",
+              width: `calc(${(1 / columnCount) * 100}% - 8px)`,
+              marginLeft: "4px",
             }}
           >
             <div className="h-full w-full rounded-[4px] border-2 border-dashed border-accent/80 bg-accent/10 px-2 py-1 flex items-center justify-center">

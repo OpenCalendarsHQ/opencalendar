@@ -26,6 +26,11 @@ export const EventCard = memo(function EventCard({ event, style, onClick }: Even
   const left = event.column * columnWidth;
   const width = columnWidth + (event.totalColumns > 1 ? 0.5 : 0);
 
+  // Convert hex color to pastel background (with opacity)
+  const eventColor = event.color || "#737373";
+  const pastelBg = `${eventColor}15`; // 15 = ~8% opacity in hex
+  const borderColor = `${eventColor}40`; // 40 = ~25% opacity
+
   return (
     <EventHoverCard event={event}>
       <button
@@ -35,31 +40,36 @@ export const EventCard = memo(function EventCard({ event, style, onClick }: Even
           e.stopPropagation();
           onClick(event);
         }}
-        className="absolute z-10 flex cursor-pointer flex-col justify-start overflow-hidden rounded-[4px] border border-border/50 bg-card px-2 py-1 text-left hover:z-20 hover:bg-card-hover"
+        className="absolute z-10 flex cursor-pointer flex-col justify-start overflow-hidden rounded-[4px] px-2 py-1 text-left hover:z-20 transition-colors"
         style={{
           ...style,
           left: `${left}%`,
-          width: `calc(${width}% - 4px)`,
-          marginLeft: "2px",
+          width: `calc(${width}% - 8px)`,
+          marginLeft: "4px",
+          backgroundColor: pastelBg,
+          borderLeft: `3px solid ${eventColor}`,
+          borderTop: `1px solid ${borderColor}`,
+          borderRight: `1px solid ${borderColor}`,
+          borderBottom: `1px solid ${borderColor}`,
         }}
       >
-        <div className="absolute left-0 top-0 h-full w-[2px]" style={{ backgroundColor: event.color || "#737373" }} />
+        <div className="absolute left-0 top-0 h-full w-[3px]" style={{ backgroundColor: eventColor }} />
 
         {isCompact ? (
-          <div className="flex items-start gap-1.5 truncate pl-1">
-            <span className="text-[11px] font-medium leading-tight text-foreground">{event.title}</span>
+          <div className="flex items-start gap-1.5 pl-1">
+            <span className="text-[11px] font-medium leading-tight text-foreground break-words">{event.title}</span>
             <span className="shrink-0 text-[10px] leading-tight text-muted-foreground">{formatTime(event.startTime, use24h)}</span>
           </div>
         ) : (
           <div className="pl-1">
-            <div className="truncate text-[11px] font-medium leading-tight text-foreground">{event.title}</div>
+            <div className="text-[11px] font-medium leading-tight text-foreground break-words">{event.title}</div>
             <div className="mt-0.5 text-[10px] leading-tight text-muted-foreground">
               {formatTime(event.startTime, use24h)} – {formatTime(event.endTime, use24h)}
             </div>
             {event.location && duration > 60 && event.totalColumns <= 2 && (
               <div className="mt-0.5 flex items-center gap-1 text-[10px] leading-tight text-muted-foreground">
                 <MapPin className="h-2.5 w-2.5 shrink-0" />
-                <span className="truncate">{event.location}</span>
+                <span className="break-words">{event.location}</span>
               </div>
             )}
           </div>
