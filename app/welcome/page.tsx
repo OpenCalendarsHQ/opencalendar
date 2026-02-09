@@ -2,22 +2,19 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import DarkVeil from "@/components/animations/dark-veil";
+import Aurora from "@/components/animations/aurora";
 import { Calendar, Github } from "lucide-react";
 
 export default function WelcomePage() {
   return (
     <div className="relative flex min-h-screen flex-col bg-black overflow-hidden">
-      {/* Dark Veil WebGL Background */}
+      {/* Aurora WebGL Background */}
       <div className="absolute inset-0 w-full h-full">
-        <DarkVeil
-          hueShift={0}
-          noiseIntensity={0.02}
-          scanlineIntensity={0}
-          speed={0.3}
-          scanlineFrequency={0}
-          warpAmount={0.1}
-          resolutionScale={1}
+        <Aurora
+          colorStops={["#0080ff", "#00ffff", "#004080"]}
+          blend={0.5}
+          amplitude={1.0}
+          speed={1}
         />
       </div>
 

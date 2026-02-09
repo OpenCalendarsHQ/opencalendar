@@ -2,23 +2,20 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import DarkVeil from "@/components/animations/dark-veil";
+import Aurora from "@/components/animations/aurora";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-[#0a0a0a]">
       {/* Left side - Branding */}
       <div className="hidden w-1/2 flex-col justify-between p-12 lg:flex relative overflow-hidden bg-black">
-        {/* Dark Veil WebGL Background - Full Width */}
+        {/* Aurora WebGL Background - Full Width */}
         <div className="absolute inset-0 w-full h-full">
-          <DarkVeil
-            hueShift={0}
-            noiseIntensity={0.02}
-            scanlineIntensity={0}
-            speed={0.3}
-            scanlineFrequency={0}
-            warpAmount={0.1}
-            resolutionScale={1}
+          <Aurora
+            colorStops={["#0080ff", "#00ffff", "#004080"]}
+            blend={0.5}
+            amplitude={1.0}
+            speed={1}
           />
         </div>
 
