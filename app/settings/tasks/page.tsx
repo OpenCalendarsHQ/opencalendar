@@ -7,7 +7,7 @@ import { ArrowLeft, RefreshCw, Trash2, Plus, Settings } from "lucide-react";
 
 interface TaskProvider {
   id: string;
-  provider: "notion" | "github";
+  provider: "notion" | "github" | "manual";
   name: string;
   lastSyncAt: string | null;
   isActive: boolean;
@@ -41,14 +41,34 @@ function GitHubIcon({ className }: { className?: string }) {
   );
 }
 
+function ManualIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+      />
+    </svg>
+  );
+}
+
 const providerIcons = {
   notion: NotionIcon,
   github: GitHubIcon,
+  manual: ManualIcon,
 };
 
 const providerNames = {
   notion: "Notion",
   github: "GitHub",
+  manual: "Handmatig",
 };
 
 function TasksSettingsContent() {
@@ -87,7 +107,11 @@ function TasksSettingsContent() {
       const response = await fetch("/api/tasks/providers");
       if (response.ok) {
         const data = await response.json();
-        setProviders(data.providers || []);
+        // Filter out manual provider (it's auto-managed, not user-configurable)
+        const filteredProviders = (data.providers || []).filter(
+          (p: TaskProvider) => p.provider !== "manual"
+        );
+        setProviders(filteredProviders);
       }
     } catch (error) {
       console.error("Failed to fetch providers:", error);

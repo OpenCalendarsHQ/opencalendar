@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ExternalLink, Calendar, Clock, Tag } from "lucide-react";
+import { ExternalLink, Calendar, Clock, Tag, Plus, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useDrag } from "@/lib/drag-context";
@@ -10,9 +10,9 @@ interface Task {
   id: string;
   providerId: string;
   providerName: string;
-  providerType: "notion" | "github";
-  externalId: string;
-  externalUrl: string;
+  providerType: "notion" | "github" | "manual";
+  externalId: string | null;
+  externalUrl: string | null;
   title: string;
   description?: string;
   status?: string;
@@ -46,12 +46,16 @@ function GitHubIcon({ className }: { className?: string }) {
 const providerIcons = {
   notion: NotionIcon,
   github: GitHubIcon,
+  manual: CheckSquare,
 };
 
 export function TaskList({ onTaskDragStart }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "scheduled" | "unscheduled">("unscheduled");
+  const [isCreating, setIsCreating] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { setDraggingTask } = useDrag();
 
   useEffect(() => {
@@ -72,6 +76,48 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
     }
   }
 
+  async function handleCreateTask() {
+    if (!newTaskTitle.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create",
+          title: newTaskTitle.trim(),
+        }),
+      });
+
+      if (response.ok) {
+        setIsCreating(false);
+        setNewTaskTitle("");
+        fetchTasks(); // Refresh
+      }
+    } catch (error) {
+      console.error("Failed to create task:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleDeleteTask(taskId: string) {
+    if (!confirm("Weet je zeker dat je deze taak wilt verwijderen?")) return;
+
+    try {
+      const response = await fetch(`/api/tasks?id=${taskId}&action=delete`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        fetchTasks(); // Refresh
+      }
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+    }
+  }
+
   const filteredTasks = tasks.filter((task) => {
     if (filter === "scheduled") return task.scheduledEventId !== null;
     if (filter === "unscheduled") return task.scheduledEventId === null;
@@ -88,13 +134,70 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
 
   if (tasks.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-2 p-4 text-center">
-        <CheckSquare className="h-8 w-8 text-muted-foreground/50" />
-        <div className="text-xs text-muted-foreground">
-          Geen taken gevonden
+      <div className="flex flex-col gap-2 p-2">
+        {/* Header with add button */}
+        <div className="flex items-center justify-between px-2 pt-0 pb-1">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Taken
+          </span>
+          <button
+            onClick={() => setIsCreating(true)}
+            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+            title="Taak toevoegen"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
         </div>
-        <div className="text-[10px] text-muted-foreground/70">
-          Verbind Notion of GitHub in de instellingen
+
+        {/* Create task form */}
+        {isCreating && (
+          <div className="mb-1 mx-2 rounded-lg border border-accent bg-card p-2">
+            <input
+              type="text"
+              placeholder="Nieuwe taak..."
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newTaskTitle.trim() && !isSubmitting) {
+                  handleCreateTask();
+                } else if (e.key === "Escape") {
+                  setIsCreating(false);
+                  setNewTaskTitle("");
+                }
+              }}
+              className="w-full px-2 py-1 text-xs bg-background border border-border rounded"
+              autoFocus
+            />
+            <div className="flex items-center gap-1 mt-2">
+              <button
+                onClick={handleCreateTask}
+                disabled={!newTaskTitle.trim() || isSubmitting}
+                className="flex-1 rounded bg-accent px-2 py-1 text-xs font-medium hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? "Bezig..." : "Toevoegen"}
+              </button>
+              <button
+                onClick={() => {
+                  setIsCreating(false);
+                  setNewTaskTitle("");
+                }}
+                disabled={isSubmitting}
+                className="flex-1 rounded px-2 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
+              >
+                Annuleren
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col items-center justify-center gap-2 p-4 text-center">
+          <CheckSquare className="h-8 w-8 text-muted-foreground/50" />
+          <div className="text-xs text-muted-foreground">
+            Geen taken gevonden
+          </div>
+          <div className="text-[10px] text-muted-foreground/70">
+            Klik op + om een taak toe te voegen
+          </div>
         </div>
       </div>
     );
@@ -102,6 +205,61 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
 
   return (
     <div className="flex flex-col gap-2 p-2">
+      {/* Header with add button */}
+      <div className="flex items-center justify-between px-2 pt-0 pb-1">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          Taken
+        </span>
+        <button
+          onClick={() => setIsCreating(true)}
+          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          title="Taak toevoegen"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Create task form */}
+      {isCreating && (
+        <div className="mb-1 mx-2 rounded-lg border border-accent bg-card p-2">
+          <input
+            type="text"
+            placeholder="Nieuwe taak..."
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && newTaskTitle.trim() && !isSubmitting) {
+                handleCreateTask();
+              } else if (e.key === "Escape") {
+                setIsCreating(false);
+                setNewTaskTitle("");
+              }
+            }}
+            className="w-full px-2 py-1 text-xs bg-background border border-border rounded"
+            autoFocus
+          />
+          <div className="flex items-center gap-1 mt-2">
+            <button
+              onClick={handleCreateTask}
+              disabled={!newTaskTitle.trim() || isSubmitting}
+              className="flex-1 rounded bg-accent px-2 py-1 text-xs font-medium hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? "Bezig..." : "Toevoegen"}
+            </button>
+            <button
+              onClick={() => {
+                setIsCreating(false);
+                setNewTaskTitle("");
+              }}
+              disabled={isSubmitting}
+              className="flex-1 rounded px-2 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
+            >
+              Annuleren
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Filter buttons */}
       <div className="flex gap-1 text-[10px]">
         <button
@@ -166,14 +324,30 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
                     </span>
                   )}
                 </div>
-                <a
-                  href={task.externalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                </a>
+                <div className="flex items-center gap-1">
+                  {task.providerType === "manual" && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTask(task.id);
+                      }}
+                      className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive hover:text-destructive-foreground group-hover:opacity-100"
+                      title="Verwijder taak"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  )}
+                  {task.externalUrl && (
+                    <a
+                      href={task.externalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
               </div>
 
               {/* Title */}

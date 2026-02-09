@@ -6,7 +6,11 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is not set");
 }
 
-const client = postgres(process.env.DATABASE_URL);
+// Configure for serverless environments (Vercel, etc.)
+const client = postgres(process.env.DATABASE_URL, {
+  prepare: false, // Required for PgBouncer connection pooling
+  max: 1, // Limit connections in serverless
+});
 
 export const db = drizzle(client, { schema });
 

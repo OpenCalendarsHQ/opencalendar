@@ -17,6 +17,7 @@ import { events } from "./events";
 export const taskProviderEnum = pgEnum("task_provider", [
   "notion",
   "github",
+  "manual",
 ]);
 
 // Task provider accounts (Notion, GitHub)
@@ -58,8 +59,8 @@ export const tasks = pgTable("tasks", {
   providerId: uuid("provider_id")
     .notNull()
     .references(() => taskProviders.id, { onDelete: "cascade" }),
-  externalId: text("external_id").notNull(), // Notion page ID or GitHub issue number
-  externalUrl: text("external_url").notNull(), // Link to original task/issue
+  externalId: text("external_id"), // Notion page ID or GitHub issue number (NULL for manual tasks)
+  externalUrl: text("external_url"), // Link to original task/issue (NULL for manual tasks)
   title: text("title").notNull(),
   description: text("description"),
   status: text("status"), // Notion status or GitHub state (open, closed, etc.)

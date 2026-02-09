@@ -135,6 +135,58 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, event });
     }
 
+    if (action === "create") {
+      // Create a new manual task
+      const { title, description, dueDate } = body;
+
+      if (!title || !title.trim()) {
+        return NextResponse.json(
+          { error: "Task title required" },
+          { status: 400 }
+        );
+      }
+
+      // Get or create manual provider for user
+      let manualProvider = await db
+        .select()
+        .from(taskProviders)
+        .where(
+          and(
+            eq(taskProviders.userId, user.id),
+            eq(taskProviders.provider, "manual")
+          )
+        )
+        .limit(1)
+        .then((rows) => rows[0]);
+
+      if (!manualProvider) {
+        // Auto-create manual provider
+        [manualProvider] = await db
+          .insert(taskProviders)
+          .values({
+            userId: user.id,
+            provider: "manual",
+            name: "Handmatige taken",
+            isActive: true,
+          })
+          .returning();
+      }
+
+      // Create manual task
+      const [task] = await db
+        .insert(tasks)
+        .values({
+          providerId: manualProvider.id,
+          title: title.trim(),
+          description: description?.trim() || null,
+          dueDate: dueDate ? new Date(dueDate) : null,
+          status: "todo",
+        })
+        .returning();
+
+      return NextResponse.json({ success: true, task });
+    }
+
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
     console.error("Failed to process task action:", error);
@@ -145,7 +197,65 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE /api/tasks/:id - Unschedule a task (remove calendar event link)
+// PUT /api/tasks - Update a manual task
+export async function PUT(request: NextRequest) {
+  try {
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { id, title, description, status } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: "Task ID required" }, { status: 400 });
+    }
+
+    // Verify task ownership and is manual
+    const [existing] = await db
+      .select()
+      .from(tasks)
+      .innerJoin(taskProviders, eq(tasks.providerId, taskProviders.id))
+      .where(
+        and(
+          eq(tasks.id, id),
+          eq(taskProviders.userId, user.id),
+          eq(taskProviders.provider, "manual")
+        )
+      )
+      .limit(1);
+
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Task not found or not editable" },
+        { status: 404 }
+      );
+    }
+
+    // Update task
+    const [updated] = await db
+      .update(tasks)
+      .set({
+        title: title?.trim() || existing.tasks.title,
+        description: description?.trim() || existing.tasks.description,
+        status: status || existing.tasks.status,
+        updatedAt: new Date(),
+      })
+      .where(eq(tasks.id, id))
+      .returning();
+
+    return NextResponse.json({ success: true, task: updated });
+  } catch (error) {
+    console.error("Failed to update task:", error);
+    return NextResponse.json(
+      { error: "Failed to update task" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/tasks/:id - Unschedule or delete a task
 export async function DELETE(request: NextRequest) {
   try {
     const user = await getUser();
@@ -155,6 +265,7 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const taskId = searchParams.get("id");
+    const action = searchParams.get("action") || "unschedule";
 
     if (!taskId) {
       return NextResponse.json(
@@ -175,6 +286,20 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
+    // If action is delete and task is manual, permanently delete it
+    if (action === "delete" && task.taskProviders.provider === "manual") {
+      // Delete linked calendar event if exists
+      if (task.tasks.scheduledEventId) {
+        await db.delete(events).where(eq(events.id, task.tasks.scheduledEventId));
+      }
+
+      // Delete the task itself
+      await db.delete(tasks).where(eq(tasks.id, taskId));
+
+      return NextResponse.json({ success: true, deleted: true });
+    }
+
+    // Default behavior: unschedule (for provider tasks or if action=unschedule)
     // If task has a scheduled event, delete it
     if (task.tasks.scheduledEventId) {
       await db.delete(events).where(eq(events.id, task.tasks.scheduledEventId));
@@ -191,9 +316,9 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to unschedule task:", error);
+    console.error("Failed to delete/unschedule task:", error);
     return NextResponse.json(
-      { error: "Failed to unschedule task" },
+      { error: "Failed to delete/unschedule task" },
       { status: 500 }
     );
   }
