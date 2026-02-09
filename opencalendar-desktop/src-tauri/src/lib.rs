@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 use tauri::{Emitter, Manager, State};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -11,6 +12,7 @@ struct AuthTokens {
 
 struct AppState {
     tokens: Mutex<AuthTokens>,
+    last_deep_link: Mutex<Option<(String, Instant)>>,
 }
 
 impl Default for AppState {
@@ -21,6 +23,7 @@ impl Default for AppState {
                 refresh_token: None,
                 user_data: None,
             }),
+            last_deep_link: Mutex::new(None),
         }
     }
 }
@@ -103,8 +106,40 @@ pub fn run() {
                 app.deep_link().register("opencalendar")?;
 
                 // Listen for deep links and emit them to the frontend
+                let app_handle = app.handle().clone();
+
                 app.deep_link().on_open_url(move |event| {
-                    println!("Deep link received in main instance: {:?}", event.urls());
+                    let event_urls = event.urls();
+                    println!("Deep link received in on_open_url: {:?}", event_urls);
+
+                    // Check for duplicate URLs within 2 seconds (debounce)
+                    let url_string = event_urls.first().map(|u| u.to_string()).unwrap_or_default();
+
+                    let state = app_handle.state::<AppState>();
+                    if let Ok(mut last_link) = state.last_deep_link.lock() {
+                        if let Some((last_url, last_time)) = last_link.as_ref() {
+                            if last_url == &url_string && last_time.elapsed() < Duration::from_secs(2) {
+                                println!("Ignoring duplicate deep link within 2 seconds");
+                                return;
+                            }
+                        }
+
+                        // Update the last processed link
+                        *last_link = Some((url_string.clone(), Instant::now()));
+                    }
+
+                    // Emit to frontend
+                    if let Some(window) = app_handle.get_webview_window("main") {
+                        let urls: Vec<String> = event_urls.iter().map(|u| u.to_string()).collect();
+                        println!("Emitting deep-link event to frontend with {} URLs", urls.len());
+                        if let Err(e) = window.emit("deep-link://new-url", urls) {
+                            eprintln!("Failed to emit deep link event: {}", e);
+                        } else {
+                            println!("Successfully emitted deep-link event");
+                        }
+                    } else {
+                        eprintln!("Could not find main window to emit deep link");
+                    }
                 });
             }
             Ok(())
