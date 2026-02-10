@@ -1,5 +1,5 @@
 /// OpenCalendar Service Worker
-const CACHE_VERSION = "opencalendar-v1";
+const CACHE_VERSION = "opencalendar-v2";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
@@ -65,21 +65,17 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static/page requests: stale-while-revalidate
+  // Static/page requests: network-first (always show newest)
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const fetchPromise = fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached);
-
-      return cached || fetchPromise;
-    })
+    fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(request))
   );
 });
 
