@@ -246,6 +246,18 @@ function CalendarApp(props: { user: any; logout: () => void }) {
     setCurrentDate(date);
   }, []);
 
+  // Filter events based on visible calendars - memoized for performance
+  // MUST be before early return to follow Rules of Hooks
+  const visibleEvents = useMemo(() => {
+    const visibleCalendarIds = new Set(
+      calendarGroups
+        .flatMap((g) => g.calendars)
+        .filter((c) => c.isVisible)
+        .map((c) => c.id)
+    );
+    return events.filter((event) => visibleCalendarIds.has(event.calendarId));
+  }, [events, calendarGroups]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -256,17 +268,6 @@ function CalendarApp(props: { user: any; logout: () => void }) {
       </div>
     );
   }
-
-  // Filter events based on visible calendars - memoized for performance
-  const visibleEvents = useMemo(() => {
-    const visibleCalendarIds = new Set(
-      calendarGroups
-        .flatMap((g) => g.calendars)
-        .filter((c) => c.isVisible)
-        .map((c) => c.id)
-    );
-    return events.filter((event) => visibleCalendarIds.has(event.calendarId));
-  }, [events, calendarGroups]);
 
   return (
     <div className="flex h-screen bg-gray-50">
