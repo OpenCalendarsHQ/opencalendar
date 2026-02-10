@@ -169,11 +169,12 @@ export default function WelcomePage() {
               ) : winAsset ? (
                 <div className="space-y-3">
                   <Link href={winAsset.browser_download_url}>
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-lg">
-                      <Download className="mr-2 h-5 w-5" />
+                    <Button className="w-full h-12 text-lg shadow-lg shadow-blue-500/20 bg-blue-600 hover:bg-blue-700">
+                      <Download className="mr-2 w-5 h-5" />
                       Download .msi
                     </Button>
                   </Link>
+
                   <p className="text-center text-xs text-zinc-500">
                     {formatSize(winAsset.size)} • {release?.tag_name}
                   </p>
