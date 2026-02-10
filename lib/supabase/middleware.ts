@@ -61,7 +61,12 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Redirect authenticated users away from auth/welcome pages
-  if (user && (request.nextUrl.pathname.startsWith("/auth") || request.nextUrl.pathname.startsWith("/welcome"))) {
+  // EXCEPTION: Allow /auth/desktop-login for desktop app token generation
+  if (
+    user &&
+    !request.nextUrl.pathname.startsWith("/auth/desktop-login") &&
+    (request.nextUrl.pathname.startsWith("/auth") || request.nextUrl.pathname.startsWith("/welcome"))
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
