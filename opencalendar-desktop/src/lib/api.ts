@@ -1,4 +1,5 @@
 import type { Calendar, CalendarAccount, Event, Settings } from "./types";
+import { offlineCache } from "./offline-cache";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -25,19 +26,30 @@ class ApiClient {
       Object.assign(headers, options.headers);
     }
 
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      ...options,
-      headers,
-    });
+    try {
+      const response = await fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers,
+      });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        error: "Request failed",
-      }));
-      throw new Error(error.error || "Request failed");
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({
+          error: "Request failed",
+        }));
+        throw new Error(error.error || "Request failed");
+      }
+
+      // Mark as online
+      offlineCache.setOfflineStatus(false);
+      return response.json();
+    } catch (error) {
+      // Network error - mark as offline
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.log('Network error detected, marking as offline');
+        offlineCache.setOfflineStatus(true);
+      }
+      throw error;
     }
-
-    return response.json();
   }
 
   // Auth endpoints
@@ -106,10 +118,38 @@ class ApiClient {
     color?: string;
     timezone?: string;
   }): Promise<Event> {
-    return this.request("/api/events", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
+    try {
+      const result = await this.request<Event>("/api/events", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      return result;
+    } catch (error) {
+      // If offline, add to sync queue and create optimistic local event
+      if (offlineCache.isOffline()) {
+        console.log('Offline: queuing event creation');
+        const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const optimisticEvent = {
+          id: tempId,
+          ...data,
+          startTime: new Date(data.startTime),
+          endTime: new Date(data.endTime),
+          isAllDay: data.isAllDay || false,
+          isRecurring: false,
+          color: data.color || '#737373',
+        };
+
+        offlineCache.addCachedEvent(optimisticEvent);
+        offlineCache.addToSyncQueue({
+          type: 'create',
+          resource: 'event',
+          data,
+        });
+
+        return optimisticEvent as Event;
+      }
+      throw error;
+    }
   }
 
   async updateEvent(
@@ -125,16 +165,53 @@ class ApiClient {
       calendarId: string;
     }>
   ): Promise<Event> {
-    return this.request("/api/events", {
-      method: "PUT",
-      body: JSON.stringify({ id, ...data }),
-    });
+    try {
+      const result = await this.request<Event>("/api/events", {
+        method: "PUT",
+        body: JSON.stringify({ id, ...data }),
+      });
+      return result;
+    } catch (error) {
+      // If offline, add to sync queue and update local cache
+      if (offlineCache.isOffline()) {
+        console.log('Offline: queuing event update');
+        offlineCache.updateCachedEvent(id, data);
+        offlineCache.addToSyncQueue({
+          type: 'update',
+          resource: 'event',
+          data: { id, ...data },
+        });
+
+        // Return optimistic result
+        const events = offlineCache.getEvents() || [];
+        const updated = events.find(e => e.id === id);
+        if (updated) {
+          return updated as Event;
+        }
+      }
+      throw error;
+    }
   }
 
   async deleteEvent(id: string): Promise<void> {
-    await this.request(`/api/events?id=${id}`, {
-      method: "DELETE",
-    });
+    try {
+      await this.request(`/api/events?id=${id}`, {
+        method: "DELETE",
+      });
+    } catch (error) {
+      // If offline, add to sync queue and remove from local cache
+      if (offlineCache.isOffline()) {
+        console.log('Offline: queuing event deletion');
+        offlineCache.removeCachedEvent(id);
+        offlineCache.addToSyncQueue({
+          type: 'delete',
+          resource: 'event',
+          data: { id },
+        });
+        return; // Don't throw error for offline deletes
+      }
+      throw error;
+    }
   }
 
   async addEventException(

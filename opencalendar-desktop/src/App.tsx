@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { apiClient } from "./lib/api";
 import { offlineCache } from "./lib/offline-cache";
+import { syncManager } from "./lib/sync-manager";
 import { Sidebar } from "./components/layout/sidebar";
 import { Header } from "./components/layout/header";
 import { MonthView } from "./components/calendar/month-view";
@@ -11,6 +12,9 @@ import { WeekView } from "./components/calendar/week-view";
 import { DayView } from "./components/calendar/day-view";
 import { YearView } from "./components/calendar/year-view";
 import { EventDetailModal } from "./components/calendar/event-detail-modal";
+import { EventEditModal } from "./components/calendar/event-edit-modal";
+import { TaskList } from "./components/tasks/task-list";
+import { TodayView } from "./components/views/today-view";
 import type { CalendarEvent, CalendarGroup, CalendarViewType } from "./lib/types";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
@@ -112,6 +116,7 @@ function App() {
 
 // Separate CalendarApp component to handle calendar state
 function CalendarApp(props: { user: any; logout: () => void }) {
+  const [mainView, setMainView] = useState<"calendar" | "tasks" | "today">("calendar");
   const [viewType, setViewType] = useState<CalendarViewType>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -120,7 +125,9 @@ function CalendarApp(props: { user: any; logout: () => void }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isNewEvent, setIsNewEvent] = useState(false);
   const hasInitialized = useRef(false);
 
   // Fetch calendars and events once when user authenticates
@@ -128,8 +135,17 @@ function CalendarApp(props: { user: any; logout: () => void }) {
     if (props.user?.id && !hasInitialized.current) {
       hasInitialized.current = true;
       console.log("User authenticated, fetching data...");
+
+      // Start sync manager for offline support
+      syncManager.startAutoSync();
+
       fetchData();
     }
+
+    // Cleanup on unmount
+    return () => {
+      syncManager.stopAutoSync();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.user?.id]); // Only re-run if user ID changes (i.e., login/logout)
 
@@ -289,7 +305,17 @@ function CalendarApp(props: { user: any; logout: () => void }) {
 
   const handleEventClick = useCallback((event: CalendarEvent) => {
     setSelectedEvent(event);
-    setIsModalOpen(true);
+    setIsDetailModalOpen(true);
+  }, []);
+
+  const handleCreateEvent = useCallback(() => {
+    setSelectedEvent(null);
+    setIsNewEvent(true);
+    setIsEditModalOpen(true);
+  }, []);
+
+  const handleEventSaved = useCallback(() => {
+    fetchEvents();
   }, []);
 
   const handleDayClick = useCallback((date: Date) => {
@@ -322,72 +348,151 @@ function CalendarApp(props: { user: any; logout: () => void }) {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar
-        selectedDate={selectedDate}
-        onDateSelect={handleDayClick}
-        calendarGroups={calendarGroups}
-        onToggleCalendar={handleToggleCalendar}
-        isCollapsed={isSidebarCollapsed}
-        onToggleCollapsed={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-      />
+      {/* Sidebar - only show in calendar view */}
+      {mainView === "calendar" && (
+        <Sidebar
+          selectedDate={selectedDate}
+          onDateSelect={handleDayClick}
+          calendarGroups={calendarGroups}
+          onToggleCalendar={handleToggleCalendar}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapsed={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
+      )}
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <Header
-          currentDate={currentDate}
-          viewType={viewType}
-          onViewTypeChange={setViewType}
-          onNavigateBack={handleNavigateBack}
-          onNavigateForward={handleNavigateForward}
-          onNavigateToday={handleNavigateToday}
-          onSync={fetchEvents}
-        />
+        {/* Header with navigation */}
+        <div className="bg-white border-b border-gray-200">
+          {/* Main view tabs */}
+          <div className="flex items-center gap-1 px-4 pt-3 border-b border-gray-100">
+            <button
+              onClick={() => setMainView("today")}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                mainView === "today"
+                  ? "bg-gray-100 text-gray-900"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              }`}
+            >
+              Vandaag
+            </button>
+            <button
+              onClick={() => setMainView("calendar")}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                mainView === "calendar"
+                  ? "bg-gray-100 text-gray-900"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              }`}
+            >
+              Kalender
+            </button>
+            <button
+              onClick={() => setMainView("tasks")}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                mainView === "tasks"
+                  ? "bg-gray-100 text-gray-900"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              }`}
+            >
+              Taken
+            </button>
+          </div>
 
-        {/* Calendar view */}
-        <div className="flex-1 overflow-auto bg-white">
-          {viewType === "month" && (
-            <MonthView
+          {/* Calendar Header - only show in calendar view */}
+          {mainView === "calendar" && (
+            <Header
               currentDate={currentDate}
-              events={visibleEvents}
-              onEventClick={handleEventClick}
-              onDayClick={handleDayClick}
-            />
-          )}
-          {viewType === "week" && (
-            <WeekView
-              currentDate={currentDate}
-              events={visibleEvents}
-              onEventClick={handleEventClick}
-              onDayClick={handleDayClick}
-            />
-          )}
-          {viewType === "day" && (
-            <DayView
-              currentDate={currentDate}
-              events={visibleEvents}
-              onEventClick={handleEventClick}
-            />
-          )}
-          {viewType === "year" && (
-            <YearView
-              currentDate={currentDate}
-              events={visibleEvents}
-              onDayClick={handleDayClick}
+              viewType={viewType}
+              onViewTypeChange={setViewType}
+              onNavigateBack={handleNavigateBack}
+              onNavigateForward={handleNavigateForward}
+              onNavigateToday={handleNavigateToday}
+              onSync={fetchEvents}
             />
           )}
         </div>
+
+        {/* View content */}
+        <div className="flex-1 overflow-auto bg-white">
+          {mainView === "today" && (
+            <TodayView
+              events={visibleEvents}
+              onEventClick={handleEventClick}
+            />
+          )}
+
+          {mainView === "calendar" && (
+            <>
+              {viewType === "month" && (
+                <MonthView
+                  currentDate={currentDate}
+                  events={visibleEvents}
+                  onEventClick={handleEventClick}
+                  onDayClick={handleDayClick}
+                />
+              )}
+              {viewType === "week" && (
+                <WeekView
+                  currentDate={currentDate}
+                  events={visibleEvents}
+                  onEventClick={handleEventClick}
+                  onDayClick={handleDayClick}
+                />
+              )}
+              {viewType === "day" && (
+                <DayView
+                  currentDate={currentDate}
+                  events={visibleEvents}
+                  onEventClick={handleEventClick}
+                />
+              )}
+              {viewType === "year" && (
+                <YearView
+                  currentDate={currentDate}
+                  events={visibleEvents}
+                  onDayClick={handleDayClick}
+                />
+              )}
+            </>
+          )}
+
+          {mainView === "tasks" && <TaskList />}
+        </div>
+
+        {/* Floating action button for creating events */}
+        {mainView === "calendar" && (
+          <button
+            onClick={handleCreateEvent}
+            className="fixed bottom-8 right-8 w-14 h-14 bg-neutral-900 text-white rounded-full shadow-lg hover:bg-neutral-800 transition-all hover:scale-110 flex items-center justify-center"
+            title="Nieuw evenement"
+          >
+            <span className="text-2xl leading-none">+</span>
+          </button>
+        )}
       </div>
 
       {/* Event Detail Modal */}
       <EventDetailModal
         event={selectedEvent}
-        isOpen={isModalOpen}
+        isOpen={isDetailModalOpen}
         onClose={() => {
-          setIsModalOpen(false);
+          setIsDetailModalOpen(false);
           setSelectedEvent(null);
         }}
+      />
+
+      {/* Event Edit Modal */}
+      <EventEditModal
+        event={selectedEvent}
+        isOpen={isEditModalOpen}
+        isNew={isNewEvent}
+        calendarGroups={calendarGroups}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedEvent(null);
+          setIsNewEvent(false);
+        }}
+        onSave={handleEventSaved}
       />
     </div>
   );

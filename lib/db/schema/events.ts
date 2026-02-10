@@ -51,6 +51,10 @@ export const events = pgTable("events", {
   endTimeIdx: index("events_end_time_idx").on(table.endTime),
   // PERFORMANCE: Composite index for common query pattern (calendar + time range)
   calendarStartIdx: index("events_calendar_start_idx").on(table.calendarId, table.startTime),
+  // PERFORMANCE: Index on icsUid for cross-calendar deduplication
+  icsUidIdx: index("events_ics_uid_idx").on(table.icsUid),
+  // PERFORMANCE: Index on externalId for deduplication
+  externalIdIdx: index("events_external_id_idx").on(table.externalId),
 }));
 
 // Recurrence rules for recurring events
