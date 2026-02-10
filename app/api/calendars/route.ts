@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { calendars, calendarAccounts, events, syncStates } from "@/lib/db/schema";
 import { verifyRequest } from "@/lib/auth/verify-request";
 import { ensureUserExists } from "@/lib/auth/ensure-user";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 
 // GET /api/calendars - Get all calendars for the current user
 export async function GET(request: NextRequest) {
@@ -98,11 +98,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Ensure a local account exists for the user
-    let [localAccount] = await db
+    let localAccountResults = await db
       .select()
       .from(calendarAccounts)
-      .where(eq(calendarAccounts.userId, user.id))
+      .where(
+        and(
+          eq(calendarAccounts.userId, user.id),
+          eq(calendarAccounts.provider, "local")
+        )
+      )
       .limit(1);
+
+    let localAccount = localAccountResults[0];
 
     if (!localAccount) {
       [localAccount] = await db

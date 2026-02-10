@@ -119,7 +119,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       const groups = await res.json();
       if (!Array.isArray(groups)) return;
 
-      // Sync all non-local calendar accounts
+      // Sync all non-local calendar accounts (local calendars don't need syncing)
       const syncPromises = groups
         .filter((group) => group.provider !== "local")
         .map(async (group) => {

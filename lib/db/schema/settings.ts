@@ -11,6 +11,7 @@ export const userSettings = pgTable("user_settings", {
   weekStartsOn: integer("week_starts_on").notNull().default(1), // 0 = Sunday, 1 = Monday
   timeFormat: text("time_format").notNull().default("24h"), // "24h" | "12h"
   timezone: text("timezone").notNull().default("Europe/Amsterdam"),
+  language: text("language").notNull().default("nl"), // "nl" | "en"
   showWeekNumbers: boolean("show_week_numbers").notNull().default(false),
   defaultView: text("default_view").notNull().default("week"), // "day" | "week" | "month" | "year"
   defaultEventDuration: integer("default_event_duration").notNull().default(60), // minutes

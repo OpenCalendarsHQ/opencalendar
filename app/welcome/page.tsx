@@ -2,10 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import Aurora from "@/components/animations/aurora";
 import { Calendar, Github } from "lucide-react";
 
 export default function WelcomePage() {
+  const t = useTranslations("Welcome");
+
   return (
     <div className="relative flex min-h-screen flex-col bg-black overflow-hidden">
       {/* Aurora WebGL Background */}
@@ -59,14 +62,10 @@ export default function WelcomePage() {
           {/* Heading */}
           <div className="space-y-4">
             <h1 className="font-pixel text-5xl font-bold leading-tight text-white md:text-6xl lg:text-7xl">
-              Sync all your calendars<br />
-              <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                in one place
-              </span>
+              {t("title")}
             </h1>
             <p className="mx-auto max-w-2xl text-lg text-zinc-400 md:text-xl">
-              OpenCalendar brings all your Google Calendar and iCloud events together.
-              Build better schedules with a unified view of your time.
+              {t("subtitle")}
             </p>
           </div>
 
@@ -76,34 +75,34 @@ export default function WelcomePage() {
               href="/auth/sign-up"
               className="w-full rounded-lg bg-blue-600 px-8 py-3 font-medium text-white transition-colors hover:bg-blue-700 sm:w-auto"
             >
-              Get Started
+              {t("getStarted")}
             </Link>
             <Link
               href="/auth/sign-in"
               className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-8 py-3 font-medium text-zinc-300 transition-colors hover:border-zinc-700 hover:bg-zinc-900/70 hover:text-white sm:w-auto"
             >
-              Sign In
+              {t("signIn")}
             </Link>
           </div>
 
           {/* Features */}
           <div className="grid gap-6 pt-12 md:grid-cols-3">
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-6 backdrop-blur-sm">
-              <h3 className="mb-2 font-semibold text-white">Multi-Calendar Sync</h3>
+              <h3 className="mb-2 font-semibold text-white">{t("features.syncTitle")}</h3>
               <p className="text-sm text-zinc-400">
-                Connect Google Calendar and iCloud in one unified view
+                {t("features.syncDesc")}
               </p>
             </div>
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-6 backdrop-blur-sm">
-              <h3 className="mb-2 font-semibold text-white">Recurring Events</h3>
+              <h3 className="mb-2 font-semibold text-white">{t("features.recurringTitle")}</h3>
               <p className="text-sm text-zinc-400">
-                Full support for recurring events with flexible editing options
+                {t("features.recurringDesc")}
               </p>
             </div>
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-6 backdrop-blur-sm">
-              <h3 className="mb-2 font-semibold text-white">Open Source</h3>
+              <h3 className="mb-2 font-semibold text-white">{t("features.openSourceTitle")}</h3>
               <p className="text-sm text-zinc-400">
-                Free and open source software built for the community
+                {t("features.openSourceDesc")}
               </p>
             </div>
           </div>

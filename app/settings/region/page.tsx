@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useSettings } from "@/lib/settings-context";
 
 const COMMON_TIMEZONES = [
@@ -31,6 +32,7 @@ const COMMON_TIMEZONES = [
 ];
 
 export default function RegionSettingsPage() {
+  const t = useTranslations("Settings.region");
   const { settings, updateSettings } = useSettings();
 
   const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -42,12 +44,52 @@ export default function RegionSettingsPage() {
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-sm font-medium text-foreground">Taal & regio</h1>
+          <h1 className="text-sm font-medium text-foreground">{t("language")} & regio</h1>
           <p className="text-xs text-muted-foreground">Tijdzone en regionale instellingen</p>
         </div>
       </div>
 
       <div className="space-y-6">
+        {/* Language switcher */}
+        <div className="rounded-lg border border-border p-4">
+          <div className="mb-3">
+            <h3 className="text-sm font-medium text-foreground">{t("language")}</h3>
+            <p className="text-xs text-muted-foreground">{t("selectLanguage")}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => updateSettings({ language: "nl" })}
+              className={`flex items-center justify-between rounded-md border px-3 py-2 text-left text-xs ${
+                settings.language === "nl"
+                  ? "border-foreground bg-foreground/5 font-medium text-foreground"
+                  : "border-border text-muted-foreground hover:border-foreground/30"
+              }`}
+            >
+              <span>{t("dutch")}</span>
+              {settings.language === "nl" && (
+                <div className="h-2 w-2 rounded-full bg-foreground" />
+              )}
+            </button>
+            <button
+              onClick={() => updateSettings({ language: "en" })}
+              className={`flex items-center justify-between rounded-md border px-3 py-2 text-left text-xs ${
+                settings.language === "en"
+                  ? "border-foreground bg-foreground/5 font-medium text-foreground"
+                  : "border-border text-muted-foreground hover:border-foreground/30"
+              }`}
+            >
+              <span>{t("english")}</span>
+              {settings.language === "en" && (
+                <div className="h-2 w-2 rounded-full bg-foreground" />
+              )}
+            </button>
+          </div>
+          <p className="mt-3 text-[10px] text-muted-foreground italic">
+            * De pagina wordt herladen om de taal te wijzigen.
+          </p>
+        </div>
+
         {/* Timezone */}
         <div className="rounded-lg border border-border p-4">
           <div className="mb-3">
@@ -93,16 +135,7 @@ export default function RegionSettingsPage() {
           </div>
         </div>
 
-        {/* Language info */}
-        <div className="rounded-lg border border-border p-4">
-          <div className="mb-1">
-            <h3 className="text-sm font-medium text-foreground">Taal</h3>
-            <p className="text-xs text-muted-foreground">Momenteel ingesteld op Nederlands</p>
-          </div>
-          <div className="mt-2 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-            Meer talen worden binnenkort toegevoegd.
-          </div>
-        </div>
+
       </div>
     </div>
   );

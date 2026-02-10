@@ -2,9 +2,12 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 
 function SignInForm() {
+  const t = useTranslations("Auth");
+  const commonT = useTranslations("Common");
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/";
@@ -54,10 +57,10 @@ function SignInForm() {
     <div className="w-full">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">
-          Welkom terug
+          {t("signInTitle")}
         </h1>
         <p className="text-zinc-400">
-          Log in op je OpenCalendar account
+          {t("signInSubtitle")}
         </p>
       </div>
 
@@ -90,7 +93,7 @@ function SignInForm() {
             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
           />
         </svg>
-        Doorgaan met Google
+        {t("continueWithGoogle")}
       </button>
 
       <div className="relative my-6">
@@ -98,7 +101,7 @@ function SignInForm() {
           <div className="w-full border-t border-zinc-800"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-3 bg-[#111111] text-zinc-500">Of met email</span>
+          <span className="px-3 bg-[#111111] text-zinc-500">{t("orWithEmail")}</span>
         </div>
       </div>
 
@@ -108,7 +111,7 @@ function SignInForm() {
             htmlFor="email"
             className="block text-sm font-medium text-zinc-300 mb-2"
           >
-            Email
+            {t("emailLabel")}
           </label>
           <input
             id="email"
@@ -126,7 +129,7 @@ function SignInForm() {
             htmlFor="password"
             className="block text-sm font-medium text-zinc-300 mb-2"
           >
-            Wachtwoord
+            {t("passwordLabel")}
           </label>
           <input
             id="password"
@@ -144,17 +147,17 @@ function SignInForm() {
           disabled={loading}
           className="w-full bg-blue-600 text-white font-medium py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Bezig met inloggen..." : "Inloggen"}
+          {loading ? t("signingIn") : t("signInButton")}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-zinc-400">
-        Nog geen account?{" "}
+        {t("noAccount")}{" "}
         <a
           href="/auth/sign-up"
           className="text-blue-400 font-medium hover:text-blue-300 transition-colors"
         >
-          Registreren
+          {t("register")}
         </a>
       </p>
     </div>

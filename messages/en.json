@@ -1,0 +1,83 @@
+{
+  "Common": {
+    "settings": "Settings",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success"
+  },
+  "Settings": {
+    "title": "Settings",
+    "description": "Manage your preferences",
+    "tabs": {
+      "calendars": "Calendar accounts",
+      "account": "Account",
+      "appearance": "Appearance",
+      "region": "Language & region",
+      "tasks": "Tasks"
+    },
+    "region": {
+      "language": "Language",
+      "selectLanguage": "Select language",
+      "dutch": "Dutch",
+      "english": "English"
+    }
+  },
+  "Dashboard": {
+    "syncing": "Syncing calendars...",
+    "sessionExpired": "Session expired. Please sign in again.",
+    "tooManyRequests": "Too many requests. Try again in {seconds}s.",
+    "networkError": "Network error. Check your internet connection.",
+    "invalidResponse": "Invalid response from server"
+  },
+  "Sidebar": {
+    "addAccount": "Add account",
+    "tasks": "Tasks",
+    "noTasks": "No tasks for today",
+    "addTodo": "Add task...",
+    "myCalendars": "My Calendars"
+  },
+  "Header": {
+    "today": "Today",
+    "search": "Search...",
+    "sync": "Sync",
+    "views": {
+      "day": "Day",
+      "week": "Week",
+      "month": "Month"
+    }
+  },
+  "Auth": {
+    "signInTitle": "Welcome back",
+    "signInSubtitle": "Sign in to your OpenCalendar account",
+    "signUpTitle": "Create account",
+    "signUpSubtitle": "Start syncing your calendars",
+    "continueWithGoogle": "Continue with Google",
+    "orWithEmail": "Or with email",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "signInButton": "Sign In",
+    "signUpButton": "Sign Up",
+    "signingIn": "Signing in...",
+    "signingUp": "Signing up...",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "register": "Register",
+    "login": "Login"
+  },
+  "Welcome": {
+    "title": "Sync all your calendars in one place",
+    "subtitle": "OpenCalendar brings all your Google Calendar and iCloud events together. Build better schedules with a unified view of your time.",
+    "getStarted": "Get Started",
+    "signIn": "Sign In",
+    "features": {
+      "syncTitle": "Multi-Calendar Sync",
+      "syncDesc": "Connect Google Calendar and iCloud in one unified view",
+      "recurringTitle": "Recurring Events",
+      "recurringDesc": "Full support for recurring events with flexible editing options",
+      "openSourceTitle": "Open Source",
+      "openSourceDesc": "Free and open source software built for the community"
+    }
+  }
+}

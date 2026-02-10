@@ -15,6 +15,7 @@ export interface AppSettings {
   weekStartsOn: 0 | 1; // 0 = Sunday, 1 = Monday
   timeFormat: "24h" | "12h";
   timezone: string;
+  language: "nl" | "en";
   showWeekNumbers: boolean;
   defaultView: "day" | "week" | "month" | "year";
   defaultEventDuration: 30 | 60 | 90 | 120; // minutes
@@ -49,6 +50,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   weekStartsOn: 1, // Monday (European default)
   timeFormat: "24h",
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Amsterdam",
+  language: "nl",
   showWeekNumbers: false,
   defaultView: "week",
   defaultEventDuration: 60,
@@ -131,11 +133,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
       updateTimeoutRef.current = setTimeout(async () => {
         try {
+          // If language changed, set the cookie for next-intl
+          if (partial.language) {
+            document.cookie = `NEXT_LOCALE=${partial.language}; path=/; max-age=31536000; SameSite=Lax`;
+          }
+
           await fetch("/api/settings", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(next),
           });
+
+          // If language changed, reload to apply changes
+          if (partial.language) {
+            window.location.reload();
+          }
         } catch (error) {
           console.error("Failed to save settings:", error);
         }

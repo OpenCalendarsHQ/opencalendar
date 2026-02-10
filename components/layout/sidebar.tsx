@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import {
   ChevronDown,
   ChevronRight,
@@ -85,6 +86,7 @@ export function Sidebar({
   onChangeCalendarColor, onAddAccount, isCollapsed, onToggleCollapsed,
   todos, todoLists, onToggleTodo, onAddTodo, onDeleteTodo, isMobile,
 }: SidebarProps) {
+  const t = useTranslations("Sidebar");
   const [activeTab, setActiveTab] = useState<SidebarTab>("calendars");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(calendarGroups.map((g) => g.id)));
   const [newTodoText, setNewTodoText] = useState("");
@@ -154,11 +156,11 @@ export function Sidebar({
       <div className="mx-2 flex items-center gap-0.5 rounded-md border border-border p-0.5">
         <button onClick={() => setActiveTab("calendars")}
           className={`flex flex-1 items-center justify-center gap-1 rounded-sm py-1 text-[11px] font-medium ${activeTab === "calendars" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-          <CalendarDays className="h-3 w-3" /> Kalenders
+          <CalendarDays className="h-3 w-3" /> {t("myCalendars")}
         </button>
         <button onClick={() => setActiveTab("todos")}
           className={`flex flex-1 items-center justify-center gap-1 rounded-sm py-1 text-[11px] font-medium ${activeTab === "todos" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-          <CheckSquare className="h-3 w-3" /> Taken
+          <CheckSquare className="h-3 w-3" /> {t("tasks")}
           {incompleteTodos.length > 0 && (
             <span className="ml-0.5 text-[9px] text-muted-foreground">{incompleteTodos.length}</span>
           )}

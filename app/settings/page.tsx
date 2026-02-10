@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Palette,
@@ -68,15 +69,9 @@ interface ConnectedAccount {
 
 type TabType = "calendars" | "account" | "appearance" | "region" | "tasks";
 
-const tabs = [
-  { id: "calendars" as TabType, label: "Kalender accounts", icon: CalendarIcon },
-  { id: "account" as TabType, label: "Account", icon: Shield },
-  { id: "appearance" as TabType, label: "Weergave", icon: Palette },
-  { id: "region" as TabType, label: "Taal & regio", icon: Globe },
-  { id: "tasks" as TabType, label: "Taken", icon: CheckSquare },
-];
-
 export default function SettingsPage() {
+  const t = useTranslations("Settings");
+  const commonT = useTranslations("Common");
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>("calendars");
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
@@ -97,6 +92,14 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const tabs = [
+    { id: "calendars" as TabType, label: t("tabs.calendars"), icon: CalendarIcon },
+    { id: "account" as TabType, label: t("tabs.account"), icon: Shield },
+    { id: "appearance" as TabType, label: t("tabs.appearance"), icon: Palette },
+    { id: "region" as TabType, label: t("tabs.region"), icon: Globe },
+    { id: "tasks" as TabType, label: t("tabs.tasks"), icon: CheckSquare },
+  ];
 
   const fetchAccounts = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
@@ -351,8 +354,8 @@ export default function SettingsPage() {
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-sm font-medium text-foreground">Instellingen</h1>
-          <p className="text-xs text-muted-foreground">Beheer je voorkeuren</p>
+          <h1 className="text-sm font-medium text-foreground">{t("title")}</h1>
+          <p className="text-xs text-muted-foreground">{t("description")}</p>
         </div>
       </div>
 

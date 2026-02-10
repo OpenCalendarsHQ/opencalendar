@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { CalendarView, type CalendarViewRef } from "@/components/calendar/calendar-view";
 import { useCalendar } from "@/lib/calendar-context";
 import { useTodos } from "@/hooks/use-todos";
@@ -17,6 +18,7 @@ import {
 import { Loader2 } from "lucide-react";
 
 function DashboardContent() {
+  const t = useTranslations("Dashboard");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, isPending } = useSession();
@@ -91,7 +93,7 @@ function DashboardContent() {
 
         // Handle authentication errors (expired session)
         if (res.status === 401) {
-          setError("Sessie verlopen. Log opnieuw in.");
+          setError(t("sessionExpired"));
           router.push("/auth/sign-in");
           return 0;
         }
@@ -99,7 +101,7 @@ function DashboardContent() {
         // Handle rate limiting
         if (res.status === 429) {
           const data = await res.json();
-          setError(`Te veel verzoeken. Probeer het over ${Math.ceil((new Date(data.resetAt).getTime() - Date.now()) / 1000)}s opnieuw.`);
+          setError(t("tooManyRequests", { seconds: Math.ceil((new Date(data.resetAt).getTime() - Date.now()) / 1000) }));
           setLoading(false);
           return 0;
         }
@@ -120,7 +122,7 @@ function DashboardContent() {
           setLoading(false);
           return data.length;
         } else {
-          setError("Ongeldig antwoord van server");
+          setError(t("invalidResponse"));
           setLoading(false);
           return 0;
         }
@@ -132,7 +134,7 @@ function DashboardContent() {
 
         // Handle network errors
         console.error("Fetch events error:", err);
-        setError("Netwerkfout. Controleer je internetverbinding.");
+        setError(t("networkError"));
         setLoading(false);
         return 0;
       }
@@ -329,7 +331,7 @@ function DashboardContent() {
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex items-center gap-2 rounded-full border border-border bg-popover/95 backdrop-blur-sm px-4 py-2 shadow-lg">
             <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-            <span className="text-xs font-medium text-foreground">Kalenders synchroniseren...</span>
+            <span className="text-xs font-medium text-foreground">{t("syncing")}</span>
           </div>
         </div>
       )}

@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Menu,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { UserButtonWrapper } from "./user-button-wrapper";
 import { formatMonthYear, formatTodayDate } from "@/lib/utils/date";
 import type { CalendarViewType } from "@/lib/types";
@@ -42,13 +43,15 @@ export function Header({
   isMobile,
   onToggleMobileSidebar,
 }: HeaderProps) {
+  const t = useTranslations("Header");
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
-  // Auto-sync every minute
+  // Auto-sync every 5 minutes when tab is visible
   useEffect(() => {
     const syncData = async () => {
-      if (onSync && !isSyncing) {
+      // Only sync if tab is visible and onSync is provided
+      if (onSync && !isSyncing && !document.hidden) {
         setIsSyncing(true);
         try {
           await onSync();
@@ -64,11 +67,24 @@ export function Header({
     // Initial sync
     syncData();
 
-    // Sync every 60 seconds
-    const interval = setInterval(syncData, 60000);
+    // Sync every 5 minutes (300000ms)
+    const interval = setInterval(syncData, 300000);
 
-    return () => clearInterval(interval);
-  }, [onSync]);
+    // Listen for visibility changes to pause/resume sync
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Tab became visible, sync immediately
+        syncData();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [onSync, isSyncing]);
 
   const handleManualSync = async () => {
     if (onSync && !isSyncing) {
@@ -142,7 +158,7 @@ export function Header({
               onClick={onNavigateToday}
               className="rounded-md border border-border px-2 py-1 text-[10px] font-medium text-foreground hover:bg-muted"
             >
-              Vandaag
+              {t("today")}
             </button>
             <button
               onClick={onNavigateForward}
@@ -219,10 +235,10 @@ export function Header({
             onClick={handleManualSync}
             disabled={isSyncing}
             className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
-            title={lastSyncTime ? `Laatst gesynchroniseerd: ${lastSyncTime.toLocaleTimeString()}` : "Synchroniseren"}
+            title={lastSyncTime ? `Laatst gesynchroniseerd: ${lastSyncTime.toLocaleTimeString()}` : t("sync")}
           >
             <RefreshCw className={`h-3 w-3 ${isSyncing ? "animate-spin" : ""}`} />
-            <span>{isSyncing ? "Bezig..." : "Sync"}</span>
+            <span>{isSyncing ? "..." : t("sync")}</span>
           </button>
         )}
       </div>
@@ -233,7 +249,7 @@ export function Header({
           onClick={onNavigateToday}
           className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
         >
-          Vandaag
+          {t("today")}
         </button>
 
         <div className="flex items-center rounded-md border border-border">
@@ -254,7 +270,7 @@ export function Header({
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
-            Dag
+            {t("views.day")}
           </button>
           <button
             onClick={() => onViewTypeChange("week")}
@@ -264,7 +280,7 @@ export function Header({
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
-            Week
+            {t("views.week")}
           </button>
           <button
             onClick={() => onViewTypeChange("month")}
@@ -274,7 +290,7 @@ export function Header({
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
-            Maand
+            {t("views.month")}
           </button>
           <button
             onClick={() => onViewTypeChange("year")}

@@ -1,0 +1,83 @@
+{
+  "Common": {
+    "settings": "Instellingen",
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "loading": "Laden...",
+    "error": "Fout",
+    "success": "Succes"
+  },
+  "Settings": {
+    "title": "Instellingen",
+    "description": "Beheer je voorkeuren",
+    "tabs": {
+      "calendars": "Kalender accounts",
+      "account": "Account",
+      "appearance": "Weergave",
+      "region": "Taal & regio",
+      "tasks": "Taken"
+    },
+    "region": {
+      "language": "Taal",
+      "selectLanguage": "Selecteer taal",
+      "dutch": "Nederlands",
+      "english": "Engels"
+    }
+  },
+  "Dashboard": {
+    "syncing": "Kalenders synchroniseren...",
+    "sessionExpired": "Sessie verlopen. Log opnieuw in.",
+    "tooManyRequests": "Te veel verzoeken. Probeer het over {seconds}s opnieuw.",
+    "networkError": "Netwerkfout. Controleer je internetverbinding.",
+    "invalidResponse": "Ongeldig antwoord van server"
+  },
+  "Sidebar": {
+    "addAccount": "Account toevoegen",
+    "tasks": "Taken",
+    "noTasks": "Geen taken voor vandaag",
+    "addTodo": "Taak toevoegen...",
+    "myCalendars": "Mijn Kalenders"
+  },
+  "Header": {
+    "today": "Vandaag",
+    "search": "Zoeken...",
+    "sync": "Synchroniseren",
+    "views": {
+      "day": "Dag",
+      "week": "Week",
+      "month": "Maand"
+    }
+  },
+  "Auth": {
+    "signInTitle": "Welkom terug",
+    "signInSubtitle": "Log in op je OpenCalendar account",
+    "signUpTitle": "Account aanmaken",
+    "signUpSubtitle": "Begin met het syncen van je kalenders",
+    "continueWithGoogle": "Doorgaan met Google",
+    "orWithEmail": "Of met email",
+    "emailLabel": "Email",
+    "passwordLabel": "Wachtwoord",
+    "signInButton": "Inloggen",
+    "signUpButton": "Registreren",
+    "signingIn": "Bezig met inloggen...",
+    "signingUp": "Bezig met registreren...",
+    "noAccount": "Nog geen account?",
+    "haveAccount": "Heb je al een account?",
+    "register": "Registreren",
+    "login": "Inloggen"
+  },
+  "Welcome": {
+    "title": "Al je kalenders op één plek",
+    "subtitle": "OpenCalendar brengt al je Google Calendar en iCloud events samen. Bouw betere schema's met een unified view van je tijd.",
+    "getStarted": "Aan de slag",
+    "signIn": "Inloggen",
+    "features": {
+      "syncTitle": "Multi-Kalender Sync",
+      "syncDesc": "Verbind Google Calendar en iCloud in één overzicht",
+      "recurringTitle": "Herhalende Events",
+      "recurringDesc": "Volledige ondersteuning voor herhalende events met flexibele opties",
+      "openSourceTitle": "Open Source",
+      "openSourceDesc": "Gratis en open source software gebouwd voor de community"
+    }
+  }
+}

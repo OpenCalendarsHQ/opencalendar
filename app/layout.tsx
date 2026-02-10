@@ -5,6 +5,8 @@ import { GeistSans } from "geist/font/sans";
 // import { GeistPixelSquare } from "geist/font/pixel";
 import { Providers } from "@/components/providers";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages } from 'next-intl/server';
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -49,13 +51,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="nl" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <body
         className={`${GeistSans.variable} font-sans antialiased`}
       >
@@ -92,7 +97,9 @@ export default function RootLayout({
             `,
           }}
         />
-        <Providers>{children}</Providers>
+        <NextIntlClientProvider messages={messages}>
+          <Providers>{children}</Providers>
+        </NextIntlClientProvider>
         <ServiceWorkerRegister />
       </body>
     </html>

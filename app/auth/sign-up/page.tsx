@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SignUpPage() {
+  const t = useTranslations("Auth");
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,10 +61,10 @@ export default function SignUpPage() {
     <div className="w-full">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">
-          Account aanmaken
+          {t("signUpTitle")}
         </h1>
         <p className="text-zinc-400">
-          Begin met OpenCalendar
+          {t("signUpSubtitle")}
         </p>
       </div>
 
@@ -101,7 +103,7 @@ export default function SignUpPage() {
             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
           />
         </svg>
-        Doorgaan met Google
+        {t("continueWithGoogle")}
       </button>
 
       <div className="relative my-6">
@@ -109,7 +111,7 @@ export default function SignUpPage() {
           <div className="w-full border-t border-zinc-800"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-3 bg-[#111111] text-zinc-500">Of met email</span>
+          <span className="px-3 bg-[#111111] text-zinc-500">{t("orWithEmail")}</span>
         </div>
       </div>
 
@@ -119,7 +121,7 @@ export default function SignUpPage() {
             htmlFor="email"
             className="block text-sm font-medium text-zinc-300 mb-2"
           >
-            Email
+            {t("emailLabel")}
           </label>
           <input
             id="email"
@@ -137,7 +139,7 @@ export default function SignUpPage() {
             htmlFor="password"
             className="block text-sm font-medium text-zinc-300 mb-2"
           >
-            Wachtwoord
+            {t("passwordLabel")}
           </label>
           <input
             id="password"
@@ -145,13 +147,10 @@ export default function SignUpPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-4 py-3 bg-zinc-900/50 border border-zinc-800 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            placeholder="Minimaal 6 karakters"
+            placeholder="••••••••"
             required
             minLength={6}
           />
-          <p className="mt-2 text-xs text-zinc-500">
-            Minimaal 6 karakters
-          </p>
         </div>
 
         <button
@@ -159,17 +158,17 @@ export default function SignUpPage() {
           disabled={loading}
           className="w-full bg-blue-600 text-white font-medium py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Account wordt aangemaakt..." : "Account aanmaken"}
+          {loading ? t("signingUp") : t("signUpButton")}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-zinc-400">
-        Al een account?{" "}
+        {t("haveAccount")}{" "}
         <a
           href="/auth/sign-in"
           className="text-blue-400 font-medium hover:text-blue-300 transition-colors"
         >
-          Inloggen
+          {t("login")}
         </a>
       </p>
     </div>
