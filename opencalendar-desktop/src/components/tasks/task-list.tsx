@@ -180,8 +180,8 @@ export function TaskList() {
         </div>
       </div>
 
-      {/* Task List */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      {/* Task List - smooth scrolling with performance optimization */}
+      <div className="flex-1 overflow-y-auto scroll-smooth px-6 py-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
         {isCreating && (
           <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
             <input
