@@ -46,6 +46,30 @@ export interface Event {
   exDates?: string[] | null;
 }
 
+// Alias for components that use CalendarEvent
+export type CalendarEvent = Event & {
+  color: string; // Make color required
+  /** Set on multi-day segments that were split for per-day rendering. Points to the real event ID. */
+  originalId?: string;
+};
+
+export interface CalendarItem {
+  id: string;
+  name: string;
+  color: string;
+  isVisible: boolean;
+  isReadOnly: boolean;
+}
+
+export interface CalendarGroup {
+  id: string;
+  provider: "google" | "icloud" | "microsoft" | "caldav" | "local";
+  email: string;
+  calendars: CalendarItem[];
+}
+
+export type CalendarViewType = "day" | "week" | "month" | "year";
+
 export interface Settings {
   id?: string;
   userId: string;

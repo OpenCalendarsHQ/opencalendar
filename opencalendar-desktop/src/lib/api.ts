@@ -86,15 +86,11 @@ class ApiClient {
   }
 
   // Event endpoints
-  async getEvents(params: {
-    start: string;
-    end: string;
-    calendarId?: string;
-  }): Promise<Event[]> {
+  async getEvents(start: Date, end: Date, calendarId?: string): Promise<Event[]> {
     const query = new URLSearchParams({
-      start: params.start,
-      end: params.end,
-      ...(params.calendarId && { calendarId: params.calendarId }),
+      start: start.toISOString(),
+      end: end.toISOString(),
+      ...(calendarId && { calendarId }),
     });
     return this.request(`/api/events?${query}`);
   }
@@ -178,3 +174,4 @@ class ApiClient {
 }
 
 export const api = new ApiClient();
+export const apiClient = api; // Alias for consistency

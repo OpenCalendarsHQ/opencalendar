@@ -1,7 +1,12 @@
 import { useAuth } from "./contexts/AuthContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { apiClient } from "./lib/api";
+import { Sidebar } from "./components/layout/sidebar";
+import { Header } from "./components/layout/header";
+import { MonthView } from "./components/calendar/month-view";
+import type { CalendarEvent, CalendarGroup, CalendarViewType } from "./lib/types";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -97,27 +102,187 @@ function App() {
     );
   }
 
-  return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Top bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">OpenCalendar</h1>
-          <p className="text-sm text-gray-500">{user?.email}</p>
+  return <CalendarApp user={user} logout={logout} />;
+}
+
+// Separate CalendarApp component to handle calendar state
+function CalendarApp(_props: { user: any; logout: () => void }) {
+  const [viewType, setViewType] = useState<CalendarViewType>("month");
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [calendarGroups, setCalendarGroups] = useState<CalendarGroup[]>([]);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch calendars and events on mount
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  async function fetchData() {
+    setIsLoading(true);
+    try {
+      await Promise.all([fetchCalendars(), fetchEvents()]);
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function fetchCalendars() {
+    const calendars = await apiClient.getCalendars();
+    // Group calendars by account
+    const grouped = calendars.reduce((acc: Map<string, CalendarGroup>, cal: any) => {
+      const key = `${cal.accountId}`;
+      const existing = acc.get(key);
+      if (existing) {
+        existing.calendars.push({
+          id: cal.id,
+          name: cal.name,
+          color: cal.color || "#737373",
+          isVisible: cal.isVisible,
+          isReadOnly: cal.isReadOnly,
+        });
+      } else {
+        acc.set(key, {
+          id: cal.accountId,
+          provider: cal.provider as any,
+          email: cal.accountEmail || cal.provider,
+          calendars: [{
+            id: cal.id,
+            name: cal.name,
+            color: cal.color || "#737373",
+            isVisible: cal.isVisible,
+            isReadOnly: cal.isReadOnly,
+          }],
+        });
+      }
+      return acc;
+    }, new Map<string, CalendarGroup>());
+
+    setCalendarGroups(Array.from(grouped.values()));
+  }
+
+  async function fetchEvents() {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+
+    const eventsData = await apiClient.getEvents(startOfMonth, endOfMonth);
+    setEvents(eventsData.map((e: any) => ({
+      ...e,
+      startTime: new Date(e.startTime),
+      endTime: new Date(e.endTime),
+      color: e.color || "#737373",
+    })));
+  }
+
+  // Navigation handlers
+  function handleNavigateBack() {
+    const newDate = new Date(currentDate);
+    if (viewType === "month") {
+      newDate.setMonth(newDate.getMonth() - 1);
+    } else if (viewType === "week") {
+      newDate.setDate(newDate.getDate() - 7);
+    } else if (viewType === "day") {
+      newDate.setDate(newDate.getDate() - 1);
+    } else if (viewType === "year") {
+      newDate.setFullYear(newDate.getFullYear() - 1);
+    }
+    setCurrentDate(newDate);
+  }
+
+  function handleNavigateForward() {
+    const newDate = new Date(currentDate);
+    if (viewType === "month") {
+      newDate.setMonth(newDate.getMonth() + 1);
+    } else if (viewType === "week") {
+      newDate.setDate(newDate.getDate() + 7);
+    } else if (viewType === "day") {
+      newDate.setDate(newDate.getDate() + 1);
+    } else if (viewType === "year") {
+      newDate.setFullYear(newDate.getFullYear() + 1);
+    }
+    setCurrentDate(newDate);
+  }
+
+  function handleNavigateToday() {
+    setCurrentDate(new Date());
+    setSelectedDate(new Date());
+  }
+
+  function handleToggleCalendar(calendarId: string) {
+    // TODO: Implement toggle calendar visibility
+    console.log("Toggle calendar:", calendarId);
+  }
+
+  function handleEventClick(event: CalendarEvent) {
+    console.log("Event clicked:", event);
+    // TODO: Open event detail dialog
+  }
+
+  function handleDayClick(date: Date) {
+    setSelectedDate(date);
+    setCurrentDate(date);
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-gray-300 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Kalenders laden...</p>
         </div>
-        <button
-          onClick={logout}
-          className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          Uitloggen
-        </button>
       </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar */}
+      <Sidebar
+        selectedDate={selectedDate}
+        onDateSelect={handleDayClick}
+        calendarGroups={calendarGroups}
+        onToggleCalendar={handleToggleCalendar}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapsed={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+      />
 
       {/* Main content */}
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Welkom! 👋</h2>
-          <p className="text-gray-600">De calendar view komt zo...</p>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <Header
+          currentDate={currentDate}
+          viewType={viewType}
+          onViewTypeChange={setViewType}
+          onNavigateBack={handleNavigateBack}
+          onNavigateForward={handleNavigateForward}
+          onNavigateToday={handleNavigateToday}
+          onSync={fetchEvents}
+        />
+
+        {/* Calendar view */}
+        <div className="flex-1 overflow-auto bg-white">
+          {viewType === "month" && (
+            <MonthView
+              currentDate={currentDate}
+              events={events}
+              onEventClick={handleEventClick}
+              onDayClick={handleDayClick}
+            />
+          )}
+          {viewType !== "month" && (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-gray-600">
+                {viewType === "day" && "Dagweergave komt binnenkort..."}
+                {viewType === "week" && "Weekweergave komt binnenkort..."}
+                {viewType === "year" && "Jaarweergave komt binnenkort..."}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
