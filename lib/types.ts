@@ -47,7 +47,7 @@ export interface CalendarItem {
 
 export interface CalendarGroup {
   id: string;
-  provider: "google" | "icloud" | "local";
+  provider: "google" | "icloud" | "microsoft" | "caldav" | "local";
   email: string;
   calendars: CalendarItem[];
 }

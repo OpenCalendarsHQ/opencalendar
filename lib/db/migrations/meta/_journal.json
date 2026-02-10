@@ -15,6 +15,13 @@
       "when": 1770636585745,
       "tag": "0001_old_deathstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770703670047,
+      "tag": "0002_unusual_deathstrike",
+      "breakpoints": true
     }
   ]
 }

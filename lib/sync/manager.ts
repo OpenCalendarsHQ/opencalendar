@@ -6,6 +6,10 @@ import {
   syncICloudCalendars,
   syncICloudEvents,
 } from "./icloud";
+import {
+  syncCalDAVCalendars,
+  syncCalDAVEvents,
+} from "./caldav";
 
 export interface SyncResult {
   accountId: string;
@@ -46,11 +50,18 @@ export async function syncAccount(accountId: string): Promise<SyncResult> {
   };
 
   try {
+    // Skip local calendars - they don't sync
+    if (account.provider === "local") {
+      return result;
+    }
+
     // Sync calendars
     if (account.provider === "google") {
       await syncGoogleCalendars(accountId);
     } else if (account.provider === "icloud") {
       await syncICloudCalendars(accountId);
+    } else if (account.provider === "caldav") {
+      await syncCalDAVCalendars(accountId);
     }
 
     // Get all calendars for the account
@@ -68,6 +79,8 @@ export async function syncAccount(accountId: string): Promise<SyncResult> {
           await syncGoogleEvents(accountId, cal.id);
         } else if (account.provider === "icloud") {
           await syncICloudEvents(accountId, cal.id);
+        } else if (account.provider === "caldav") {
+          await syncCalDAVEvents(accountId, cal.id);
         }
         result.eventsSync++;
       } catch (error) {
