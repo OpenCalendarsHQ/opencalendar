@@ -1,0 +1,134 @@
+name: Release Tauri App
+
+on:
+  push:
+    tags:
+      - 'v*.*.*' # Triggers on version tags like v1.0.0
+
+jobs:
+  create-release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create-release.outputs.id }}
+      release_upload_url: ${{ steps.create-release.outputs.upload_url }}
+      release_version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create release
+        id: create-release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: OpenCalendar v${{ steps.version.outputs.version }}
+          body: |
+            ## 📦 OpenCalendar Desktop v${{ steps.version.outputs.version }}
+
+            ### Downloads
+            - **Windows**: `OpenCalendar_${{ steps.version.outputs.version }}_x64_en-US.msi`
+            - **macOS**: `OpenCalendar_${{ steps.version.outputs.version }}_universal.dmg`
+            - **Linux**: `opencalendar_${{ steps.version.outputs.version }}_amd64.AppImage`
+
+            ### What's Changed
+            <!-- Add release notes here -->
+
+            ### Installation
+            Download the appropriate file for your operating system and run the installer.
+
+            ### Auto-Update
+            The app will automatically check for updates and notify you when a new version is available.
+          draft: false
+          prerelease: false
+
+  build-tauri:
+    needs: create-release
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            target: 'universal-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            target: 'x86_64-unknown-linux-gnu'
+          - platform: 'windows-latest'
+            target: 'x86_64-pc-windows-msvc'
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: opencalendar-desktop/package-lock.json
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        working-directory: opencalendar-desktop
+        run: npm ci
+
+      - name: Build Tauri app
+        working-directory: opencalendar-desktop
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run tauri build -- --target ${{ matrix.target }}
+
+      - name: Upload Release Assets (Windows)
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.release_upload_url }}
+          asset_path: ./opencalendar-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/msi/OpenCalendar_${{ needs.create-release.outputs.release_version }}_x64_en-US.msi
+          asset_name: OpenCalendar_${{ needs.create-release.outputs.release_version }}_x64_en-US.msi
+          asset_content_type: application/x-msi
+
+      - name: Upload Release Assets (macOS)
+        if: matrix.platform == 'macos-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.release_upload_url }}
+          asset_path: ./opencalendar-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/dmg/OpenCalendar_${{ needs.create-release.outputs.release_version }}_universal.dmg
+          asset_name: OpenCalendar_${{ needs.create-release.outputs.release_version }}_universal.dmg
+          asset_content_type: application/x-apple-diskimage
+
+      - name: Upload Release Assets (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.release_upload_url }}
+          asset_path: ./opencalendar-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/appimage/opencalendar_${{ needs.create-release.outputs.release_version }}_amd64.AppImage
+          asset_name: opencalendar_${{ needs.create-release.outputs.release_version }}_amd64.AppImage
+          asset_content_type: application/x-executable

@@ -1,11 +1,14 @@
 import { useAuth } from "./contexts/AuthContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { apiClient } from "./lib/api";
 import { Sidebar } from "./components/layout/sidebar";
 import { Header } from "./components/layout/header";
 import { MonthView } from "./components/calendar/month-view";
+import { WeekView } from "./components/calendar/week-view";
+import { DayView } from "./components/calendar/day-view";
+import { YearView } from "./components/calendar/year-view";
 import type { CalendarEvent, CalendarGroup, CalendarViewType } from "./lib/types";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
@@ -106,7 +109,7 @@ function App() {
 }
 
 // Separate CalendarApp component to handle calendar state
-function CalendarApp(_props: { user: any; logout: () => void }) {
+function CalendarApp(props: { user: any; logout: () => void }) {
   const [viewType, setViewType] = useState<CalendarViewType>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -115,10 +118,14 @@ function CalendarApp(_props: { user: any; logout: () => void }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch calendars and events on mount
+  // Fetch calendars and events once when user authenticates
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (props.user?.id) {
+      console.log("User authenticated, fetching data...");
+      fetchData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.user?.id]); // Only re-run if user ID changes (i.e., login/logout)
 
   async function fetchData() {
     setIsLoading(true);
@@ -132,37 +139,25 @@ function CalendarApp(_props: { user: any; logout: () => void }) {
   }
 
   async function fetchCalendars() {
-    const calendars = await apiClient.getCalendars();
-    // Group calendars by account
-    const grouped = calendars.reduce((acc: Map<string, CalendarGroup>, cal: any) => {
-      const key = `${cal.accountId}`;
-      const existing = acc.get(key);
-      if (existing) {
-        existing.calendars.push({
-          id: cal.id,
-          name: cal.name,
-          color: cal.color || "#737373",
-          isVisible: cal.isVisible,
-          isReadOnly: cal.isReadOnly,
-        });
-      } else {
-        acc.set(key, {
-          id: cal.accountId,
-          provider: cal.provider as any,
-          email: cal.accountEmail || cal.provider,
-          calendars: [{
-            id: cal.id,
-            name: cal.name,
-            color: cal.color || "#737373",
-            isVisible: cal.isVisible,
-            isReadOnly: cal.isReadOnly,
-          }],
-        });
-      }
-      return acc;
-    }, new Map<string, CalendarGroup>());
+    const accounts = await apiClient.getCalendars();
+    console.log("Fetched calendar accounts:", accounts);
 
-    setCalendarGroups(Array.from(grouped.values()));
+    // API returns array of accounts with nested calendars
+    const groups: CalendarGroup[] = accounts.map((account: any) => ({
+      id: account.id,
+      provider: account.provider as any,
+      email: account.email,
+      calendars: (account.calendars || []).map((cal: any) => ({
+        id: cal.id,
+        name: cal.name,
+        color: cal.color || "#737373",
+        isVisible: cal.isVisible !== false, // Default to true if undefined
+        isReadOnly: cal.isReadOnly || false,
+      })),
+    }));
+
+    console.log("Processed calendar groups:", groups);
+    setCalendarGroups(groups);
   }
 
   async function fetchEvents() {
@@ -179,8 +174,8 @@ function CalendarApp(_props: { user: any; logout: () => void }) {
     })));
   }
 
-  // Navigation handlers
-  function handleNavigateBack() {
+  // Navigation handlers - memoized to prevent unnecessary re-renders
+  const handleNavigateBack = useCallback(() => {
     const newDate = new Date(currentDate);
     if (viewType === "month") {
       newDate.setMonth(newDate.getMonth() - 1);
@@ -192,9 +187,9 @@ function CalendarApp(_props: { user: any; logout: () => void }) {
       newDate.setFullYear(newDate.getFullYear() - 1);
     }
     setCurrentDate(newDate);
-  }
+  }, [currentDate, viewType]);
 
-  function handleNavigateForward() {
+  const handleNavigateForward = useCallback(() => {
     const newDate = new Date(currentDate);
     if (viewType === "month") {
       newDate.setMonth(newDate.getMonth() + 1);
@@ -206,27 +201,50 @@ function CalendarApp(_props: { user: any; logout: () => void }) {
       newDate.setFullYear(newDate.getFullYear() + 1);
     }
     setCurrentDate(newDate);
-  }
+  }, [currentDate, viewType]);
 
-  function handleNavigateToday() {
+  const handleNavigateToday = useCallback(() => {
     setCurrentDate(new Date());
     setSelectedDate(new Date());
-  }
+  }, []);
 
-  function handleToggleCalendar(calendarId: string) {
-    // TODO: Implement toggle calendar visibility
-    console.log("Toggle calendar:", calendarId);
-  }
+  const handleToggleCalendar = useCallback(async (calendarId: string) => {
+    // Find the calendar and toggle its visibility
+    setCalendarGroups((prevGroups) => {
+      const updatedGroups = prevGroups.map((group) => ({
+        ...group,
+        calendars: group.calendars.map((cal) =>
+          cal.id === calendarId ? { ...cal, isVisible: !cal.isVisible } : cal
+        ),
+      }));
 
-  function handleEventClick(event: CalendarEvent) {
+      // Persist to backend asynchronously
+      const calendar = updatedGroups
+        .flatMap((g) => g.calendars)
+        .find((c) => c.id === calendarId);
+
+      if (calendar) {
+        apiClient.updateCalendar({ id: calendarId, isVisible: calendar.isVisible })
+          .catch((error) => {
+            console.error("Failed to toggle calendar visibility:", error);
+            // Revert on error by setting back to previous groups
+            setCalendarGroups(prevGroups);
+          });
+      }
+
+      return updatedGroups;
+    });
+  }, []);
+
+  const handleEventClick = useCallback((event: CalendarEvent) => {
     console.log("Event clicked:", event);
     // TODO: Open event detail dialog
-  }
+  }, []);
 
-  function handleDayClick(date: Date) {
+  const handleDayClick = useCallback((date: Date) => {
     setSelectedDate(date);
     setCurrentDate(date);
-  }
+  }, []);
 
   if (isLoading) {
     return (
@@ -238,6 +256,17 @@ function CalendarApp(_props: { user: any; logout: () => void }) {
       </div>
     );
   }
+
+  // Filter events based on visible calendars - memoized for performance
+  const visibleEvents = useMemo(() => {
+    const visibleCalendarIds = new Set(
+      calendarGroups
+        .flatMap((g) => g.calendars)
+        .filter((c) => c.isVisible)
+        .map((c) => c.id)
+    );
+    return events.filter((event) => visibleCalendarIds.has(event.calendarId));
+  }, [events, calendarGroups]);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -269,19 +298,32 @@ function CalendarApp(_props: { user: any; logout: () => void }) {
           {viewType === "month" && (
             <MonthView
               currentDate={currentDate}
-              events={events}
+              events={visibleEvents}
               onEventClick={handleEventClick}
               onDayClick={handleDayClick}
             />
           )}
-          {viewType !== "month" && (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-gray-600">
-                {viewType === "day" && "Dagweergave komt binnenkort..."}
-                {viewType === "week" && "Weekweergave komt binnenkort..."}
-                {viewType === "year" && "Jaarweergave komt binnenkort..."}
-              </p>
-            </div>
+          {viewType === "week" && (
+            <WeekView
+              currentDate={currentDate}
+              events={visibleEvents}
+              onEventClick={handleEventClick}
+              onDayClick={handleDayClick}
+            />
+          )}
+          {viewType === "day" && (
+            <DayView
+              currentDate={currentDate}
+              events={visibleEvents}
+              onEventClick={handleEventClick}
+            />
+          )}
+          {viewType === "year" && (
+            <YearView
+              currentDate={currentDate}
+              events={visibleEvents}
+              onDayClick={handleDayClick}
+            />
           )}
         </div>
       </div>
