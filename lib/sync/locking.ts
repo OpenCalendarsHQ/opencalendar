@@ -1,36 +1,47 @@
 import { db } from "@/lib/db";
 import { syncStates } from "@/lib/db/schema";
-import { eq, and, lt } from "drizzle-orm";
+import { eq, and, lt, isNull } from "drizzle-orm";
 
 const LOCK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 export interface SyncLock {
   accountId: string;
-  resource: string;
+  calendarId: string | null;
   acquiredAt: Date;
 }
 
 /**
- * Acquire a sync lock for a specific account and resource
+ * Acquire a sync lock for a specific account
+ * For calendar-level locks: calendarId is null
+ * For event-level locks: calendarId is set
  * Returns true if lock was acquired, false if already locked
  */
 export async function acquireSyncLock(
   accountId: string,
-  resource: "calendars" | "events"
+  resource: "calendars" | "events",
+  calendarId?: string
 ): Promise<boolean> {
-  const lockKey = `${accountId}:${resource}`;
+  // For calendar sync: use null calendarId (account-level lock)
+  // For event sync: use specific calendarId (calendar-level lock)
+  const lockCalendarId = resource === "calendars" ? null : (calendarId || null);
+  const lockKey = `${accountId}:${resource}${lockCalendarId ? `:${lockCalendarId}` : ""}`;
 
   try {
     // Check if there's an existing lock
+    const whereClause = lockCalendarId
+      ? and(
+          eq(syncStates.accountId, accountId),
+          eq(syncStates.calendarId, lockCalendarId)
+        )
+      : and(
+          eq(syncStates.accountId, accountId),
+          isNull(syncStates.calendarId)
+        );
+
     const [existing] = await db
       .select()
       .from(syncStates)
-      .where(
-        and(
-          eq(syncStates.accountId, accountId),
-          eq(syncStates.resource, resource)
-        )
-      );
+      .where(whereClause);
 
     const now = new Date();
 
@@ -55,16 +66,16 @@ export async function acquireSyncLock(
         .update(syncStates)
         .set({
           lastSyncAt: now,
-          syncToken: null,
+          syncStatus: "syncing",
           updatedAt: now,
         })
         .where(eq(syncStates.id, existing.id));
     } else {
       await db.insert(syncStates).values({
         accountId,
-        resource,
+        calendarId: lockCalendarId,
         lastSyncAt: now,
-        syncToken: null,
+        syncStatus: "syncing",
       });
     }
 
@@ -81,27 +92,32 @@ export async function acquireSyncLock(
  */
 export async function releaseSyncLock(
   accountId: string,
-  resource: "calendars" | "events"
+  resource: "calendars" | "events",
+  calendarId?: string
 ): Promise<void> {
-  const lockKey = `${accountId}:${resource}`;
+  const lockCalendarId = resource === "calendars" ? null : (calendarId || null);
+  const lockKey = `${accountId}:${resource}${lockCalendarId ? `:${lockCalendarId}` : ""}`;
 
   try {
-    // We don't actually delete the lock - just set lastSyncAt to a past time
-    // This allows us to keep sync tokens while releasing the lock
-    const pastTime = new Date(Date.now() - LOCK_TIMEOUT_MS - 1000);
+    // We don't actually delete the lock - just set status to idle
+    // This allows us to keep sync tokens
+    const whereClause = lockCalendarId
+      ? and(
+          eq(syncStates.accountId, accountId),
+          eq(syncStates.calendarId, lockCalendarId)
+        )
+      : and(
+          eq(syncStates.accountId, accountId),
+          isNull(syncStates.calendarId)
+        );
 
     await db
       .update(syncStates)
       .set({
-        lastSyncAt: pastTime,
+        syncStatus: "idle",
         updatedAt: new Date(),
       })
-      .where(
-        and(
-          eq(syncStates.accountId, accountId),
-          eq(syncStates.resource, resource)
-        )
-      );
+      .where(whereClause);
 
     console.log(`[SyncLock] Lock released for ${lockKey}`);
   } catch (error) {
@@ -116,13 +132,15 @@ export async function releaseSyncLock(
 export async function withSyncLock<T>(
   accountId: string,
   resource: "calendars" | "events",
-  fn: () => Promise<T>
+  fn: () => Promise<T>,
+  calendarId?: string
 ): Promise<T | null> {
-  const lockAcquired = await acquireSyncLock(accountId, resource);
+  const lockAcquired = await acquireSyncLock(accountId, resource, calendarId);
 
   if (!lockAcquired) {
+    const lockKey = `${accountId}:${resource}${calendarId ? `:${calendarId}` : ""}`;
     console.log(
-      `[SyncLock] Could not acquire lock for ${accountId}:${resource}, skipping sync`
+      `[SyncLock] Could not acquire lock for ${lockKey}, skipping sync`
     );
     return null;
   }
@@ -131,7 +149,7 @@ export async function withSyncLock<T>(
     const result = await fn();
     return result;
   } finally {
-    await releaseSyncLock(accountId, resource);
+    await releaseSyncLock(accountId, resource, calendarId);
   }
 }
 
@@ -143,16 +161,22 @@ export async function cleanupExpiredLocks(): Promise<number> {
   try {
     const cutoff = new Date(Date.now() - LOCK_TIMEOUT_MS);
 
-    const result = await db
+    await db
       .update(syncStates)
       .set({
-        lastSyncAt: new Date(0), // Set to epoch to mark as released
+        syncStatus: "idle",
+        errorMessage: "Lock timeout - cleaned up by system",
         updatedAt: new Date(),
       })
-      .where(lt(syncStates.lastSyncAt, cutoff));
+      .where(
+        and(
+          lt(syncStates.lastSyncAt, cutoff),
+          eq(syncStates.syncStatus, "syncing")
+        )
+      );
 
     console.log(`[SyncLock] Cleaned up expired locks`);
-    return 0; // Drizzle doesn't return affected rows count easily
+    return 0;
   } catch (error) {
     console.error("[SyncLock] Error cleaning up expired locks:", error);
     return 0;

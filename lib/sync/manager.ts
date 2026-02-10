@@ -103,7 +103,8 @@ export async function syncAccount(accountId: string): Promise<SyncResult> {
               await syncCalDAVEvents(accountId, cal.id);
             }
             return true;
-          }
+          },
+          cal.id // Pass calendarId for per-calendar locking
         );
 
         if (eventSyncResult !== null) {
