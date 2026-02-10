@@ -536,7 +536,7 @@ export default function SettingsPage() {
             <div className="mt-6">
               <h3 className="mb-2 text-xs font-medium text-muted-foreground">Lokale kalenders</h3>
               <p className="mb-3 text-xs text-muted-foreground">
-                Lokale kalenders worden alleen op dit apparaat opgeslagen en niet gesynchroniseerd.
+                Lokale kalenders worden in de database opgeslagen en synchroniseren tussen je apparaten, maar zijn niet verbonden met externe diensten.
               </p>
               <button
                 onClick={() => setShowLocalCalendarModal(true)}
