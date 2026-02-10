@@ -1,14 +1,16 @@
 import { useAuth } from "./contexts/AuthContext";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { apiClient } from "./lib/api";
+import { offlineCache } from "./lib/offline-cache";
 import { Sidebar } from "./components/layout/sidebar";
 import { Header } from "./components/layout/header";
 import { MonthView } from "./components/calendar/month-view";
 import { WeekView } from "./components/calendar/week-view";
 import { DayView } from "./components/calendar/day-view";
 import { YearView } from "./components/calendar/year-view";
+import { EventDetailModal } from "./components/calendar/event-detail-modal";
 import type { CalendarEvent, CalendarGroup, CalendarViewType } from "./lib/types";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
@@ -117,10 +119,14 @@ function CalendarApp(props: { user: any; logout: () => void }) {
   const [calendarGroups, setCalendarGroups] = useState<CalendarGroup[]>([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const hasInitialized = useRef(false);
 
   // Fetch calendars and events once when user authenticates
   useEffect(() => {
-    if (props.user?.id) {
+    if (props.user?.id && !hasInitialized.current) {
+      hasInitialized.current = true;
       console.log("User authenticated, fetching data...");
       fetchData();
     }
@@ -128,11 +134,49 @@ function CalendarApp(props: { user: any; logout: () => void }) {
   }, [props.user?.id]); // Only re-run if user ID changes (i.e., login/logout)
 
   async function fetchData() {
-    setIsLoading(true);
+    // Try to load from cache first (offline-first approach)
+    const cachedCalendars = offlineCache.getCalendars();
+    const cachedEvents = offlineCache.getEvents();
+
+    if (cachedCalendars && cachedEvents) {
+      console.log("📦 Loading from offline cache");
+      // Load cached data immediately
+      const groups = cachedCalendars.map((account: any) => ({
+        id: account.id,
+        provider: account.provider,
+        email: account.email,
+        calendars: (account.calendars || []).map((cal: any) => ({
+          id: cal.id,
+          name: cal.name,
+          color: cal.color || "#737373",
+          isVisible: cal.isVisible !== false,
+          isReadOnly: cal.isReadOnly || false,
+        })),
+      }));
+      setCalendarGroups(groups);
+      setEvents(cachedEvents.map((e: any) => ({
+        ...e,
+        startTime: new Date(e.startTime),
+        endTime: new Date(e.endTime),
+      })));
+      setIsLoading(false);
+    } else {
+      setIsLoading(true);
+    }
+
+    // Fetch fresh data in background
     try {
+      console.log("🔄 Fetching fresh data from server");
       await Promise.all([fetchCalendars(), fetchEvents()]);
     } catch (error) {
       console.error("Failed to fetch data:", error);
+      // If we have cache, we're OK (offline mode)
+      if (!cachedCalendars || !cachedEvents) {
+        // No cache and network failed - show error
+        alert("Kan geen verbinding maken met de server. Controleer je internetverbinding.");
+      } else {
+        console.log("✅ Using offline cache due to network error");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -141,6 +185,9 @@ function CalendarApp(props: { user: any; logout: () => void }) {
   async function fetchCalendars() {
     const accounts = await apiClient.getCalendars();
     console.log("Fetched calendar accounts:", accounts);
+
+    // Save to offline cache
+    offlineCache.saveCalendars(accounts);
 
     // API returns array of accounts with nested calendars
     const groups: CalendarGroup[] = accounts.map((account: any) => ({
@@ -166,6 +213,10 @@ function CalendarApp(props: { user: any; logout: () => void }) {
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0);
 
     const eventsData = await apiClient.getEvents(startOfMonth, endOfMonth);
+
+    // Save to offline cache
+    offlineCache.saveEvents(eventsData);
+
     setEvents(eventsData.map((e: any) => ({
       ...e,
       startTime: new Date(e.startTime),
@@ -237,8 +288,8 @@ function CalendarApp(props: { user: any; logout: () => void }) {
   }, []);
 
   const handleEventClick = useCallback((event: CalendarEvent) => {
-    console.log("Event clicked:", event);
-    // TODO: Open event detail dialog
+    setSelectedEvent(event);
+    setIsModalOpen(true);
   }, []);
 
   const handleDayClick = useCallback((date: Date) => {
@@ -328,6 +379,16 @@ function CalendarApp(props: { user: any; logout: () => void }) {
           )}
         </div>
       </div>
+
+      {/* Event Detail Modal */}
+      <EventDetailModal
+        event={selectedEvent}
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedEvent(null);
+        }}
+      />
     </div>
   );
 }

@@ -113,7 +113,6 @@ export const WeekView = memo(function WeekView({
                       const eventStart = new Date(event.startTime);
                       const eventEnd = new Date(event.endTime);
                       const startHour = eventStart.getHours();
-                      const endHour = eventEnd.getHours();
                       const isFirstHour = hour === startHour;
 
                       if (!isFirstHour) return null; // Only render on first hour
