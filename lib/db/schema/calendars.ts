@@ -17,6 +17,7 @@ export const calendarProviderEnum = pgEnum("calendar_provider", [
   "google",
   "icloud",
   "microsoft",
+  "caldav",
   "local",
 ]);
 
