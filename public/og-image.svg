@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <!-- Aurora gradient -->
+    <radialGradient id="aurora1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0080ff"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+    <radialGradient id="aurora2" cx="30%" cy="60%" r="40%">
+      <stop offset="0%" stop-color="#00ffff"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+    <radialGradient id="aurora3" cx="70%" cy="40%" r="45%">
+      <stop offset="0%" stop-color="#004080"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+      <stop offset="30%" stop-color="transparent"/>
+      <stop offset="100%" stop-color="rgba(0,0,0,0.6)"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#0a0a0a"/>
+  
+  <!-- Aurora layers -->
+  <rect width="1200" height="630" fill="url(#aurora1)"/>
+  <rect width="1200" height="630" fill="url(#aurora2)"/>
+  <rect width="1200" height="630" fill="url(#aurora3)"/>
+  
+  <!-- Vignette -->
+  <rect width="1200" height="630" fill="url(#vignette)"/>
+  
+  <!-- Text content -->
+  <text x="600" y="285" 
+        font-family="monospace" 
+        font-size="80" 
+        font-weight="bold" 
+        fill="white" 
+        text-anchor="middle"
+        letter-spacing="-2"
+        style="text-transform: uppercase;">OPENCALENDARS</text>
+  
+  <text x="600" y="365" 
+        font-family="system-ui, sans-serif" 
+        font-size="36" 
+        fill="rgba(255,255,255,0.95)" 
+        text-anchor="middle">Al je kalenders op één plek</text>
+  
+  <text x="600" y="425" 
+        font-family="system-ui, sans-serif" 
+        font-size="24" 
+        fill="rgba(255,255,255,0.7)" 
+        text-anchor="middle"
+        letter-spacing="2">Google Calendar • iCloud • Microsoft • CalDAV</text>
+</svg>

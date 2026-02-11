@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenCalendars OG Image Generator</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #0a0a0a;
+            padding: 20px;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        
+        .generator-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: white;
+            margin-bottom: 10px;
+        }
+        
+        p {
+            color: #888;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            background: #0080ff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #0066cc;
+        }
+        
+        /* The OG Image Container */
+        .og-image {
+            width: 1200px;
+            height: 630px;
+            position: relative;
+            overflow: hidden;
+            background: #0a0a0a;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        
+        /* Aurora Background */
+        .aurora-bg {
+            position: absolute;
+            inset: 0;
+            background: 
+                radial-gradient(ellipse 80% 50% at 50% 50%, #0080ff 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 30% 60%, #00ffff 0%, transparent 40%),
+                radial-gradient(ellipse 50% 60% at 70% 40%, #004080 0%, transparent 45%);
+        }
+        
+        /* Noise overlay for texture */
+        .noise {
+            position: absolute;
+            inset: 0;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+        
+        /* Vignette */
+        .vignette {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.6) 100%);
+        }
+        
+        /* Content */
+        .content {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .brand {
+            font-family: 'Space Mono', monospace;
+            font-size: 80px;
+            font-weight: 700;
+            color: white;
+            letter-spacing: -2px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 30px rgba(0, 128, 255, 0.5);
+        }
+        
+        .tagline {
+            font-family: 'Space Mono', monospace;
+            font-size: 36px;
+            color: rgba(255, 255, 255, 0.95);
+            margin-bottom: 15px;
+            font-weight: 400;
+        }
+        
+        .features {
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.7);
+            letter-spacing: 2px;
+        }
+        
+        .preview-info {
+            color: #666;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 1240px) {
+            .og-image {
+                transform: scale(0.5);
+                transform-origin: top center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="generator-container">
+        <h1>OpenCalendars OG Image Generator</h1>
+        <p>Right-click the image below and save as "og-image.png" in the public folder</p>
+        <button onclick="downloadImage()">📥 Download as PNG</button>
+        <p class="preview-info">Dimensions: 1200 x 630 pixels (Open Graph standard)</p>
+    </div>
+    
+    <div class="og-image" id="ogImage">
+        <div class="aurora-bg"></div>
+        <div class="noise"></div>
+        <div class="vignette"></div>
+        <div class="content">
+            <div class="brand">OPENCALENDARS</div>
+            <div class="tagline">Al je kalenders op één plek</div>
+            <div class="features">Google Calendar • iCloud • Microsoft • CalDAV</div>
+        </div>
+    </div>
+    
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script>
+        async function downloadImage() {
+            const element = document.getElementById('ogImage');
+            
+            try {
+                const canvas = await html2canvas(element, {
+                    width: 1200,
+                    height: 630,
+                    scale: 1,
+                    useCORS: true,
+                    backgroundColor: '#0a0a0a'
+                });
+                
+                const link = document.createElement('a');
+                link.download = 'og-image.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                alert('✅ OG image downloaded! Save it to your public folder.');
+            } catch (error) {
+                console.error('Error generating image:', error);
+                alert('❌ Error generating image. Try right-clicking and selecting "Save image as" instead.');
+            }
+        }
+    </script>
+</body>
+</html>
