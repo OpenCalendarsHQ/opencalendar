@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm install @vercel/analytics)"
+      "Bash(npm install @vercel/analytics)",
+      "Bash(magick identify:*)",
+      "Bash(python -c:*)"
     ]
   }
 }

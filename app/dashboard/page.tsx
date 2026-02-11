@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "rea
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { CalendarView, type CalendarViewRef } from "@/components/calendar/calendar-view";
+import { WeekViewSkeleton } from "@/components/calendar/week-view-skeleton";
 import { useCalendar } from "@/lib/calendar-context";
+import { useSettings } from "@/lib/settings-context";
 import { useTodos } from "@/hooks/use-todos";
 import { useRecurringEvents } from "@/hooks/use-recurring-events";
 import { useSession } from "@/lib/auth/client";
@@ -16,6 +18,11 @@ import {
   addDays,
 } from "date-fns";
 import { Loader2 } from "lucide-react";
+
+// LocalStorage cache keys
+const EVENTS_CACHE_KEY = "opencalendar_events_cache";
+const CACHE_TIMESTAMP_KEY = "opencalendar_cache_timestamp";
+const CACHE_EXPIRY = 1000 * 60 * 5; // 5 minutes
 
 function DashboardContent() {
   const t = useTranslations("Dashboard");
@@ -38,12 +45,36 @@ function DashboardContent() {
     registerRefreshEvents, 
     visibleCalendarIds 
   } = useCalendar();
+  const { settings } = useSettings();
   const { todos, toggleTodo } = useTodos();
   const hasSynced = useRef(false);
   const hasInitialized = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const calendarRef = useRef<CalendarViewRef>(null);
   const syncingStartTime = useRef<number>(0);
+
+  // Load cached events immediately on mount for instant feedback
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(EVENTS_CACHE_KEY);
+      const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+      
+      if (cached && timestamp) {
+        const age = Date.now() - parseInt(timestamp, 10);
+        
+        // Use cache even if expired (for instant feedback), but still fetch fresh data
+        if (age < CACHE_EXPIRY * 10) { // Keep cache for max 50 minutes
+          const cachedEvents = JSON.parse(cached);
+          if (Array.isArray(cachedEvents) && cachedEvents.length > 0) {
+            setRawEvents(cachedEvents);
+            setLoading(false); // Show cached data instantly
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to load cached events:", err);
+    }
+  }, []);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -104,7 +135,7 @@ function DashboardContent() {
     async (signal?: AbortSignal) => {
       const cacheKey = `${dateRange.start}-${dateRange.end}`;
       
-      // Use cache for instant feedback if available
+      // Use in-memory cache for instant feedback if available
       if (eventCache.current.has(cacheKey)) {
         setRawEvents(eventCache.current.get(cacheKey)!);
         setLoading(false);
@@ -147,6 +178,15 @@ function DashboardContent() {
           // Store raw events (including RRULE metadata)
           setRawEvents(data);
           eventCache.current.set(cacheKey, data);
+          
+          // Persist to localStorage for instant loading on next visit
+          try {
+            localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify(data));
+            localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+          } catch (err) {
+            console.warn("Failed to cache events to localStorage:", err);
+          }
+          
           setLoading(false);
           return data.length;
         } else {
@@ -190,55 +230,59 @@ function DashboardContent() {
     if (hasSynced.current) return;
     hasSynced.current = true;
     
-    // First check if there are any calendars
-    const calendarsExist = await hasCalendars();
-    if (!calendarsExist) {
-      console.log("No calendars found, skipping sync");
-      return;
-    }
-    
-    try {
-      const res = await fetch("/api/calendars");
-
-      if (res.status === 401) {
-        router.push("/auth/sign-in");
-        return;
-      }
-
-      if (!res.ok) return;
-
-      const groups = await res.json();
-      if (!Array.isArray(groups)) return;
-
-      // Sync all accounts in parallel (max 3 at a time to avoid rate limits)
-      const nonLocalGroups = groups.filter(group => group.provider !== "local");
-      if (nonLocalGroups.length === 0) return;
-      
-      // Sync in batches of 3 to avoid overwhelming the server
-      for (let i = 0; i < nonLocalGroups.length; i += 3) {
-        const batch = nonLocalGroups.slice(i, i + 3);
-        const syncPromises = batch.map(group => {
-          const endpoint =
-            group.provider === "google" ? "/api/sync/google" : "/api/sync/icloud";
-          return fetch(endpoint, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "sync", accountId: group.id }),
-          }).catch((err) => {
-            console.warn(`Sync failed for ${group.provider}:`, err);
-          });
-        });
-        await Promise.all(syncPromises);
-        // Small delay between batches
-        if (i + 3 < nonLocalGroups.length) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+    // Run sync in background without blocking UI
+    (async () => {
+      try {
+        // First check if there are any calendars
+        const calendarsExist = await hasCalendars();
+        if (!calendarsExist) {
+          console.log("No calendars found, skipping sync");
+          return;
         }
+        
+        const res = await fetch("/api/calendars");
+
+        if (res.status === 401) {
+          router.push("/auth/sign-in");
+          return;
+        }
+
+        if (!res.ok) return;
+
+        const groups = await res.json();
+        if (!Array.isArray(groups)) return;
+
+        // Sync all accounts in parallel (max 3 at a time to avoid rate limits)
+        const nonLocalGroups = groups.filter(group => group.provider !== "local");
+        if (nonLocalGroups.length === 0) return;
+        
+        // Sync in batches of 3 to avoid overwhelming the server
+        for (let i = 0; i < nonLocalGroups.length; i += 3) {
+          const batch = nonLocalGroups.slice(i, i + 3);
+          const syncPromises = batch.map(group => {
+            const endpoint =
+              group.provider === "google" ? "/api/sync/google" : "/api/sync/icloud";
+            return fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "sync", accountId: group.id }),
+            }).catch((err) => {
+              console.warn(`Sync failed for ${group.provider}:`, err);
+            });
+          });
+          await Promise.all(syncPromises);
+          // Small delay between batches
+          if (i + 3 < nonLocalGroups.length) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+        
+        // Refetch events after sync completes
+        await fetchEvents();
+      } catch (err) {
+        console.error("Trigger sync error:", err);
       }
-      
-      await fetchEvents();
-    } catch (err) {
-      console.error("Trigger sync error:", err);
-    }
+    })();
   }, [fetchEvents, router, hasCalendars]);
 
   // Fetch events when date range changes or session becomes available
@@ -250,16 +294,36 @@ function DashboardContent() {
     abortRef.current = controller;
 
     const init = async () => {
-      const count = await fetchEvents(controller.signal);
-      // Only trigger sync if we got 0 events (not -1 which means error)
-      if (count === 0 && !hasSynced.current) {
-        await triggerSync();
+      // Check if we have cached data (only check once)
+      const hasCachedData = rawEvents.length > 0;
+      
+      // Start fetching events immediately (will use cache if available)
+      const fetchPromise = fetchEvents(controller.signal);
+      
+      // If we already have cached data showing, don't block on fetch
+      if (hasCachedData) {
+        // Fetch in background
+        fetchPromise.then(count => {
+          // Only trigger sync if we got 0 NEW events (not -1 which means error)
+          if (count === 0 && !hasSynced.current) {
+            triggerSync();
+          }
+        });
+      } else {
+        // No cached data, wait for fetch before triggering sync
+        const count = await fetchPromise;
+        // Only trigger sync if we got 0 events (not -1 which means error)
+        if (count === 0 && !hasSynced.current) {
+          triggerSync();
+        }
       }
+      
       hasInitialized.current = true;
     };
     init();
 
     return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchEvents, triggerSync, session, isPending]);
 
   // Rapid polling during initial sync - max 15 attempts with exponential backoff
@@ -384,18 +448,26 @@ function DashboardContent() {
         </div>
       )}
 
-      <CalendarView
-        ref={calendarRef}
-        currentDate={currentDate}
-        viewType={viewType}
-        events={events}
-        rawEvents={rawEvents}
-        todos={todos}
-        onEventsChange={() => fetchEvents()}
-        onDateChange={setCurrentDate}
-        onViewTypeChange={setViewType}
-        onToggleTodo={toggleTodo}
-      />
+      {loading && events.length === 0 && viewType === "week" ? (
+        <WeekViewSkeleton
+          currentDate={currentDate}
+          weekStartsOn={settings.weekStartsOn}
+          showWeekNumbers={settings.showWeekNumbers}
+        />
+      ) : (
+        <CalendarView
+          ref={calendarRef}
+          currentDate={currentDate}
+          viewType={viewType}
+          events={events}
+          rawEvents={rawEvents}
+          todos={todos}
+          onEventsChange={() => fetchEvents()}
+          onDateChange={setCurrentDate}
+          onViewTypeChange={setViewType}
+          onToggleTodo={toggleTodo}
+        />
+      )}
     </>
   );
 }
