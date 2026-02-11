@@ -20,6 +20,8 @@ import {
   Terminal,
   Laptop,
   X,
+  Edit2,
+  Check,
 } from "lucide-react";
 import { MiniCalendar } from "@/components/calendar/mini-calendar";
 import { ColorPicker } from "@/components/ui/color-picker";
@@ -94,6 +96,8 @@ interface SidebarProps {
   calendarGroups: CalendarGroup[];
   onToggleCalendar: (calendarId: string) => void;
   onChangeCalendarColor: (calendarId: string, color: string) => void;
+  onRenameCalendar?: (calendarId: string, newName: string) => void;
+  onDeleteCalendar?: (calendarId: string) => void;
   onAddAccount: () => void;
   isCollapsed: boolean;
   onToggleCollapsed: () => void;
@@ -113,12 +117,32 @@ const providerIcons: Record<string, React.ComponentType<{ className?: string }>>
   local: Monitor,
 };
 
-const CalendarItem = memo(function CalendarItem({ cal, onToggle, onChangeColor }: {
+const CalendarItem = memo(function CalendarItem({ cal, provider, onToggle, onChangeColor, onRename, onDelete }: {
   cal: { id: string; name: string; color: string; isVisible: boolean };
+  provider: string;
   onToggle: (id: string) => void;
   onChangeColor: (id: string, color: string) => void;
+  onRename?: (id: string, newName: string) => void;
+  onDelete?: (id: string) => void;
 }) {
   const [showPicker, setShowPicker] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(cal.name);
+
+  const handleRename = () => {
+    if (editName.trim() && editName !== cal.name && onRename) {
+      onRename(cal.id, editName.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleDelete = () => {
+    if (onDelete && confirm(`Weet je zeker dat je "${cal.name}" wilt verwijderen?`)) {
+      onDelete(cal.id);
+    }
+  };
+
+  const isLocal = provider === "local";
 
   return (
     <div className="group relative flex items-center gap-2 rounded-md px-1.5 py-1 text-xs hover:bg-muted">
@@ -126,27 +150,75 @@ const CalendarItem = memo(function CalendarItem({ cal, onToggle, onChangeColor }
         className="h-2.5 w-2.5 shrink-0 rounded-sm"
         style={{ backgroundColor: cal.color }}
       />
-      <span className={`flex-1 truncate ${cal.isVisible ? "text-foreground" : "text-muted-foreground line-through"}`}>
-        {cal.name}
-      </span>
-      <button
-        onClick={() => onToggle(cal.id)}
-        className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-accent"
-        title={cal.isVisible ? "Verberg kalender" : "Toon kalender"}
-      >
-        {cal.isVisible ? (
-          <Eye className="h-3 w-3 text-muted-foreground" />
-        ) : (
-          <EyeOff className="h-3 w-3 text-muted-foreground" />
-        )}
-      </button>
-      <button
-        onClick={(e) => { e.stopPropagation(); setShowPicker(!showPicker); }}
-        className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-accent"
-        title="Wijzig kleur"
-      >
-        <div className="h-2.5 w-2.5 rounded-full border border-border" style={{ backgroundColor: cal.color }} />
-      </button>
+      {isEditing ? (
+        <input
+          type="text"
+          value={editName}
+          onChange={(e) => setEditName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleRename();
+            if (e.key === "Escape") setIsEditing(false);
+          }}
+          onBlur={handleRename}
+          className="flex-1 rounded border border-accent bg-background px-1 py-0.5 text-xs focus:outline-none"
+          autoFocus
+        />
+      ) : (
+        <span className={`flex-1 truncate ${cal.isVisible ? "text-foreground" : "text-muted-foreground line-through"}`}>
+          {cal.name}
+        </span>
+      )}
+
+      {!isEditing && (
+        <div className="flex items-center gap-0.5">
+          {/* Edit button - only for local calendars */}
+          {isLocal && onRename && (
+            <button
+              onClick={() => {
+                setEditName(cal.name);
+                setIsEditing(true);
+              }}
+              className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-accent"
+              title="Hernoem kalender"
+            >
+              <Edit2 className="h-3 w-3 text-muted-foreground" />
+            </button>
+          )}
+
+          {/* Delete button - only for local calendars */}
+          {isLocal && onDelete && (
+            <button
+              onClick={handleDelete}
+              className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground"
+              title="Verwijder kalender"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          )}
+
+          {/* Visibility toggle */}
+          <button
+            onClick={() => onToggle(cal.id)}
+            className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-accent"
+            title={cal.isVisible ? "Verberg kalender" : "Toon kalender"}
+          >
+            {cal.isVisible ? (
+              <Eye className="h-3 w-3 text-muted-foreground" />
+            ) : (
+              <EyeOff className="h-3 w-3 text-muted-foreground" />
+            )}
+          </button>
+
+          {/* Color picker */}
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowPicker(!showPicker); }}
+            className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-accent"
+            title="Wijzig kleur"
+          >
+            <div className="h-2.5 w-2.5 rounded-full border border-border" style={{ backgroundColor: cal.color }} />
+          </button>
+        </div>
+      )}
 
       {showPicker && (
         <div className="absolute right-0 top-full z-50 mt-1">
@@ -163,7 +235,7 @@ const CalendarItem = memo(function CalendarItem({ cal, onToggle, onChangeColor }
 
 export function Sidebar({
   selectedDate, onDateSelect, calendarGroups, onToggleCalendar,
-  onChangeCalendarColor, onAddAccount, isCollapsed, onToggleCollapsed,
+  onChangeCalendarColor, onRenameCalendar, onDeleteCalendar, onAddAccount, isCollapsed, onToggleCollapsed,
   todos, todoLists, onToggleTodo, onAddTodo, onDeleteTodo, isMobile,
 }: SidebarProps) {
   const t = useTranslations("Sidebar");
@@ -302,7 +374,15 @@ export function Sidebar({
                   {isExpanded && (
                     <div className="ml-4 space-y-px">
                       {group.calendars.map((cal) => (
-                        <CalendarItem key={cal.id} cal={cal} onToggle={onToggleCalendar} onChangeColor={onChangeCalendarColor} />
+                        <CalendarItem
+                          key={cal.id}
+                          cal={cal}
+                          provider={group.provider}
+                          onToggle={onToggleCalendar}
+                          onChangeColor={onChangeCalendarColor}
+                          onRename={onRenameCalendar}
+                          onDelete={onDeleteCalendar}
+                        />
                       ))}
                     </div>
                   )}

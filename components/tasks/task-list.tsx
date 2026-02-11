@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ExternalLink, Calendar, Clock, Tag, Plus, Trash2 } from "lucide-react";
+import { ExternalLink, Calendar, Clock, Tag, Plus, Trash2, Check, ChevronDown, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useDrag } from "@/lib/drag-context";
@@ -21,10 +21,17 @@ interface Task {
   labels?: string[];
   scheduledEventId?: string;
   scheduledAt?: string;
+  completedAt?: string;
 }
 
 interface TaskListProps {
   onTaskDragStart?: (task: Task) => void;
+}
+
+interface GroupedTasks {
+  personal: Task[];
+  notion: Task[];
+  github: Task[];
 }
 
 function NotionIcon({ className }: { className?: string }) {
@@ -56,6 +63,8 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["personal", "notion", "github"]));
+  const [editingStatus, setEditingStatus] = useState<string | null>(null);
   const { setDraggingTask } = useDrag();
 
   useEffect(() => {
@@ -74,6 +83,34 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
     } finally {
       setLoading(false);
     }
+  }
+
+  function toggleGroup(group: string) {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(group)) {
+        next.delete(group);
+      } else {
+        next.add(group);
+      }
+      return next;
+    });
+  }
+
+  function groupTasks(tasks: Task[]): GroupedTasks {
+    return tasks.reduce(
+      (acc, task) => {
+        if (task.providerType === "manual") {
+          acc.personal.push(task);
+        } else if (task.providerType === "notion") {
+          acc.notion.push(task);
+        } else if (task.providerType === "github") {
+          acc.github.push(task);
+        }
+        return acc;
+      },
+      { personal: [], notion: [], github: [] } as GroupedTasks
+    );
   }
 
   async function handleCreateTask() {
@@ -118,11 +155,52 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
     }
   }
 
+  async function handleToggleComplete(task: Task) {
+    try {
+      const response = await fetch(`/api/tasks?id=${task.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: task.id,
+          completed: !task.completedAt,
+        }),
+      });
+
+      if (response.ok) {
+        fetchTasks(); // Refresh
+      }
+    } catch (error) {
+      console.error("Failed to toggle task completion:", error);
+    }
+  }
+
+  async function handleUpdateStatus(taskId: string, newStatus: string) {
+    try {
+      const response = await fetch(`/api/tasks?id=${taskId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: taskId,
+          status: newStatus,
+        }),
+      });
+
+      if (response.ok) {
+        setEditingStatus(null);
+        fetchTasks(); // Refresh
+      }
+    } catch (error) {
+      console.error("Failed to update task status:", error);
+    }
+  }
+
   const filteredTasks = tasks.filter((task) => {
     if (filter === "scheduled") return task.scheduledEventId !== null;
     if (filter === "unscheduled") return task.scheduledEventId === null;
     return true;
   });
+
+  const groupedTasks = groupTasks(filteredTasks);
 
   if (loading) {
     return (
@@ -131,6 +209,195 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
       </div>
     );
   }
+
+  const renderTaskGroup = (title: string, tasks: Task[], groupKey: string, icon: React.ReactNode) => {
+    if (tasks.length === 0) return null;
+
+    const isExpanded = expandedGroups.has(groupKey);
+
+    return (
+      <div className="mb-3">
+        {/* Group Header */}
+        <button
+          onClick={() => toggleGroup(groupKey)}
+          className="flex w-full items-center justify-between px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50 rounded"
+        >
+          <div className="flex items-center gap-1.5">
+            {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+            {icon}
+            <span>{title}</span>
+            <span className="text-[10px] text-muted-foreground">({tasks.length})</span>
+          </div>
+        </button>
+
+        {/* Group Tasks */}
+        {isExpanded && (
+          <div className="space-y-1.5 mt-1.5">
+            {tasks.map((task) => {
+              const ProviderIcon = providerIcons[task.providerType];
+              const isCompleted = !!task.completedAt;
+
+              return (
+                <div
+                  key={task.id}
+                  draggable={!task.scheduledEventId && !isCompleted}
+                  onDragStart={(e) => {
+                    if (!task.scheduledEventId && !isCompleted) {
+                      e.dataTransfer.effectAllowed = "move";
+                      setDraggingTask(task);
+                      if (onTaskDragStart) {
+                        onTaskDragStart(task);
+                      }
+                    }
+                  }}
+                  onDragEnd={() => {
+                    setDraggingTask(null);
+                  }}
+                  className={`group relative rounded-lg border bg-card p-2.5 text-xs transition-all ${
+                    isCompleted
+                      ? "border-border/50 opacity-50"
+                      : task.scheduledEventId
+                      ? "border-accent/30 opacity-70"
+                      : "border-border cursor-move hover:border-accent hover:shadow-sm"
+                  }`}
+                >
+                  {/* Header with checkbox and actions */}
+                  <div className="mb-1.5 flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {/* Checkbox */}
+                      <button
+                        onClick={() => handleToggleComplete(task)}
+                        className={`shrink-0 rounded border-2 transition-colors ${
+                          isCompleted
+                            ? "border-accent bg-accent text-accent-foreground"
+                            : "border-muted-foreground/30 hover:border-accent"
+                        }`}
+                        style={{ width: "14px", height: "14px" }}
+                        title={isCompleted ? "Markeer als niet voltooid" : "Markeer als voltooid"}
+                      >
+                        {isCompleted && <Check className="h-2.5 w-2.5" strokeWidth={3} />}
+                      </button>
+
+                      <ProviderIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+
+                      {/* Status badge - clickable for Notion tasks */}
+                      {task.status && (
+                        task.providerType === "notion" && editingStatus === task.id ? (
+                          <select
+                            value={task.status}
+                            onChange={(e) => handleUpdateStatus(task.id, e.target.value)}
+                            onBlur={() => setEditingStatus(null)}
+                            className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] text-muted-foreground border-none outline-none"
+                            autoFocus
+                          >
+                            <option value="Not started">Not started</option>
+                            <option value="In progress">In progress</option>
+                            <option value="Done">Done</option>
+                            <option value="Blocked">Blocked</option>
+                          </select>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (task.providerType === "notion") {
+                                setEditingStatus(task.id);
+                              }
+                            }}
+                            className={`rounded-full bg-muted px-1.5 py-0.5 text-[9px] text-muted-foreground ${
+                              task.providerType === "notion" ? "hover:bg-muted/80 cursor-pointer" : ""
+                            }`}
+                            disabled={task.providerType !== "notion"}
+                            title={task.providerType === "notion" ? "Klik om status te wijzigen" : ""}
+                          >
+                            {task.status}
+                          </button>
+                        )
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {task.providerType === "manual" && !isCompleted && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTask(task.id);
+                          }}
+                          className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive hover:text-destructive-foreground group-hover:opacity-100"
+                          title="Verwijder taak"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                      {task.externalUrl && (
+                        <a
+                          href={task.externalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Title */}
+                  <div className={`mb-1 font-medium leading-tight ${isCompleted ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                    {task.title}
+                  </div>
+
+                  {/* Metadata */}
+                  <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                    {task.dueDate && (
+                      <div className="flex items-center gap-0.5">
+                        <Clock className="h-2.5 w-2.5" />
+                        <span>
+                          {formatDistanceToNow(new Date(task.dueDate), {
+                            addSuffix: true,
+                            locale: nl,
+                          })}
+                        </span>
+                      </div>
+                    )}
+                    {task.labels && task.labels.length > 0 && (
+                      <div className="flex items-center gap-0.5">
+                        <Tag className="h-2.5 w-2.5" />
+                        <span>{task.labels[0]}</span>
+                        {task.labels.length > 1 && (
+                          <span className="text-muted-foreground/70">
+                            +{task.labels.length - 1}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {task.scheduledEventId && (
+                      <div className="flex items-center gap-0.5 text-accent">
+                        <Calendar className="h-2.5 w-2.5" />
+                        <span>Gepland</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Priority indicator */}
+                  {task.priority && (
+                    <div
+                      className={`absolute left-0 top-0 h-full w-1 rounded-l-lg ${
+                        task.priority === "High" || task.priority === "Urgent"
+                          ? "bg-red-500"
+                          : task.priority === "Medium"
+                          ? "bg-yellow-500"
+                          : "bg-blue-500"
+                      }`}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   if (tasks.length === 0) {
     return (
@@ -154,7 +421,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
           <div className="mb-1 mx-2 rounded-lg border border-accent bg-card p-2">
             <input
               type="text"
-              placeholder="Nieuwe taak..."
+              placeholder="Nieuwe persoonlijke taak..."
               value={newTaskTitle}
               onChange={(e) => setNewTaskTitle(e.target.value)}
               onKeyDown={(e) => {
@@ -196,7 +463,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
             Geen taken gevonden
           </div>
           <div className="text-[10px] text-muted-foreground/70">
-            Klik op + om een taak toe te voegen
+            Klik op + om een persoonlijke taak toe te voegen of verbind providers in instellingen
           </div>
         </div>
       </div>
@@ -213,7 +480,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
         <button
           onClick={() => setIsCreating(true)}
           className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-          title="Taak toevoegen"
+          title="Persoonlijke taak toevoegen"
         >
           <Plus className="h-3.5 w-3.5" />
         </button>
@@ -224,7 +491,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
         <div className="mb-1 mx-2 rounded-lg border border-accent bg-card p-2">
           <input
             type="text"
-            placeholder="Nieuwe taak..."
+            placeholder="Nieuwe persoonlijke taak..."
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
             onKeyDown={(e) => {
@@ -261,7 +528,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
       )}
 
       {/* Filter buttons */}
-      <div className="flex gap-1 text-[10px]">
+      <div className="flex gap-1 text-[10px] mb-1">
         <button
           onClick={() => setFilter("unscheduled")}
           className={`flex-1 rounded px-2 py-1 ${
@@ -270,7 +537,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          Ongepland ({tasks.filter((t) => !t.scheduledEventId).length})
+          Ongepland ({tasks.filter((t) => !t.scheduledEventId && !t.completedAt).length})
         </button>
         <button
           onClick={() => setFilter("scheduled")}
@@ -284,124 +551,26 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
         </button>
       </div>
 
-      {/* Task list */}
-      <div className="space-y-1.5">
-        {filteredTasks.map((task) => {
-          const ProviderIcon = providerIcons[task.providerType];
-
-          return (
-            <div
-              key={task.id}
-              draggable={!task.scheduledEventId}
-              onDragStart={(e) => {
-                if (!task.scheduledEventId) {
-                  e.dataTransfer.effectAllowed = "move";
-                  // Store task in context for drop handler
-                  setDraggingTask(task);
-                  // Also call callback if provided
-                  if (onTaskDragStart) {
-                    onTaskDragStart(task);
-                  }
-                }
-              }}
-              onDragEnd={() => {
-                // Clear dragging task when drag ends
-                setDraggingTask(null);
-              }}
-              className={`group relative rounded-lg border border-border bg-card p-2 text-xs transition-all ${
-                task.scheduledEventId
-                  ? "opacity-60"
-                  : "cursor-move hover:border-accent hover:shadow-sm"
-              }`}
-            >
-              {/* Header with provider icon and status */}
-              <div className="mb-1 flex items-start justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  <ProviderIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
-                  {task.status && (
-                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] text-muted-foreground">
-                      {task.status}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  {task.providerType === "manual" && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteTask(task.id);
-                      }}
-                      className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive hover:text-destructive-foreground group-hover:opacity-100"
-                      title="Verwijder taak"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  )}
-                  {task.externalUrl && (
-                    <a
-                      href={task.externalUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                </div>
-              </div>
-
-              {/* Title */}
-              <div className="mb-1 font-medium leading-tight text-foreground">
-                {task.title}
-              </div>
-
-              {/* Metadata */}
-              <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
-                {task.dueDate && (
-                  <div className="flex items-center gap-0.5">
-                    <Clock className="h-2.5 w-2.5" />
-                    <span>
-                      {formatDistanceToNow(new Date(task.dueDate), {
-                        addSuffix: true,
-                        locale: nl,
-                      })}
-                    </span>
-                  </div>
-                )}
-                {task.labels && task.labels.length > 0 && (
-                  <div className="flex items-center gap-0.5">
-                    <Tag className="h-2.5 w-2.5" />
-                    <span>{task.labels[0]}</span>
-                    {task.labels.length > 1 && (
-                      <span className="text-muted-foreground/70">
-                        +{task.labels.length - 1}
-                      </span>
-                    )}
-                  </div>
-                )}
-                {task.scheduledEventId && (
-                  <div className="flex items-center gap-0.5 text-accent">
-                    <Calendar className="h-2.5 w-2.5" />
-                    <span>Gepland</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Priority indicator */}
-              {task.priority && (
-                <div
-                  className={`absolute left-0 top-0 h-full w-1 rounded-l-lg ${
-                    task.priority === "High" || task.priority === "Urgent"
-                      ? "bg-red-500"
-                      : task.priority === "Medium"
-                      ? "bg-yellow-500"
-                      : "bg-blue-500"
-                  }`}
-                />
-              )}
-            </div>
-          );
-        })}
+      {/* Grouped Task Lists */}
+      <div className="space-y-1">
+        {renderTaskGroup(
+          "Persoonlijke Taken",
+          groupedTasks.personal,
+          "personal",
+          <CheckSquare className="h-3 w-3" />
+        )}
+        {renderTaskGroup(
+          "Notion",
+          groupedTasks.notion,
+          "notion",
+          <NotionIcon className="h-3 w-3" />
+        )}
+        {renderTaskGroup(
+          "GitHub",
+          groupedTasks.github,
+          "github",
+          <GitHubIcon className="h-3 w-3" />
+        )}
       </div>
 
       {filteredTasks.length === 0 && (

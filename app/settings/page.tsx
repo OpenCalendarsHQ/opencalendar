@@ -473,10 +473,33 @@ function SettingsContent() {
               </div>
             </div>
 
-            <div className="mb-4">
-              <h2 className="mb-2 text-sm font-medium text-foreground">Verbonden accounts</h2>
+            {/* Lokale kalenders sectie - PROMINENT BOVENAAN */}
+            <div className="mb-6">
+              <div className="mb-3">
+                <h2 className="text-sm font-medium text-foreground">Jouw Kalenders</h2>
+                <p className="text-xs text-muted-foreground">
+                  Maak lokale kalenders aan. Je data blijft volledig bij OpenCalendar.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowLocalCalendarModal(true)}
+                className="flex w-full items-center gap-3 rounded-lg border-2 border-dashed border-accent/50 bg-accent/5 px-4 py-4 text-left transition-colors hover:border-accent hover:bg-accent/10"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                  <Plus className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-foreground">Nieuwe lokale kalender</div>
+                  <div className="text-xs text-muted-foreground">Bewaar je agenda volledig lokaal</div>
+                </div>
+              </button>
+            </div>
+
+            {/* Verbonden accounts sectie */}
+            <div className="mb-4 mt-8 border-t border-border pt-6">
+              <h2 className="mb-2 text-sm font-medium text-foreground">Externe Providers (Optioneel)</h2>
               <p className="text-xs text-muted-foreground">
-                Synchroniseer je kalenders met Google, Microsoft of iCloud
+                Synchroniseer met externe kalender providers zoals Google, Microsoft, of iCloud
               </p>
             </div>
 
@@ -502,8 +525,8 @@ function SettingsContent() {
               ) : accounts.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center">
                   <CalendarIcon className="mx-auto h-8 w-8 text-muted-foreground/50" />
-                  <p className="mt-2 text-xs text-muted-foreground">Geen accounts verbonden</p>
-                  <p className="mt-1 text-xs text-muted-foreground/70">Voeg een account toe om te synchroniseren</p>
+                  <p className="mt-2 text-xs text-muted-foreground">Geen externe accounts verbonden</p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">Dit is optioneel - je lokale kalenders werken zonder externe sync</p>
                 </div>
               ) : (
               <div className="space-y-2">
@@ -561,7 +584,7 @@ function SettingsContent() {
             </div>
 
             <div className="mt-4">
-              <h3 className="mb-2 text-xs font-medium text-muted-foreground">Account toevoegen</h3>
+              <h3 className="mb-2 text-xs font-medium text-muted-foreground">Externe provider toevoegen</h3>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <button onClick={handleConnectGoogle}
                   className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-3 text-left hover:bg-muted">
@@ -604,26 +627,6 @@ function SettingsContent() {
                   </div>
                 </button>
               </div>
-            </div>
-
-            <div className="mt-6">
-              <h3 className="mb-2 text-xs font-medium text-muted-foreground">Lokale kalenders</h3>
-              <p className="mb-3 text-xs text-muted-foreground">
-                Lokale kalenders worden in de database opgeslagen en synchroniseren tussen je apparaten, maar zijn niet verbonden met externe diensten.
-              </p>
-              <button
-                onClick={() => setShowLocalCalendarModal(true)}
-                className="flex w-full items-center gap-2.5 rounded-lg border border-dashed border-border px-3 py-3 text-left hover:bg-muted"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                  <Monitor className="h-4 w-4 text-foreground" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-xs font-medium text-foreground">Lokale kalender toevoegen</div>
-                  <div className="text-[10px] text-muted-foreground">Blijft op dit apparaat</div>
-                </div>
-                <Plus className="h-4 w-4 text-muted-foreground" />
-              </button>
             </div>
           </div>
         )}

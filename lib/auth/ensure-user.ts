@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { user } from "@/lib/db/schema";
+import { user, calendarAccounts, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 /**
@@ -53,6 +53,35 @@ export async function ensureUserExists(sessionUser: {
       image: sessionUser.image || null,
     })
     .returning();
+
+  // Auto-create default local calendar for new users
+  try {
+    // Create local calendar account
+    const [localAccount] = await db
+      .insert(calendarAccounts)
+      .values({
+        userId: created.id,
+        provider: "local",
+        email: created.email || "local",
+      })
+      .returning();
+
+    // Create default "Persoonlijke" calendar
+    await db
+      .insert(calendars)
+      .values({
+        accountId: localAccount.id,
+        name: "Persoonlijke",
+        color: "#3b82f6",
+        isVisible: true,
+        isPrimary: true,
+      });
+
+    console.log(`[Auth] Created default local calendar for user ${created.id}`);
+  } catch (error) {
+    console.error("[Auth] Failed to create default calendar:", error);
+    // Don't fail user creation if calendar creation fails
+  }
 
   return created;
 }

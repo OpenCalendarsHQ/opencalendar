@@ -89,6 +89,55 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, [setCalendarGroups, refreshEvents]);
 
+  const handleRenameCalendar = useCallback((calendarId: string, newName: string) => {
+    // Optimistic update
+    setCalendarGroups((prev) =>
+      prev.map((group) => ({
+        ...group,
+        calendars: group.calendars.map((cal) =>
+          cal.id === calendarId ? { ...cal, name: newName } : cal
+        ),
+      }))
+    );
+
+    // Persist to API
+    fetch("/api/calendars", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: calendarId, name: newName }),
+    }).catch((err) => {
+      console.error("Failed to rename calendar:", err);
+      // Revert on error
+      refreshCalendars();
+    });
+  }, [setCalendarGroups, refreshCalendars]);
+
+  const handleDeleteCalendar = useCallback(async (calendarId: string) => {
+    try {
+      const res = await fetch(`/api/calendars?calendarId=${calendarId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        // Remove calendar from state
+        setCalendarGroups((prev) =>
+          prev.map((group) => ({
+            ...group,
+            calendars: group.calendars.filter((cal) => cal.id !== calendarId),
+          }))
+        );
+        // Refresh events to remove deleted calendar's events
+        refreshEvents();
+      } else {
+        const data = await res.json().catch(() => ({ error: "Onbekende fout" }));
+        alert(data.error || "Verwijderen mislukt");
+      }
+    } catch (err) {
+      console.error("Failed to delete calendar:", err);
+      alert("Verwijderen mislukt");
+    }
+  }, [setCalendarGroups, refreshEvents]);
+
   const handleSync = useCallback(async () => {
     try {
       // Use calendarGroups from context instead of refetching everything
@@ -189,6 +238,8 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
                 calendarGroups={calendarGroups}
                 onToggleCalendar={handleToggleCalendar}
                 onChangeCalendarColor={handleChangeCalendarColor}
+                onRenameCalendar={handleRenameCalendar}
+                onDeleteCalendar={handleDeleteCalendar}
                 onAddAccount={() => { router.push("/settings"); setMobileSidebarOpen(false); }}
                 isCollapsed={false}
                 onToggleCollapsed={() => setMobileSidebarOpen(false)}
@@ -209,6 +260,8 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
             calendarGroups={calendarGroups}
             onToggleCalendar={handleToggleCalendar}
             onChangeCalendarColor={handleChangeCalendarColor}
+            onRenameCalendar={handleRenameCalendar}
+            onDeleteCalendar={handleDeleteCalendar}
             onAddAccount={() => router.push("/settings")}
             isCollapsed={sidebarCollapsed}
             onToggleCollapsed={() => setSidebarCollapsed((p) => !p)}
