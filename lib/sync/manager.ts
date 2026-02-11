@@ -10,6 +10,7 @@ import {
   syncCalDAVCalendars,
   syncCalDAVEvents,
 } from "./caldav";
+import { withSyncLock } from "./locking";
 
 export interface SyncResult {
   accountId: string;
@@ -55,13 +56,28 @@ export async function syncAccount(accountId: string): Promise<SyncResult> {
       return result;
     }
 
-    // Sync calendars
-    if (account.provider === "google") {
-      await syncGoogleCalendars(accountId);
-    } else if (account.provider === "icloud") {
-      await syncICloudCalendars(accountId);
-    } else if (account.provider === "caldav") {
-      await syncCalDAVCalendars(accountId);
+    // Acquire lock for calendar sync
+    const calendarSyncResult = await withSyncLock(
+      accountId,
+      "calendars",
+      async () => {
+        // Sync calendars
+        if (account.provider === "google") {
+          await syncGoogleCalendars(accountId);
+        } else if (account.provider === "icloud") {
+          await syncICloudCalendars(accountId);
+        } else if (account.provider === "caldav") {
+          await syncCalDAVCalendars(accountId);
+        }
+        return true;
+      }
+    );
+
+    // If calendar sync was skipped due to lock, return early
+    if (calendarSyncResult === null) {
+      result.success = false;
+      result.errors.push("Sync al bezig voor dit account");
+      return result;
     }
 
     // Get all calendars for the account
@@ -72,17 +88,30 @@ export async function syncAccount(accountId: string): Promise<SyncResult> {
 
     result.calendarsSync = cals.length;
 
-    // Sync events for each calendar
+    // Sync events for each calendar with locking
     for (const cal of cals) {
       try {
-        if (account.provider === "google") {
-          await syncGoogleEvents(accountId, cal.id);
-        } else if (account.provider === "icloud") {
-          await syncICloudEvents(accountId, cal.id);
-        } else if (account.provider === "caldav") {
-          await syncCalDAVEvents(accountId, cal.id);
+        const eventSyncResult = await withSyncLock(
+          accountId,
+          "events",
+          async () => {
+            if (account.provider === "google") {
+              await syncGoogleEvents(accountId, cal.id);
+            } else if (account.provider === "icloud") {
+              await syncICloudEvents(accountId, cal.id);
+            } else if (account.provider === "caldav") {
+              await syncCalDAVEvents(accountId, cal.id);
+            }
+            return true;
+          },
+          cal.id // Pass calendarId for per-calendar locking
+        );
+
+        if (eventSyncResult !== null) {
+          result.eventsSync++;
+        } else {
+          result.errors.push(`${cal.name}: Sync al bezig`);
         }
-        result.eventsSync++;
       } catch (error) {
         const message =
           error instanceof Error

@@ -9,7 +9,7 @@ const intlMiddleware = createMiddleware({
   localePrefix: 'never'
 });
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // 1. Handle CORS preflight requests for API routes
   if (request.method === "OPTIONS" && request.nextUrl.pathname.startsWith("/api/")) {
     return handleCorsPreflightRequest(request);

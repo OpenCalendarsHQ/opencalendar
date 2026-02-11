@@ -1,1 +1,66 @@
 @import "tailwindcss";
+
+/* Custom Scrollbar Styling */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: rgb(243 244 246);
+    border-radius: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgb(209 213 219);
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgb(156 163 175);
+  }
+
+  .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+    background: rgb(209 213 219);
+  }
+
+  .scrollbar-track-gray-100::-webkit-scrollbar-track {
+    background: rgb(243 244 246);
+  }
+
+  /* Firefox */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(209 213 219) rgb(243 244 246);
+  }
+}
+
+/* Smooth scrolling behavior */
+@layer base {
+  * {
+    scroll-behavior: smooth;
+  }
+
+  /* Performance optimization */
+  .calendar-cell,
+  .event-card,
+  .task-item {
+    will-change: transform;
+    transform: translateZ(0);
+  }
+}
+
+/* Loading spinner animation */
+@layer components {
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+}

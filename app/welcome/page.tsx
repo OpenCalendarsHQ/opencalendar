@@ -1,13 +1,75 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import Aurora from "@/components/animations/aurora";
-import { Calendar, Github } from "lucide-react";
+import {
+  Calendar,
+  Github,
+  Download,
+  Monitor,
+  Apple,
+  Terminal,
+} from "lucide-react";
+
+interface ReleaseAsset {
+  name: string;
+  browser_download_url: string;
+  size: number;
+}
+
+interface Release {
+  tag_name: string;
+  assets: ReleaseAsset[];
+}
 
 export default function WelcomePage() {
   const t = useTranslations("Welcome");
+  const [release, setRelease] = useState<Release | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchRelease() {
+      try {
+        // Public repo — no token needed for the GitHub API
+        const response = await fetch(
+          "https://api.github.com/repos/ArjandenHartog/opencalendar/releases/tags/latest",
+          { headers: { Accept: "application/vnd.github.v3+json" } }
+        );
+        if (response.ok) {
+          setRelease(await response.json());
+        } else {
+          const allResponse = await fetch(
+            "https://api.github.com/repos/ArjandenHartog/opencalendar/releases",
+            { headers: { Accept: "application/vnd.github.v3+json" } }
+          );
+          if (allResponse.ok) {
+            const releases = await allResponse.json();
+            if (releases.length > 0) setRelease(releases[0]);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching release:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchRelease();
+  }, []);
+
+  const getAsset = (ext: string) =>
+    release?.assets.find((a) =>
+      a.name.toLowerCase().endsWith(ext.toLowerCase())
+    );
+
+  const formatSize = (bytes: number) =>
+    (bytes / (1024 * 1024)).toFixed(1) + " MB";
+
+  const winAsset = getAsset(".msi");
+  const macAsset = getAsset(".dmg");
+  const linuxAsset = getAsset(".appimage");
 
   return (
     <div className="relative flex min-h-screen flex-col bg-black overflow-hidden">
@@ -104,6 +166,85 @@ export default function WelcomePage() {
               <p className="text-sm text-zinc-400">
                 {t("features.openSourceDesc")}
               </p>
+            </div>
+          </div>
+
+          {/* Desktop Downloads Section */}
+          <div className="border-t border-zinc-800 pt-12 mt-4">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold text-white">
+                  {t("download.title")}
+                </h2>
+                <p className="text-sm text-zinc-400">
+                  {t("download.subtitle")}
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                {/* Windows */}
+                {loading ? (
+                  <div className="h-11 w-48 animate-pulse rounded-lg bg-zinc-800" />
+                ) : winAsset ? (
+                  <Link href={winAsset.browser_download_url}>
+                    <button className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900/60 px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-blue-500/50 hover:bg-zinc-800/80 hover:text-white">
+                      <Monitor className="h-4 w-4" />
+                      Windows (.msi)
+                      <span className="text-xs text-zinc-500">{formatSize(winAsset.size)}</span>
+                    </button>
+                  </Link>
+                ) : (
+                  <button disabled className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 px-5 py-2.5 text-sm text-zinc-600 cursor-not-allowed">
+                    <Monitor className="h-4 w-4" />
+                    Windows
+                    <span className="text-xs">{t("download.comingSoon")}</span>
+                  </button>
+                )}
+
+                {/* macOS */}
+                {loading ? (
+                  <div className="h-11 w-48 animate-pulse rounded-lg bg-zinc-800" />
+                ) : macAsset ? (
+                  <Link href={macAsset.browser_download_url}>
+                    <button className="inline-flex items-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-5 py-2.5 text-sm font-medium text-blue-300 transition-colors hover:border-blue-500/60 hover:bg-blue-500/20 hover:text-blue-200">
+                      <Apple className="h-4 w-4" />
+                      macOS (.dmg)
+                      <span className="text-xs text-blue-400/60">{formatSize(macAsset.size)}</span>
+                    </button>
+                  </Link>
+                ) : (
+                  <button disabled className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 px-5 py-2.5 text-sm text-zinc-600 cursor-not-allowed">
+                    <Apple className="h-4 w-4" />
+                    macOS
+                    <span className="text-xs">{t("download.comingSoon")}</span>
+                  </button>
+                )}
+
+                {/* Linux */}
+                {loading ? (
+                  <div className="h-11 w-48 animate-pulse rounded-lg bg-zinc-800" />
+                ) : linuxAsset ? (
+                  <Link href={linuxAsset.browser_download_url}>
+                    <button className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900/60 px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-orange-500/50 hover:bg-zinc-800/80 hover:text-white">
+                      <Terminal className="h-4 w-4" />
+                      Linux (.AppImage)
+                      <span className="text-xs text-zinc-500">{formatSize(linuxAsset.size)}</span>
+                    </button>
+                  </Link>
+                ) : (
+                  <button disabled className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 px-5 py-2.5 text-sm text-zinc-600 cursor-not-allowed">
+                    <Terminal className="h-4 w-4" />
+                    Linux
+                    <span className="text-xs">{t("download.comingSoon")}</span>
+                  </button>
+                )}
+              </div>
+
+              {release && (
+                <p className="text-xs text-zinc-600">
+                  {t("download.version")}: {release.tag_name}
+                </p>
+              )}
             </div>
           </div>
         </div>

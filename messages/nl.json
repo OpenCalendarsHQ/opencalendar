@@ -78,6 +78,12 @@
       "recurringDesc": "Volledige ondersteuning voor herhalende events met flexibele opties",
       "openSourceTitle": "Open Source",
       "openSourceDesc": "Gratis en open source software gebouwd voor de community"
+    },
+    "download": {
+      "title": "Desktop App",
+      "subtitle": "Native prestaties met offline ondersteuning",
+      "comingSoon": "Binnenkort",
+      "version": "Versie"
     }
   }
 }
