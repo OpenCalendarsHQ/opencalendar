@@ -120,24 +120,25 @@ interface SettingsContextValue {
 export const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<AppSettings>(() => {
-    // Load from localStorage immediately for instant UI
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("opencalendar_settings");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          return { ...DEFAULT_SETTINGS, ...parsed };
-        }
-      } catch (e) {
-        console.error("Failed to parse cached settings", e);
-      }
-    }
-    return DEFAULT_SETTINGS;
-  });
+  // Always start with DEFAULT_SETTINGS to prevent hydration mismatch
+  // localStorage is loaded in useEffect after mount
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSyncRef = useRef<number>(0);
+
+  // Load from localStorage immediately after mount to prevent flash
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem("opencalendar_settings");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setSettings((prev) => ({ ...prev, ...parsed }));
+      }
+    } catch (e) {
+      console.error("Failed to parse cached settings", e);
+    }
+  }, []);
 
   // Load settings from database on mount and sync periodically
   useEffect(() => {
