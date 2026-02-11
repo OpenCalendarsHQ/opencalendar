@@ -178,7 +178,9 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// DELETE /api/calendars?accountId=... - Delete a connected account
+// DELETE /api/calendars - Delete a calendar or an account
+// ?calendarId=... - Delete a single calendar
+// ?accountId=... - Delete a connected account and all its calendars
 export async function DELETE(request: NextRequest) {
   try {
     const { user } = await verifyRequest(request);
@@ -187,37 +189,80 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const calendarId = searchParams.get("calendarId");
     const accountId = searchParams.get("accountId");
 
-    if (!accountId) {
-      return NextResponse.json({ error: "Account ID is verplicht" }, { status: 400 });
+    // DELETE individual calendar
+    if (calendarId) {
+      // Get calendar and verify ownership
+      const [calendar] = await db
+        .select()
+        .from(calendars)
+        .where(eq(calendars.id, calendarId));
+
+      if (!calendar) {
+        return NextResponse.json({ error: "Kalender niet gevonden" }, { status: 404 });
+      }
+
+      // Verify user owns the account this calendar belongs to
+      const [account] = await db
+        .select()
+        .from(calendarAccounts)
+        .where(eq(calendarAccounts.id, calendar.accountId));
+
+      if (!account || account.userId !== user.id) {
+        return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
+      }
+
+      // Only allow deleting local calendars
+      if (account.provider !== "local") {
+        return NextResponse.json(
+          { error: "Alleen lokale kalenders kunnen individueel worden verwijderd" },
+          { status: 400 }
+        );
+      }
+
+      // Delete related data
+      await db.delete(events).where(eq(events.calendarId, calendarId));
+      await db.delete(syncStates).where(eq(syncStates.calendarId, calendarId));
+      await db.delete(calendars).where(eq(calendars.id, calendarId));
+
+      return NextResponse.json({ success: true, message: "Kalender verwijderd" });
     }
 
-    const [account] = await db
-      .select()
-      .from(calendarAccounts)
-      .where(eq(calendarAccounts.id, accountId));
+    // DELETE entire account
+    if (accountId) {
+      const [account] = await db
+        .select()
+        .from(calendarAccounts)
+        .where(eq(calendarAccounts.id, accountId));
 
-    if (!account || account.userId !== user.id) {
-      return NextResponse.json({ error: "Account niet gevonden" }, { status: 404 });
+      if (!account || account.userId !== user.id) {
+        return NextResponse.json({ error: "Account niet gevonden" }, { status: 404 });
+      }
+
+      const accountCalendars = await db
+        .select({ id: calendars.id })
+        .from(calendars)
+        .where(eq(calendars.accountId, accountId));
+
+      const calendarIds = accountCalendars.map((c) => c.id);
+
+      if (calendarIds.length > 0) {
+        await db.delete(events).where(inArray(events.calendarId, calendarIds));
+        await db.delete(syncStates).where(inArray(syncStates.calendarId, calendarIds));
+        await db.delete(calendars).where(eq(calendars.accountId, accountId));
+      }
+
+      await db.delete(calendarAccounts).where(eq(calendarAccounts.id, accountId));
+
+      return NextResponse.json({ success: true, message: "Account verwijderd" });
     }
 
-    const accountCalendars = await db
-      .select({ id: calendars.id })
-      .from(calendars)
-      .where(eq(calendars.accountId, accountId));
-
-    const calendarIds = accountCalendars.map((c) => c.id);
-
-    if (calendarIds.length > 0) {
-      await db.delete(events).where(inArray(events.calendarId, calendarIds));
-      await db.delete(syncStates).where(inArray(syncStates.calendarId, calendarIds));
-      await db.delete(calendars).where(eq(calendars.accountId, accountId));
-    }
-
-    await db.delete(calendarAccounts).where(eq(calendarAccounts.id, accountId));
-
-    return NextResponse.json({ success: true, message: "Account verwijderd" });
+    return NextResponse.json(
+      { error: "calendarId of accountId parameter is verplicht" },
+      { status: 400 }
+    );
   } catch (error) {
     console.error("DELETE /api/calendars error:", error);
     return NextResponse.json({ error: "Er is een fout opgetreden" }, { status: 500 });

@@ -215,11 +215,28 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
                 onChange={(e) => setCalendarId(e.target.value)}
                 className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground"
               >
-                {calendars.map((cal) => (
-                  <option key={cal.id} value={cal.id}>
-                    {cal.name}
-                  </option>
-                ))}
+                {calendarGroups.map((group: any) => {
+                  const writableCalendars = group.calendars?.filter((cal: any) => !cal.isReadOnly) || [];
+                  if (writableCalendars.length === 0) return null;
+
+                  const providerLabels: Record<string, string> = {
+                    local: "Mijn Kalenders",
+                    google: "Google",
+                    icloud: "iCloud",
+                    microsoft: "Microsoft",
+                    caldav: "CalDAV",
+                  };
+
+                  return (
+                    <optgroup key={group.id} label={providerLabels[group.provider] || group.provider}>
+                      {writableCalendars.map((cal: any) => (
+                        <option key={cal.id} value={cal.id}>
+                          {cal.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
               </select>
             </div>
           )}

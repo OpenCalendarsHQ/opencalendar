@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const includeCompleted = searchParams.get("includeCompleted") === "true";
 
     // Fetch tasks with provider information
     const userTasks = await db
@@ -42,8 +44,8 @@ export async function GET(request: NextRequest) {
         and(
           eq(taskProviders.userId, user.id),
           eq(taskProviders.isActive, true),
-          // Optionally filter out completed tasks
-          isNull(tasks.completedAt)
+          // Filter out completed tasks unless explicitly requested
+          includeCompleted ? undefined : isNull(tasks.completedAt)
         )
       )
       .orderBy(desc(tasks.dueDate), desc(tasks.createdAt));
@@ -209,7 +211,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT /api/tasks - Update a manual task
+// PUT /api/tasks - Update a task (manual, toggle completion, or Notion status)
 export async function PUT(request: NextRequest) {
   try {
     const { user } = await verifyRequest(request);
@@ -219,13 +221,13 @@ export async function PUT(request: NextRequest) {
 
 
     const body = await request.json();
-    const { id, title, description, status } = body;
+    const { id, title, description, status, completed } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Task ID required" }, { status: 400 });
     }
 
-    // Verify task ownership and is manual
+    // Get task with provider info
     const [existing] = await db
       .select()
       .from(tasks)
@@ -233,28 +235,81 @@ export async function PUT(request: NextRequest) {
       .where(
         and(
           eq(tasks.id, id),
-          eq(taskProviders.userId, user.id),
-          eq(taskProviders.provider, "manual")
+          eq(taskProviders.userId, user.id)
         )
       )
       .limit(1);
 
     if (!existing) {
       return NextResponse.json(
-        { error: "Task not found or not editable" },
+        { error: "Task not found" },
         { status: 404 }
       );
     }
 
-    // Update task
+    const updateData: any = {
+      updatedAt: new Date(),
+    };
+
+    // Handle completion toggle (all task types)
+    if (completed !== undefined) {
+      updateData.completedAt = completed ? new Date() : null;
+    }
+
+    // Handle manual task updates
+    if (existing.task_providers.provider === "manual") {
+      if (title !== undefined) updateData.title = title.trim();
+      if (description !== undefined) updateData.description = description.trim();
+      if (status !== undefined) updateData.status = status;
+    }
+
+    // Handle Notion status updates
+    if (existing.task_providers.provider === "notion" && status !== undefined) {
+      // Update via Notion API
+      try {
+        const { decrypt } = await import("@/lib/encryption");
+        const accessToken = decrypt(existing.task_providers.accessToken!);
+
+        const response = await fetch(`https://api.notion.com/v1/pages/${existing.tasks.externalId}`, {
+          method: "PATCH",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Notion-Version": "2022-06-28",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            properties: {
+              Status: {
+                status: {
+                  name: status,
+                },
+              },
+            },
+          }),
+        });
+
+        if (response.ok) {
+          updateData.status = status;
+        } else {
+          console.error("Failed to update Notion task:", await response.text());
+          return NextResponse.json(
+            { error: "Failed to update in Notion" },
+            { status: 500 }
+          );
+        }
+      } catch (error) {
+        console.error("Error updating Notion task:", error);
+        return NextResponse.json(
+          { error: "Failed to update in Notion" },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Update task in database
     const [updated] = await db
       .update(tasks)
-      .set({
-        title: title?.trim() || existing.tasks.title,
-        description: description?.trim() || existing.tasks.description,
-        status: status || existing.tasks.status,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(tasks.id, id))
       .returning();
 
