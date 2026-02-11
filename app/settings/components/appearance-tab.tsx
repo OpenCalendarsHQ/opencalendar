@@ -2,9 +2,28 @@
 
 import { useSettings } from "@/lib/settings-context";
 import { SettingSection, OptionButton, ToggleSwitch } from "./setting-helpers";
+import { EventPreview } from "./event-preview";
+import { Palette, RotateCcw } from "lucide-react";
 
 export function AppearanceTab() {
   const { settings, updateSettings } = useSettings();
+
+  const resetEventDisplaySettings = () => {
+    updateSettings({
+      eventBorderStyle: "solid",
+      eventBorderWidth: 3,
+      eventCornerRadius: 4,
+      eventOpacity: 100,
+      eventFontSize: "sm",
+      eventPadding: "normal",
+      showLocationIcon: true,
+      showTimeInCompact: true,
+      eventBackgroundStyle: "solid",
+      eventShadow: "none",
+      showEventBorder: true,
+      eventTitleWeight: "medium",
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -240,6 +259,224 @@ export function AppearanceTab() {
           />
         </div>
       </SettingSection>
+
+      {/* Event Display Customization Section */}
+      <div className="my-8 border-t border-border pt-6">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Palette className="h-5 w-5 text-foreground" />
+            <h3 className="text-base font-semibold text-foreground">Event Weergave Aanpassen</h3>
+          </div>
+          <button
+            onClick={resetEventDisplaySettings}
+            className="flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+            title="Terugzetten naar standaard"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Standaard
+          </button>
+        </div>
+
+        {/* Preview */}
+        <div className="mb-6">
+          <EventPreview />
+        </div>
+
+        {/* Event Background Style */}
+        <SettingSection title="Achtergrond stijl" description="Stijl van event achtergrond">
+          <div className="flex gap-2">
+            {([
+              { value: "solid" as const, label: "Solid" },
+              { value: "gradient" as const, label: "Gradient" },
+              { value: "glass" as const, label: "Glass" },
+            ]).map((opt) => (
+              <OptionButton
+                key={opt.value}
+                label={opt.label}
+                selected={settings.eventBackgroundStyle === opt.value}
+                onClick={() => updateSettings({ eventBackgroundStyle: opt.value })}
+              />
+            ))}
+          </div>
+        </SettingSection>
+
+        {/* Event Border Style */}
+        <SettingSection title="Rand weergave" description="Toon rand rondom events">
+          <ToggleSwitch
+            checked={settings.showEventBorder}
+            onChange={(checked) => updateSettings({ showEventBorder: checked })}
+          />
+        </SettingSection>
+
+        {settings.showEventBorder && (
+          <>
+            <SettingSection title="Rand stijl" description="Stijl van event rand">
+              <div className="flex gap-2">
+                {([
+                  { value: "solid" as const, label: "Solid" },
+                  { value: "dashed" as const, label: "Dashed" },
+                  { value: "dotted" as const, label: "Dotted" },
+                ]).map((opt) => (
+                  <OptionButton
+                    key={opt.value}
+                    label={opt.label}
+                    selected={settings.eventBorderStyle === opt.value}
+                    onClick={() => updateSettings({ eventBorderStyle: opt.value })}
+                  />
+                ))}
+              </div>
+            </SettingSection>
+
+            <SettingSection title="Rand dikte" description="Dikte van linker rand">
+              <div className="flex gap-2">
+                {([
+                  { value: 1 as const, label: "1px" },
+                  { value: 2 as const, label: "2px" },
+                  { value: 3 as const, label: "3px" },
+                  { value: 4 as const, label: "4px" },
+                ]).map((opt) => (
+                  <OptionButton
+                    key={opt.value}
+                    label={opt.label}
+                    selected={settings.eventBorderWidth === opt.value}
+                    onClick={() => updateSettings({ eventBorderWidth: opt.value })}
+                  />
+                ))}
+              </div>
+            </SettingSection>
+          </>
+        )}
+
+        {/* Event Corner Radius */}
+        <SettingSection title="Hoek afronding" description="Ronde hoeken van events">
+          <div className="flex flex-wrap gap-2">
+            {([
+              { value: 0 as const, label: "Geen" },
+              { value: 2 as const, label: "Klein" },
+              { value: 4 as const, label: "Normaal" },
+              { value: 6 as const, label: "Medium" },
+              { value: 8 as const, label: "Groot" },
+              { value: 12 as const, label: "Extra" },
+            ]).map((opt) => (
+              <OptionButton
+                key={opt.value}
+                label={opt.label}
+                selected={settings.eventCornerRadius === opt.value}
+                onClick={() => updateSettings({ eventCornerRadius: opt.value })}
+              />
+            ))}
+          </div>
+        </SettingSection>
+
+        {/* Event Shadow */}
+        <SettingSection title="Schaduw" description="Schaduw onder events">
+          <div className="flex gap-2">
+            {([
+              { value: "none" as const, label: "Geen" },
+              { value: "sm" as const, label: "Klein" },
+              { value: "md" as const, label: "Medium" },
+            ]).map((opt) => (
+              <OptionButton
+                key={opt.value}
+                label={opt.label}
+                selected={settings.eventShadow === opt.value}
+                onClick={() => updateSettings({ eventShadow: opt.value })}
+              />
+            ))}
+          </div>
+        </SettingSection>
+
+        {/* Event Opacity */}
+        <SettingSection title="Transparantie" description="Doorzichtigheid van event achtergrond">
+          <div className="flex flex-wrap gap-2">
+            {([
+              { value: 60 as const, label: "60%" },
+              { value: 70 as const, label: "70%" },
+              { value: 80 as const, label: "80%" },
+              { value: 90 as const, label: "90%" },
+              { value: 100 as const, label: "100%" },
+            ]).map((opt) => (
+              <OptionButton
+                key={opt.value}
+                label={opt.label}
+                selected={settings.eventOpacity === opt.value}
+                onClick={() => updateSettings({ eventOpacity: opt.value })}
+              />
+            ))}
+          </div>
+        </SettingSection>
+
+        {/* Event Font Size */}
+        <SettingSection title="Lettergrootte" description="Grootte van event tekst">
+          <div className="flex gap-2">
+            {([
+              { value: "xs" as const, label: "Klein" },
+              { value: "sm" as const, label: "Normaal" },
+              { value: "base" as const, label: "Groot" },
+            ]).map((opt) => (
+              <OptionButton
+                key={opt.value}
+                label={opt.label}
+                selected={settings.eventFontSize === opt.value}
+                onClick={() => updateSettings({ eventFontSize: opt.value })}
+              />
+            ))}
+          </div>
+        </SettingSection>
+
+        {/* Event Title Weight */}
+        <SettingSection title="Titel dikte" description="Dikte van event titel">
+          <div className="flex gap-2">
+            {([
+              { value: "normal" as const, label: "Normaal" },
+              { value: "medium" as const, label: "Medium" },
+              { value: "semibold" as const, label: "Semibold" },
+              { value: "bold" as const, label: "Bold" },
+            ]).map((opt) => (
+              <OptionButton
+                key={opt.value}
+                label={opt.label}
+                selected={settings.eventTitleWeight === opt.value}
+                onClick={() => updateSettings({ eventTitleWeight: opt.value })}
+              />
+            ))}
+          </div>
+        </SettingSection>
+
+        {/* Event Padding */}
+        <SettingSection title="Binnen ruimte" description="Ruimte binnen events">
+          <div className="flex gap-2">
+            {([
+              { value: "tight" as const, label: "Krap" },
+              { value: "normal" as const, label: "Normaal" },
+              { value: "relaxed" as const, label: "Ruim" },
+            ]).map((opt) => (
+              <OptionButton
+                key={opt.value}
+                label={opt.label}
+                selected={settings.eventPadding === opt.value}
+                onClick={() => updateSettings({ eventPadding: opt.value })}
+              />
+            ))}
+          </div>
+        </SettingSection>
+
+        {/* Show Location Icon */}
+        <SettingSection title="Locatie icoon" description="Toon locatie icoon in events">
+          <ToggleSwitch
+            checked={settings.showLocationIcon}
+            onChange={(checked) => updateSettings({ showLocationIcon: checked })}
+          />
+        </SettingSection>
+
+        {/* Show Time in Compact */}
+        <SettingSection title="Tijd in compacte weergave" description="Toon tijd bij korte events">
+          <ToggleSwitch
+            checked={settings.showTimeInCompact}
+            onChange={(checked) => updateSettings({ showTimeInCompact: checked })}
+          />
+        </SettingSection>
+      </div>
 
       {/* Show mini calendar */}
       <SettingSection title="Mini kalender" description="Toon mini maandkalender in sidebar">

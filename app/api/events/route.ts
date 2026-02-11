@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { events, calendars, calendarAccounts, eventRecurrences } from "@/lib/db/schema";
 import { verifyRequest } from "@/lib/auth/verify-request";
 import { ensureUserExists } from "@/lib/auth/ensure-user";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { createICloudEvent, updateICloudEvent, deleteICloudEvent } from "@/lib/sync/icloud";
 import { createGoogleEvent, updateGoogleEvent, deleteGoogleEvent } from "@/lib/sync/google";
@@ -141,8 +141,10 @@ export async function GET(request: NextRequest) {
     // 1. Non-recurring events: filtered by date range (performance optimization)
     // 2. Recurring events: NO date filter (they may have occurrences in range)
 
-    // Fetch non-recurring events with date filter
-    const nonRecurringEvents = await db
+    // PERFORMANCE: Fetch both recurring and non-recurring events in a single optimized query
+    // For non-recurring: filter by date range
+    // For recurring: filter only those that haven't ended yet (recurUntil >= startDate)
+    const allEvents = await db
       .select({
         id: events.id,
         title: events.title,
@@ -158,6 +160,7 @@ export async function GET(request: NextRequest) {
         isRecurring: events.isRecurring,
         rrule: eventRecurrences.rrule,
         exDates: eventRecurrences.exDates,
+        recurUntil: eventRecurrences.recurUntil,
       })
       .from(events)
       .innerJoin(calendars, eq(events.calendarId, calendars.id))
@@ -166,53 +169,34 @@ export async function GET(request: NextRequest) {
       .where(
         and(
           ...baseConditions,
-          eq(events.isRecurring, false),
-          gte(events.endTime, startDate),
-          lte(events.startTime, endDate)
+          or(
+            // 1. Non-recurring events within the range
+            and(
+              eq(events.isRecurring, false),
+              gte(events.endTime, startDate),
+              lte(events.startTime, endDate)
+            ),
+            // 2. Recurring events that are still active
+            and(
+              eq(events.isRecurring, true),
+              or(
+                isNull(eventRecurrences.recurUntil),
+                gte(eventRecurrences.recurUntil, startDate)
+              )
+            )
+          )
         )
       );
 
-    // Fetch recurring events WITHOUT date filter
-    const recurringEvents = await db
-      .select({
-        id: events.id,
-        title: events.title,
-        description: events.description,
-        startTime: events.startTime,
-        endTime: events.endTime,
-        isAllDay: events.isAllDay,
-        location: events.location,
-        eventColor: events.color,
-        calendarColor: calendars.color,
-        calendarId: events.calendarId,
-        status: events.status,
-        isRecurring: events.isRecurring,
-        rrule: eventRecurrences.rrule,
-        exDates: eventRecurrences.exDates,
-      })
-      .from(events)
-      .innerJoin(calendars, eq(events.calendarId, calendars.id))
-      .innerJoin(calendarAccounts, eq(calendars.accountId, calendarAccounts.id))
-      .leftJoin(eventRecurrences, eq(events.id, eventRecurrences.eventId))
-      .where(
-        and(
-          ...baseConditions,
-          eq(events.isRecurring, true)
-        )
-      );
-
-    // Combine results
-    const result = [...nonRecurringEvents, ...recurringEvents];
-
-    // Format the results and deduplicate (LEFT JOIN can create duplicates if there are multiple recurrence entries)
+    // Format the results and deduplicate
     const seen = new Set<string>();
-    const formattedEvents = result
-      .filter((e) => {
-        if (seen.has(e.id)) return false;
-        seen.add(e.id);
-        return true;
-      })
-      .map((e) => ({
+    const formattedEvents = [];
+
+    for (const e of allEvents) {
+      if (seen.has(e.id)) continue;
+      seen.add(e.id);
+
+      formattedEvents.push({
         id: e.id,
         title: e.title,
         description: e.description,
@@ -226,7 +210,8 @@ export async function GET(request: NextRequest) {
         isRecurring: e.isRecurring,
         rrule: e.rrule,
         exDates: e.exDates as string[] | null,
-      }));
+      });
+    }
 
     return NextResponse.json(formattedEvents);
   } catch (error) {

@@ -20,10 +20,19 @@ export async function GET(request: NextRequest) {
       .where(eq(userSettings.userId, user.id));
 
     if (settings) {
-      // Parse JSON fields
+      // Parse JSON fields safely
+      let defaultReminders = [15, 60];
+      try {
+        if (settings.defaultReminders) {
+          defaultReminders = JSON.parse(settings.defaultReminders);
+        }
+      } catch (e) {
+        console.error("Failed to parse defaultReminders:", e);
+      }
+
       const parsedSettings = {
         ...settings,
-        defaultReminders: JSON.parse(settings.defaultReminders),
+        defaultReminders,
       };
       return NextResponse.json(parsedSettings);
     }

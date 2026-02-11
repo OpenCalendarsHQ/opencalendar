@@ -26,10 +26,50 @@ export const EventCard = memo(function EventCard({ event, style, onClick }: Even
   const left = event.column * columnWidth;
   const width = columnWidth + (event.totalColumns > 1 ? 0.5 : 0);
 
-  // Convert hex color to pastel background (with opacity)
+  // Convert hex color to background based on style
   const eventColor = event.color || "#737373";
-  const pastelBg = `${eventColor}15`; // 15 = ~8% opacity in hex
-  const borderColor = `${eventColor}40`; // 40 = ~25% opacity
+  const opacity = settings.eventOpacity / 100;
+  
+  let backgroundColor: string;
+  let backgroundImage: string | undefined;
+  
+  if (settings.eventBackgroundStyle === "solid") {
+    backgroundColor = `${eventColor}${Math.round(opacity * 0.15 * 255).toString(16).padStart(2, '0')}`;
+  } else if (settings.eventBackgroundStyle === "gradient") {
+    backgroundColor = "transparent";
+    backgroundImage = `linear-gradient(135deg, ${eventColor}${Math.round(opacity * 0.2 * 255).toString(16).padStart(2, '0')}, ${eventColor}${Math.round(opacity * 0.08 * 255).toString(16).padStart(2, '0')})`;
+  } else {
+    // glass effect
+    backgroundColor = `${eventColor}${Math.round(opacity * 0.1 * 255).toString(16).padStart(2, '0')}`;
+  }
+  
+  const borderColor = `${eventColor}${Math.round(opacity * 0.4 * 255).toString(16).padStart(2, '0')}`;
+
+  // Apply settings for styling
+  const fontSizeClass = {
+    xs: "text-[10px]",
+    sm: "text-[11px]",
+    base: "text-xs",
+  }[settings.eventFontSize];
+
+  const paddingClass = {
+    tight: "px-1.5 py-0.5",
+    normal: "px-2 py-1",
+    relaxed: "px-3 py-1.5",
+  }[settings.eventPadding];
+
+  const shadowClass = {
+    none: "",
+    sm: "shadow-sm",
+    md: "shadow-md",
+  }[settings.eventShadow];
+
+  const fontWeightClass = {
+    normal: "font-normal",
+    medium: "font-medium",
+    semibold: "font-semibold",
+    bold: "font-bold",
+  }[settings.eventTitleWeight];
 
   return (
     <EventHoverCard event={event}>
@@ -40,33 +80,53 @@ export const EventCard = memo(function EventCard({ event, style, onClick }: Even
           e.stopPropagation();
           onClick(event);
         }}
-        className="absolute z-10 flex cursor-pointer flex-col justify-start overflow-hidden rounded-[4px] px-2 py-1 text-left hover:z-20 transition-colors"
+        className={`absolute z-10 flex cursor-pointer flex-col justify-start overflow-hidden transition-colors hover:z-20 ${paddingClass} ${fontSizeClass} ${shadowClass}`}
         style={{
           ...style,
           left: `${left}%`,
           width: `calc(${width}% - 8px)`,
           marginLeft: "4px",
-          backgroundColor: pastelBg,
-          borderLeft: `3px solid ${eventColor}`,
-          borderTop: `1px solid ${borderColor}`,
-          borderRight: `1px solid ${borderColor}`,
-          borderBottom: `1px solid ${borderColor}`,
+          backgroundColor,
+          backgroundImage,
+          borderRadius: `${settings.eventCornerRadius}px`,
+          borderLeft: settings.showEventBorder 
+            ? `${settings.eventBorderWidth}px ${settings.eventBorderStyle} ${eventColor}`
+            : undefined,
+          borderTop: settings.showEventBorder && settings.eventBorderStyle !== "none"
+            ? `1px ${settings.eventBorderStyle} ${borderColor}`
+            : undefined,
+          borderRight: settings.showEventBorder && settings.eventBorderStyle !== "none"
+            ? `1px ${settings.eventBorderStyle} ${borderColor}`
+            : undefined,
+          borderBottom: settings.showEventBorder && settings.eventBorderStyle !== "none"
+            ? `1px ${settings.eventBorderStyle} ${borderColor}`
+            : undefined,
+          backdropFilter: settings.eventBackgroundStyle === "glass" ? "blur(8px)" : undefined,
         }}
       >
-        <div className="absolute left-0 top-0 h-full w-[3px]" style={{ backgroundColor: eventColor }} />
+        {settings.showEventBorder && (
+          <div className="absolute left-0 top-0 h-full" 
+            style={{ 
+              width: `${settings.eventBorderWidth}px`, 
+              backgroundColor: eventColor 
+            }} 
+          />
+        )}
 
         {isCompact ? (
           <div className="flex items-start gap-1.5 pl-1">
-            <span className="text-[11px] font-medium leading-tight text-foreground break-words">{event.title}</span>
-            <span className="shrink-0 text-[10px] leading-tight text-muted-foreground">{formatTime(event.startTime, use24h)}</span>
+            <span className={`${fontWeightClass} leading-tight text-foreground break-words flex-1`}>{event.title}</span>
+            {settings.showTimeInCompact && (
+              <span className="shrink-0 text-[10px] leading-tight text-muted-foreground">{formatTime(event.startTime, use24h)}</span>
+            )}
           </div>
         ) : (
           <div className="pl-1">
-            <div className="text-[11px] font-medium leading-tight text-foreground break-words">{event.title}</div>
+            <div className={`${fontWeightClass} leading-tight text-foreground break-words`}>{event.title}</div>
             <div className="mt-0.5 text-[10px] leading-tight text-muted-foreground">
               {formatTime(event.startTime, use24h)} – {formatTime(event.endTime, use24h)}
             </div>
-            {event.location && duration > 60 && event.totalColumns <= 2 && (
+            {settings.showLocationIcon && event.location && duration > 60 && event.totalColumns <= 2 && (
               <div className="mt-0.5 flex items-center gap-1 text-[10px] leading-tight text-muted-foreground">
                 <MapPin className="h-2.5 w-2.5 shrink-0" />
                 <span className="break-words">{event.location}</span>

@@ -40,6 +40,20 @@ export interface AppSettings {
   eventColorSource: "calendar" | "event"; // Use calendar color or event's own color
   showMiniCalendar: boolean;
 
+  // Event display customization
+  eventBorderStyle: "solid" | "dashed" | "dotted" | "none";
+  eventBorderWidth: 1 | 2 | 3 | 4;
+  eventCornerRadius: 0 | 2 | 4 | 6 | 8 | 12;
+  eventOpacity: 60 | 70 | 80 | 90 | 100;
+  eventFontSize: "xs" | "sm" | "base";
+  eventPadding: "tight" | "normal" | "relaxed";
+  showLocationIcon: boolean;
+  showTimeInCompact: boolean;
+  eventBackgroundStyle: "solid" | "gradient" | "glass";
+  eventShadow: "none" | "sm" | "md";
+  showEventBorder: boolean;
+  eventTitleWeight: "normal" | "medium" | "semibold" | "bold";
+
   // Notifications (for later)
   defaultReminders: number[]; // minutes before event: [15, 60, 1440]
   enableNotifications: boolean;
@@ -74,6 +88,20 @@ const DEFAULT_SETTINGS: AppSettings = {
   defaultCalendarId: null,
   eventColorSource: "calendar",
   showMiniCalendar: true,
+
+  // Event display customization
+  eventBorderStyle: "solid",
+  eventBorderWidth: 3,
+  eventCornerRadius: 4,
+  eventOpacity: 100,
+  eventFontSize: "sm",
+  eventPadding: "normal",
+  showLocationIcon: true,
+  showTimeInCompact: true,
+  eventBackgroundStyle: "solid",
+  eventShadow: "none",
+  showEventBorder: true,
+  eventTitleWeight: "medium",
 
   // Notifications (for later)
   defaultReminders: [15, 60], // 15 min and 1 hour before

@@ -29,6 +29,13 @@
       "when": 1770705537368,
       "tag": "0003_big_angel",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1770797869080,
+      "tag": "0004_burly_ezekiel_stane",
+      "breakpoints": true
     }
   ]
 }

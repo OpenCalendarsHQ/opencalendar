@@ -36,6 +36,20 @@ export const userSettings = pgTable("user_settings", {
   eventColorSource: text("event_color_source").notNull().default("calendar"), // "calendar" | "event"
   showMiniCalendar: boolean("show_mini_calendar").notNull().default(true),
 
+  // Event display customization
+  eventBorderStyle: text("event_border_style").notNull().default("solid"), // "solid" | "dashed" | "dotted" | "none"
+  eventBorderWidth: integer("event_border_width").notNull().default(3), // 1 | 2 | 3 | 4
+  eventCornerRadius: integer("event_corner_radius").notNull().default(4), // 0 | 2 | 4 | 6 | 8 | 12
+  eventOpacity: integer("event_opacity").notNull().default(100), // 60 | 70 | 80 | 90 | 100
+  eventFontSize: text("event_font_size").notNull().default("sm"), // "xs" | "sm" | "base"
+  eventPadding: text("event_padding").notNull().default("normal"), // "tight" | "normal" | "relaxed"
+  showLocationIcon: boolean("show_location_icon").notNull().default(true),
+  showTimeInCompact: boolean("show_time_in_compact").notNull().default(true),
+  eventBackgroundStyle: text("event_background_style").notNull().default("solid"), // "solid" | "gradient" | "glass"
+  eventShadow: text("event_shadow").notNull().default("none"), // "none" | "sm" | "md"
+  showEventBorder: boolean("show_event_border").notNull().default(true),
+  eventTitleWeight: text("event_title_weight").notNull().default("medium"), // "normal" | "medium" | "semibold" | "bold"
+
   // Notifications (for later)
   defaultReminders: text("default_reminders").notNull().default("[15,60]"), // JSON array of minutes
   enableNotifications: boolean("enable_notifications").notNull().default(false),
