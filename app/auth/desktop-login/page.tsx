@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 
 export default function DesktopLoginPage() {
   const router = useRouter();
+  const t = useTranslations("Auth");
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -21,7 +23,7 @@ export default function DesktopLoginPage() {
       if (user && !isRedirecting) {
         setIsRedirecting(true);
         setTimeout(() => {
-          window.location.href = "/api/auth/desktop-token";
+          window.location.href = "/auth/desktop-token";
         }, 500);
       }
     });
@@ -34,10 +36,15 @@ export default function DesktopLoginPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#111111]">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-zinc-800 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-zinc-400">Laden...</p>
+      <div className="w-full">
+        <div className="mb-8">
+          <h1 className="font-pixel text-3xl font-bold text-white mb-2">
+            {t("desktopLoginTitle")}
+          </h1>
+          <p className="text-zinc-400">{t("loading")}</p>
+        </div>
+        <div className="flex justify-center py-8">
+          <div className="w-12 h-12 border-4 border-zinc-800 border-t-blue-500 rounded-full animate-spin"></div>
         </div>
       </div>
     );
@@ -45,45 +52,40 @@ export default function DesktopLoginPage() {
 
   if (user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#111111]">
-        <div className="bg-zinc-900 rounded-lg border border-zinc-800 shadow-sm p-8 max-w-md w-full mx-4 text-center">
-          <div className="w-12 h-12 border-4 border-zinc-800 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <h1 className="text-xl font-semibold text-white mb-2">
-            Authenticating...
+      <div className="w-full">
+        <div className="mb-8">
+          <h1 className="font-pixel text-3xl font-bold text-white mb-2">
+            {t("authenticating")}
           </h1>
-          <p className="text-sm text-zinc-400">
-            Je wordt doorgestuurd naar de desktop app
-          </p>
+          <p className="text-zinc-400">{t("desktopLoginSubtitle")}</p>
+        </div>
+        <div className="flex justify-center py-8">
+          <div className="w-12 h-12 border-4 border-zinc-800 border-t-blue-500 rounded-full animate-spin"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[#111111]">
-      <div className="bg-zinc-900 rounded-lg border border-zinc-800 shadow-sm p-8 max-w-md w-full mx-4">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-white mb-2">
-            OpenCalendars Desktop
+    <div className="w-full">
+      <div className="mb-8">
+        <h1 className="font-pixel text-3xl font-bold text-white mb-2">
+          {t("desktopLoginTitle")}
+        </h1>
+        <p className="text-zinc-400">{t("desktopLoginSubtitle")}</p>
+      </div>
 
-          </h1>
-          <p className="text-sm text-zinc-400">
-            Log in om je desktop app te koppelen
-          </p>
-        </div>
+      <button
+        onClick={handleLogin}
+        className="w-full bg-blue-600 text-white font-medium py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+      >
+        {t("signInButton")}
+      </button>
 
-        <button
-          onClick={handleLogin}
-          className="block w-full bg-indigo-600 text-white font-medium py-2.5 px-4 rounded-md hover:bg-indigo-700 transition-colors text-center"
-        >
-          Inloggen
-        </button>
-
-        <div className="mt-6 pt-6 border-t border-zinc-800">
-          <p className="text-xs text-zinc-500 text-center">
-            Na het inloggen wordt je desktop app automatisch geactiveerd
-          </p>
-        </div>
+      <div className="mt-6 pt-6 border-t border-zinc-800">
+        <p className="text-xs text-zinc-500 text-center">
+          {t("desktopLoginInfo")}
+        </p>
       </div>
     </div>
   );

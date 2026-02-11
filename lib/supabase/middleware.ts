@@ -52,7 +52,9 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith("/api") &&
     !request.nextUrl.pathname.startsWith("/welcome") &&
     !request.nextUrl.pathname.startsWith("/privacy") &&
-    !request.nextUrl.pathname.startsWith("/terms")
+    !request.nextUrl.pathname.startsWith("/terms") &&
+    !request.nextUrl.pathname.startsWith("/sitemap") &&
+    !request.nextUrl.pathname.startsWith("/robots")
   ) {
     // Redirect unauthenticated users to welcome page
     const url = request.nextUrl.clone();
@@ -61,10 +63,12 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Redirect authenticated users away from auth/welcome pages
-  // EXCEPTION: Allow /auth/desktop-login for desktop app token generation
+  // EXCEPTION: Allow /auth/desktop-login, /auth/desktop-token and /auth/api/* for desktop app token generation
   if (
     user &&
     !request.nextUrl.pathname.startsWith("/auth/desktop-login") &&
+    !request.nextUrl.pathname.startsWith("/auth/desktop-token") &&
+    !request.nextUrl.pathname.startsWith("/auth/api/") &&
     (request.nextUrl.pathname.startsWith("/auth") || request.nextUrl.pathname.startsWith("/welcome"))
   ) {
     const url = request.nextUrl.clone();

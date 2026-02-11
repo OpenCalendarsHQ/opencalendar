@@ -10,13 +10,17 @@ const intlMiddleware = createMiddleware({
 });
 
 export async function proxy(request: NextRequest) {
+  // Check if this is an API route
+  const isApiRoute = request.nextUrl.pathname.startsWith("/api/") || 
+                     request.nextUrl.pathname.startsWith("/auth/api/");
+
   // 1. Handle CORS preflight requests for API routes
-  if (request.method === "OPTIONS" && request.nextUrl.pathname.startsWith("/api/")) {
+  if (request.method === "OPTIONS" && isApiRoute) {
     return handleCorsPreflightRequest(request);
   }
 
-  // 2. Handle internationalization
-  const response = intlMiddleware(request);
+  // 2. Handle internationalization (skip for API routes)
+  const response = isApiRoute ? NextResponse.next() : intlMiddleware(request);
 
   // 3. Update supabase session
   // Note: updateSession will create its own response if it needs to redirect,
@@ -24,7 +28,7 @@ export async function proxy(request: NextRequest) {
   const sessionResponse = await updateSession(request);
 
   // 4. Add CORS headers to API responses for desktop app
-  if (request.nextUrl.pathname.startsWith("/api/")) {
+  if (isApiRoute) {
     return corsMiddleware(request, sessionResponse);
   }
 

@@ -2,6 +2,7 @@ import { useAuth } from "./contexts/AuthContext";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { check } from "@tauri-apps/plugin-updater";
 import { apiClient } from "./lib/api";
 import { offlineCache } from "./lib/offline-cache";
 import { syncManager } from "./lib/sync-manager";
@@ -27,8 +28,36 @@ import type { CalendarEvent, CalendarGroup, CalendarViewType } from "./lib/types
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
+// Check for updates on app startup
+async function checkForUpdates() {
+  try {
+    console.log("Checking for updates...");
+    const update = await check();
+    
+    if (update) {
+      console.log(`Update available: v${update.version}`);
+      // The dialog is handled automatically by the updater plugin (dialog: true in config)
+      // If you want manual control, you can use:
+      // const confirmed = await ask(`Update to v${update.version}?`, { title: 'Update beschikbaar' });
+      // if (confirmed) {
+      //   await update.downloadAndInstall();
+      //   await relaunch();
+      // }
+    } else {
+      console.log("✅ App is up to date");
+    }
+  } catch (error) {
+    console.error("Failed to check for updates:", error);
+  }
+}
+
 function App() {
   const { user, isAuthenticated, isLoading, logout, login } = useAuth();
+
+  // Check for updates on app startup
+  useEffect(() => {
+    checkForUpdates();
+  }, []);
 
   // Listen for deep link events
   useEffect(() => {

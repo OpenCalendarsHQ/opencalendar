@@ -10,6 +10,7 @@ export function corsMiddleware(request: NextRequest, response: NextResponse) {
     "tauri://localhost",
     "http://localhost:1420", // Tauri dev server
     "https://tauri.localhost", // Alternative Tauri origin
+    "https://opencalendars.app", // Production URL
   ];
 
   const origin = request.headers.get("origin");
@@ -39,6 +40,7 @@ export function handleCorsPreflightRequest(request: NextRequest) {
     "tauri://localhost",
     "http://localhost:1420",
     "https://tauri.localhost",
+    "https://opencalendars.app",
   ];
 
   const origin = request.headers.get("origin");

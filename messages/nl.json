@@ -60,7 +60,16 @@
     "noAccount": "Nog geen account?",
     "haveAccount": "Heb je al een account?",
     "register": "Registreren",
-    "login": "Inloggen"
+    "login": "Inloggen",
+    "desktopLoginTitle": "OpenCalendars Desktop",
+    "desktopLoginSubtitle": "Log in om je desktop app te koppelen",
+    "desktopLoginInfo": "Na het inloggen wordt je desktop app automatisch geactiveerd",
+    "authenticating": "Authenticeren...",
+    "loading": "Laden...",
+    "generatingTokens": "Tokens genereren...",
+    "redirectingToApp": "Doorsturen naar OpenCalendars...",
+    "redirectFailed": "Als de app niet automatisch opent, sluit dit venster en probeer het opnieuw.",
+    "authenticationFailed": "Authenticatie mislukt. Sluit dit venster en probeer het opnieuw."
   },
   "Welcome": {
     "title": "Al je kalenders op één plek",

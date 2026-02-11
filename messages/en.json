@@ -60,7 +60,16 @@
     "noAccount": "Don't have an account?",
     "haveAccount": "Already have an account?",
     "register": "Register",
-    "login": "Login"
+    "login": "Login",
+    "desktopLoginTitle": "OpenCalendars Desktop",
+    "desktopLoginSubtitle": "Sign in to connect your desktop app",
+    "desktopLoginInfo": "Your desktop app will be automatically activated after signing in",
+    "authenticating": "Authenticating...",
+    "loading": "Loading...",
+    "generatingTokens": "Generating tokens...",
+    "redirectingToApp": "Redirecting to OpenCalendars...",
+    "redirectFailed": "If the app did not open automatically, please close this window and try again.",
+    "authenticationFailed": "Authentication failed. Please close this window and try again."
   },
   "Welcome": {
     "title": "Sync all your calendars in one place",
