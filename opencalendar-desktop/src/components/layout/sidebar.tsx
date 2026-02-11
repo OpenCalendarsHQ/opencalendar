@@ -93,10 +93,10 @@ export function Sidebar({
 
   if (isCollapsed) {
     return (
-      <div className="w-12 border-r border-gray-200 bg-white flex flex-col items-center py-4">
+      <div className="w-12 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col items-center py-4">
         <button
           onClick={onToggleCollapsed}
-          className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md p-2"
+          className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md p-2"
           title="Sidebar openen"
         >
           <PanelLeft className="h-5 w-5" />
@@ -106,13 +106,13 @@ export function Sidebar({
   }
 
   return (
-    <div className="w-64 border-r border-gray-200 bg-white flex flex-col">
+    <div className="w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-3 border-b border-gray-200">
-        <h2 className="text-sm font-semibold text-gray-900">Kalenders</h2>
+      <div className="flex items-center justify-between px-3 py-3 border-b border-gray-200 dark:border-gray-700">
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Kalenders</h2>
         <button
           onClick={onToggleCollapsed}
-          className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md p-1"
+          className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md p-1"
           title="Sidebar sluiten"
         >
           <PanelLeftClose className="h-4 w-4" />
@@ -120,7 +120,7 @@ export function Sidebar({
       </div>
 
       {/* Mini Calendar */}
-      <div className="border-b border-gray-200 py-2">
+      <div className="border-b border-gray-200 dark:border-gray-700 py-2">
         <MiniCalendar
           selectedDate={selectedDate}
           onDateSelect={onDateSelect}
