@@ -59,11 +59,21 @@ jobs:
         working-directory: opencalendar-desktop
         run: npm ci --prefer-offline --no-audit
 
+      - name: Decode signing key
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            echo "${{ secrets.TAURI_SIGNING_PRIVATE_KEY_BASE64 }}" | base64 -d > $TEMP/tauri-signing-key.key
+            echo "TAURI_SIGNING_PRIVATE_KEY_PATH=$TEMP/tauri-signing-key.key" >> $GITHUB_ENV
+          else
+            echo "${{ secrets.TAURI_SIGNING_PRIVATE_KEY_BASE64 }}" | base64 -d > /tmp/tauri-signing-key.key
+            echo "TAURI_SIGNING_PRIVATE_KEY_PATH=/tmp/tauri-signing-key.key" >> $GITHUB_ENV
+          fi
+
       - name: Build Tauri app
         working-directory: opencalendar-desktop
         env:
           VITE_API_URL: https://opencalendars.app
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build -- --target ${{ matrix.target }}
 
