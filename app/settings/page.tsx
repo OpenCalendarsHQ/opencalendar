@@ -140,7 +140,7 @@ function SettingsContent() {
                   flattened.push({
                     id: cal.id,
                     name: cal.name,
-                    accountEmail: group.email || "Lokaal",
+                    accountEmail: group.provider === "local" ? "OpenCalendar" : (group.email || "Externe account"),
                   });
                 }
               });
@@ -325,7 +325,7 @@ function SettingsContent() {
         setShowLocalCalendarModal(false);
         setLocalCalendarName("");
         setLocalCalendarColor("#3b82f6");
-        setSuccess("Lokale kalender aangemaakt!");
+        setSuccess("Kalender aangemaakt!");
         await fetchAccounts();
         setTimeout(() => setSuccess(null), 3000);
       } else {
@@ -473,12 +473,12 @@ function SettingsContent() {
               </div>
             </div>
 
-            {/* Lokale kalenders sectie - PROMINENT BOVENAAN */}
+            {/* OpenCalendar kalenders sectie - PROMINENT BOVENAAN */}
             <div className="mb-6">
               <div className="mb-3">
-                <h2 className="text-sm font-medium text-foreground">Jouw Kalenders</h2>
+                <h2 className="text-sm font-medium text-foreground">OpenCalendar</h2>
                 <p className="text-xs text-muted-foreground">
-                  Maak lokale kalenders aan. Je data blijft volledig bij OpenCalendar.
+                  Maak kalenders aan die veilig worden opgeslagen in je OpenCalendar account.
                 </p>
               </div>
               <button
@@ -489,8 +489,8 @@ function SettingsContent() {
                   <Plus className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm font-medium text-foreground">Nieuwe lokale kalender</div>
-                  <div className="text-xs text-muted-foreground">Bewaar je agenda volledig lokaal</div>
+                  <div className="text-sm font-medium text-foreground">Nieuwe kalender</div>
+                  <div className="text-xs text-muted-foreground">Veilig opgeslagen in je account</div>
                 </div>
               </button>
             </div>
@@ -526,7 +526,7 @@ function SettingsContent() {
                 <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center">
                   <CalendarIcon className="mx-auto h-8 w-8 text-muted-foreground/50" />
                   <p className="mt-2 text-xs text-muted-foreground">Geen externe accounts verbonden</p>
-                  <p className="mt-1 text-xs text-muted-foreground/70">Dit is optioneel - je lokale kalenders werken zonder externe sync</p>
+                  <p className="mt-1 text-xs text-muted-foreground/70">Dit is optioneel - je OpenCalendar kalenders werken zonder externe sync</p>
                 </div>
               ) : (
               <div className="space-y-2">
@@ -550,7 +550,10 @@ function SettingsContent() {
                           <CheckCircle2 className="h-3 w-3 shrink-0 text-success" />
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {account.provider === "google" ? "Google Calendar" : account.provider === "microsoft" ? "Microsoft Calendar" : account.provider === "caldav" ? "CalDAV" : "iCloud Calendar"}
+                          {account.provider === "google" ? "Google Calendar" : 
+                           account.provider === "microsoft" ? "Microsoft Calendar" : 
+                           account.provider === "icloud" ? "iCloud Calendar" :
+                           account.provider === "caldav" ? "CalDAV" : "OpenCalendar"}
                           {account.calendarCount > 0 && ` · ${account.calendarCount} kalender${account.calendarCount !== 1 ? "s" : ""}`}
                         </div>
                       </div>
@@ -774,7 +777,7 @@ function SettingsContent() {
         <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
           <div className="fixed inset-0 bg-black/20" onClick={() => setShowLocalCalendarModal(false)} />
           <div className="relative w-full max-w-md mx-4 rounded-t-xl border border-border bg-popover p-5 shadow-lg safe-bottom md:rounded-lg">
-            <h2 className="text-sm font-medium text-foreground">Lokale kalender aanmaken</h2>
+            <h2 className="text-sm font-medium text-foreground">Kalender aanmaken</h2>
 
             {error && (
               <div className="mt-3 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">{error}</div>

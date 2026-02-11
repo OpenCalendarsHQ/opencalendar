@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         .values({
           userId: user.id,
           provider: "local",
-          email: user.email || "local",
+          email: user.email || "OpenCalendar",
         })
         .returning();
     }
@@ -217,7 +217,7 @@ export async function DELETE(request: NextRequest) {
       // Only allow deleting local calendars
       if (account.provider !== "local") {
         return NextResponse.json(
-          { error: "Alleen lokale kalenders kunnen individueel worden verwijderd" },
+          { error: "Alleen OpenCalendar kalenders kunnen individueel worden verwijderd" },
           { status: 400 }
         );
       }

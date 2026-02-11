@@ -220,7 +220,7 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
                   if (writableCalendars.length === 0) return null;
 
                   const providerLabels: Record<string, string> = {
-                    local: "Mijn Kalenders",
+                    local: "OpenCalendar",
                     google: "Google",
                     icloud: "iCloud",
                     microsoft: "Microsoft",

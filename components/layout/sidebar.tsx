@@ -369,7 +369,9 @@ export function Sidebar({
                     className="flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-xs hover:bg-muted">
                     {isExpanded ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
                     <Icon className="h-3 w-3 text-muted-foreground" />
-                    <span className="truncate font-medium text-foreground">{group.email}</span>
+                    <span className="truncate font-medium text-foreground">
+                      {group.provider === "local" ? "OpenCalendar" : group.email}
+                    </span>
                   </button>
                   {isExpanded && (
                     <div className="ml-4 space-y-px">

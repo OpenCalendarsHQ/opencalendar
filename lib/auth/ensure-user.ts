@@ -62,7 +62,7 @@ export async function ensureUserExists(sessionUser: {
       .values({
         userId: created.id,
         provider: "local",
-        email: created.email || "local",
+        email: "OpenCalendar",
       })
       .returning();
 
@@ -77,7 +77,7 @@ export async function ensureUserExists(sessionUser: {
         isPrimary: true,
       });
 
-    console.log(`[Auth] Created default local calendar for user ${created.id}`);
+    console.log(`[Auth] Created default calendar for user ${created.id}`);
   } catch (error) {
     console.error("[Auth] Failed to create default calendar:", error);
     // Don't fail user creation if calendar creation fails
