@@ -9,7 +9,7 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const { isDarkMode, toggleDarkMode } = useTheme();
+  const { isDarkMode, setDarkMode } = useTheme();
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'general' | 'appearance' | 'account'>('general');
 
@@ -140,7 +140,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             type="radio"
                             name="theme"
                             checked={!isDarkMode}
-                            onChange={() => toggleDarkMode()}
+                            onChange={() => setDarkMode(false)}
                             className="text-blue-600"
                           />
                           <Sun className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -152,7 +152,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             type="radio"
                             name="theme"
                             checked={isDarkMode}
-                            onChange={() => toggleDarkMode()}
+                            onChange={() => setDarkMode(true)}
                             className="text-blue-600"
                           />
                           <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400" />

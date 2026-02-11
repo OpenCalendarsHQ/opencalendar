@@ -14,9 +14,11 @@ import { DayView } from "./components/calendar/day-view";
 import { YearView } from "./components/calendar/year-view";
 import { EventDetailModal } from "./components/calendar/event-detail-modal";
 import { EventEditModal } from "./components/calendar/event-edit-modal";
+import { SettingsModal } from "./components/settings/SettingsModal";
 import { TaskList } from "./components/tasks/task-list";
 import { TodayView } from "./components/views/today-view";
 import { useRecurringEvents } from "./hooks/use-recurring-events";
+import { Settings } from "lucide-react";
 import { 
   startOfMonth, 
   endOfMonth, 
@@ -165,6 +167,7 @@ function CalendarApp(props: { user: any; logout: () => void }) {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isNewEvent, setIsNewEvent] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const hasInitialized = useRef(false);
 
   // Date range for expansion
@@ -415,36 +418,45 @@ function CalendarApp(props: { user: any; logout: () => void }) {
         {/* Header with navigation */}
         <div className="bg-white border-b border-gray-200">
           {/* Main view tabs */}
-          <div className="mx-auto flex w-full max-w-(--breakpoint-2xl) items-center gap-1 px-4 pt-3 border-b border-gray-100">
+          <div className="mx-auto flex w-full max-w-(--breakpoint-2xl) items-center justify-between gap-1 px-4 pt-3 border-b border-gray-100">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setMainView("today")}
+                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                  mainView === "today"
+                    ? "bg-gray-100 text-gray-900"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                Vandaag
+              </button>
+              <button
+                onClick={() => setMainView("calendar")}
+                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                  mainView === "calendar"
+                    ? "bg-gray-100 text-gray-900"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                Kalender
+              </button>
+              <button
+                onClick={() => setMainView("tasks")}
+                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                  mainView === "tasks"
+                    ? "bg-gray-100 text-gray-900"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                Taken
+              </button>
+            </div>
             <button
-              onClick={() => setMainView("today")}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                mainView === "today"
-                  ? "bg-gray-100 text-gray-900"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              }`}
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+              title="Instellingen"
             >
-              Vandaag
-            </button>
-            <button
-              onClick={() => setMainView("calendar")}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                mainView === "calendar"
-                  ? "bg-gray-100 text-gray-900"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              }`}
-            >
-              Kalender
-            </button>
-            <button
-              onClick={() => setMainView("tasks")}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                mainView === "tasks"
-                  ? "bg-gray-100 text-gray-900"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              }`}
-            >
-              Taken
+              <Settings className="w-5 h-5" />
             </button>
           </div>
 
@@ -543,6 +555,12 @@ function CalendarApp(props: { user: any; logout: () => void }) {
           setIsNewEvent(false);
         }}
         onSave={handleEventSaved}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
       />
     </div>
   );
