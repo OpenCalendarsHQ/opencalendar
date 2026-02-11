@@ -61,34 +61,55 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     fetchCalendars();
   }, [session, isPending, fetchCalendars, router]);
 
+  // Sync visible calendars to context
+  useEffect(() => {
+    const visible = new Set<string>();
+    calendarGroups.forEach((group) => {
+      group.calendars.forEach((cal) => {
+        if (cal.isVisible) visible.add(cal.id);
+      });
+    });
+    calendar.setVisibleCalendarIds(visible);
+  }, [calendarGroups, calendar.setVisibleCalendarIds]);
+
   const handleToggleCalendar = useCallback((calendarId: string) => {
-    let newVisibility = true;
+    // Find current visibility
+    let currentVisibility = true;
+    let found = false;
+    
+    // Check in current state
+    for (const group of calendarGroups) {
+      const cal = group.calendars.find((c) => c.id === calendarId);
+      if (cal) {
+        currentVisibility = cal.isVisible;
+        found = true;
+        break;
+      }
+    }
+    
+    if (!found) return;
+    
+    const newVisibility = !currentVisibility;
+
     setCalendarGroups((prev) =>
       prev.map((group) => ({
         ...group,
         calendars: group.calendars.map((cal) => {
           if (cal.id === calendarId) {
-            newVisibility = !cal.isVisible;
             return { ...cal, isVisible: newVisibility };
           }
           return cal;
         }),
       }))
     );
-    // Persist to API and refresh events
-    setTimeout(() => {
-      fetch("/api/calendars", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: calendarId, isVisible: newVisibility }),
-      })
-        .then(() => {
-          // Refresh calendar view to show/hide events immediately
-          calendar.refreshEvents();
-        })
-        .catch(() => {});
-    }, 0);
-  }, [calendar]);
+    
+    // Persist to API (background)
+    fetch("/api/calendars", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: calendarId, isVisible: newVisibility }),
+    }).catch(() => {});
+  }, [calendarGroups]);
 
   const handleChangeCalendarColor = useCallback((calendarId: string, color: string) => {
     setCalendarGroups((prev) =>

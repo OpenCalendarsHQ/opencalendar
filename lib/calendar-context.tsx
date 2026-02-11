@@ -20,6 +20,8 @@ interface CalendarContextValue {
   openEvent: (eventId: string) => void;
   registerRefreshEvents: (fn: () => void) => void;
   refreshEvents: () => void;
+  visibleCalendarIds: Set<string>;
+  setVisibleCalendarIds: Dispatch<SetStateAction<Set<string>>>;
   commandMenuOpen: boolean;
   setCommandMenuOpen: Dispatch<SetStateAction<boolean>>;
   toggleCommandMenu: () => void;
@@ -32,6 +34,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewType, setViewType] = useState<CalendarViewType>(settings.defaultView || "week");
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
+  const [visibleCalendarIds, setVisibleCalendarIds] = useState<Set<string>>(new Set());
   const createEventRef = useRef<(() => void) | null>(null);
   const openEventRef = useRef<((eventId: string) => void) | null>(null);
   const refreshEventsRef = useRef<(() => void) | null>(null);
@@ -101,6 +104,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         openEvent,
         registerRefreshEvents,
         refreshEvents,
+        visibleCalendarIds,
+        setVisibleCalendarIds,
         commandMenuOpen,
         setCommandMenuOpen,
         toggleCommandMenu,

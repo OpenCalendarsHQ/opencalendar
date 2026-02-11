@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
     const baseConditions = [
       eq(calendarAccounts.userId, user.id),
       eq(calendarAccounts.isActive, true),
-      eq(calendars.isVisible, true),
+      // eq(calendars.isVisible, true), // REMOVED: Fetch all events to allow client-side toggle
     ];
 
     if (calendarId) {

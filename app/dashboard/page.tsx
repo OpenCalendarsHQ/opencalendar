@@ -26,7 +26,7 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { currentDate, viewType, weekStartsOn, setCurrentDate, setViewType, registerCreateEvent, registerOpenEvent, registerRefreshEvents } = useCalendar();
+  const { currentDate, viewType, weekStartsOn, setCurrentDate, setViewType, registerCreateEvent, registerOpenEvent, registerRefreshEvents, visibleCalendarIds } = useCalendar();
   const { todos, toggleTodo } = useTodos();
   const hasSynced = useRef(false);
   const hasInitialized = useRef(false);
@@ -81,8 +81,13 @@ function DashboardContent() {
     };
   }, [currentDate, viewType, weekStartsOn]);
 
+  // Filter events based on visible calendars
+  const visibleRawEvents = useMemo(() => {
+    return rawEvents.filter((e) => visibleCalendarIds.has(e.calendarId));
+  }, [rawEvents, visibleCalendarIds]);
+
   // Expand recurring events client-side for better performance
-  const events = useRecurringEvents(rawEvents, dateRange.startDate, dateRange.endDate);
+  const events = useRecurringEvents(visibleRawEvents, dateRange.startDate, dateRange.endDate);
 
   const fetchEvents = useCallback(
     async (signal?: AbortSignal) => {
