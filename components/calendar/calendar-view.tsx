@@ -74,7 +74,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
       startTime,
       endTime,
       color: "#6366f1",
-      calendarId: settings.defaultCalendarId || "local",
+      calendarId: settings.defaultCalendarId || "",
       isAllDay: false,
     });
     setIsNewEvent(true);
@@ -93,7 +93,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
       startTime,
       endTime,
       color: "#6366f1",
-      calendarId: settings.defaultCalendarId || "local",
+      calendarId: settings.defaultCalendarId || "",
       isAllDay: false,
     });
     setIsNewEvent(true);
@@ -120,7 +120,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
             endTime: endTime.toISOString(),
             isAllDay: false,
             color: "#8b5cf6", // Purple for tasks
-            calendarId: settings.defaultCalendarId || "local",
+            calendarId: settings.defaultCalendarId || "",
           },
         }),
       });
@@ -390,7 +390,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
       startTime,
       endTime,
       color: "#6366f1",
-      calendarId: settings.defaultCalendarId || "local",
+      calendarId: settings.defaultCalendarId || "",
       isAllDay: false,
     });
     setIsNewEvent(true);

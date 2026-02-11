@@ -22,7 +22,10 @@ import {
   X,
   Edit2,
   Check,
+  LayoutGrid,
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { MiniCalendar } from "@/components/calendar/mini-calendar";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { TaskList } from "@/components/tasks/task-list";
@@ -393,7 +396,20 @@ export function Sidebar({
             })}
           </>
         ) : (
-          <TaskList />
+          <>
+            <div className="mb-1 flex items-center justify-between px-1">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Taken</span>
+              <div className="flex items-center gap-0.5">
+                <Link href="/dashboard/tasks" className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground" title="Volledig overzicht">
+                  <LayoutGrid className="h-3 w-3" />
+                </Link>
+                <button onClick={() => {}} className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+                  <Plus className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+            <TaskList />
+          </>
         )}
       </div>
 

@@ -79,6 +79,38 @@ export async function syncNotionTasks(providerId: string): Promise<void> {
 }
 
 /**
+ * Fetch status options from a Notion database schema
+ */
+export async function fetchNotionStatusOptions(
+  accessToken: string,
+  databaseId: string
+): Promise<string[]> {
+  const response = await fetch(`https://api.notion.com/v1/databases/${databaseId}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Notion-Version": "2022-06-28",
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to fetch Notion database: ${error}`);
+  }
+
+  const data = await response.json();
+  const properties = data.properties || {};
+
+  // Find status property (Status, status, or any property with type "status")
+  const statusProp =
+    properties.Status || properties.status || Object.values(properties).find((p: any) => p?.type === "status");
+
+  if (!statusProp) return [];
+
+  const options = statusProp.status?.options || statusProp.select?.options || [];
+  return options.map((o: { name: string }) => o.name);
+}
+
+/**
  * Fetch all accessible Notion databases
  */
 export async function fetchNotionDatabases(accessToken: string): Promise<Array<{ id: string; title: string }>> {
@@ -255,6 +287,9 @@ function parseNotionPage(page: any): NotionTask {
  * Upsert a task into the database
  */
 async function upsertTask(providerId: string, notionTask: NotionTask): Promise<void> {
+  const statusLower = (notionTask.status || "").toLowerCase();
+  const isCompleted = ["done", "completed", "closed", "gereed", "voltooid", "klaar"].includes(statusLower);
+  
   await db
     .insert(tasks)
     .values({
@@ -267,6 +302,7 @@ async function upsertTask(providerId: string, notionTask: NotionTask): Promise<v
       priority: notionTask.priority,
       dueDate: notionTask.dueDate,
       labels: notionTask.labels,
+      completedAt: isCompleted ? new Date() : null,
     })
     .onConflictDoUpdate({
       target: [tasks.providerId, tasks.externalId],
@@ -277,6 +313,7 @@ async function upsertTask(providerId: string, notionTask: NotionTask): Promise<v
         priority: notionTask.priority,
         dueDate: notionTask.dueDate,
         labels: notionTask.labels,
+        completedAt: isCompleted ? new Date() : null,
         updatedAt: new Date(),
       },
     });

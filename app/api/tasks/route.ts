@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { tasks, taskProviders, events, calendars } from "@/lib/db/schema";
+import { tasks, taskProviders, events, calendars, calendarAccounts } from "@/lib/db/schema";
 import { verifyRequest } from "@/lib/auth/verify-request";
 import { eq, isNull, and, desc } from "drizzle-orm";
 
@@ -96,28 +96,46 @@ export async function POST(request: NextRequest) {
       // Get default calendar for tasks or user's first writable calendar
       let targetCalendarId = eventData.calendarId;
 
-      if (!targetCalendarId) {
-        const [calendar] = await db
-          .select()
+      // Verify the calendar exists and belongs to the user
+      if (targetCalendarId && targetCalendarId !== "local") {
+        const [calVerify] = await db
+          .select({ id: calendars.id })
           .from(calendars)
-          .innerJoin(taskProviders, eq(calendars.accountId, taskProviders.id))
+          .innerJoin(calendarAccounts, eq(calendars.accountId, calendarAccounts.id))
           .where(
             and(
-              eq(taskProviders.userId, user.id),
-              eq(calendars.isReadOnly, false),
-              eq(calendars.isVisible, true)
+              eq(calendars.id, targetCalendarId),
+              eq(calendarAccounts.userId, user.id)
             )
-          )
-          .limit(1);
+          );
         
-        if (calendar) {
-          targetCalendarId = calendar.calendars.id;
+        if (!calVerify) {
+          targetCalendarId = null; // Reset to trigger fallback
         }
       }
 
-      if (!targetCalendarId) {
+      if (!targetCalendarId || targetCalendarId === "local") {
+        const [calendar] = await db
+          .select({ id: calendars.id })
+          .from(calendars)
+          .innerJoin(calendarAccounts, eq(calendars.accountId, calendarAccounts.id))
+          .where(
+            and(
+              eq(calendarAccounts.userId, user.id),
+              eq(calendars.isReadOnly, false)
+            )
+          )
+          .orderBy(desc(calendarAccounts.provider)) // 'local' is high in descending order
+          .limit(1);
+        
+        if (calendar) {
+          targetCalendarId = calendar.id;
+        }
+      }
+
+      if (!targetCalendarId || targetCalendarId === "local") {
         return NextResponse.json(
-          { error: "No writable calendar found" },
+          { error: "Geen schrijfdbare kalender gevonden" },
           { status: 400 }
         );
       }
@@ -254,17 +272,36 @@ export async function PUT(request: NextRequest) {
     // Handle completion toggle (all task types)
     if (completed !== undefined) {
       updateData.completedAt = completed ? new Date() : null;
+      // Also update status string if it's a manual task
+      if (existing.task_providers.provider === "manual") {
+        updateData.status = completed ? "Done" : "Todo";
+      }
+    }
+
+    // Handle status updates and sync back
+    if (status !== undefined) {
+      const statusStr = typeof status === "string" ? status : String(status ?? "");
+      updateData.status = statusStr;
+      const statusLower = statusStr.toLowerCase();
+      const isDoneStatus = ["done", "completed", "closed", "gereed", "voltooid", "klaar", "finished"].includes(statusLower);
+      
+      // Sync completion state with status
+      if (isDoneStatus && !existing.tasks.completedAt) {
+        updateData.completedAt = new Date();
+      } else if (!isDoneStatus && existing.tasks.completedAt) {
+        updateData.completedAt = null;
+      }
     }
 
     // Handle manual task updates
     if (existing.task_providers.provider === "manual") {
       if (title !== undefined) updateData.title = title.trim();
-      if (description !== undefined) updateData.description = description.trim();
-      if (status !== undefined) updateData.status = status;
+      if (description !== undefined) updateData.description = (description || "").trim();
     }
 
     // Handle Notion status updates
     if (existing.task_providers.provider === "notion" && status !== undefined) {
+      const statusStr = typeof status === "string" ? status : String(status ?? "");
       // Update via Notion API
       try {
         const { decrypt } = await import("@/lib/encryption");
@@ -281,7 +318,7 @@ export async function PUT(request: NextRequest) {
             properties: {
               Status: {
                 status: {
-                  name: status,
+                  name: statusStr,
                 },
               },
             },
@@ -289,7 +326,7 @@ export async function PUT(request: NextRequest) {
         });
 
         if (response.ok) {
-          updateData.status = status;
+          updateData.status = statusStr;
         } else {
           console.error("Failed to update Notion task:", await response.text());
           return NextResponse.json(

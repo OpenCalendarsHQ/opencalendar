@@ -117,22 +117,20 @@ function SettingsContent() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          // Process accounts
+          // Process accounts - Include ALL accounts including local
           setAccounts(
-            data
-              .filter((g: Record<string, unknown>) => g.provider !== "local")
-              .map((g: Record<string, unknown>) => ({
-                id: g.id as string,
-                provider: g.provider as "google" | "icloud" | "microsoft" | "caldav",
-                email: g.email as string,
-                lastSyncAt: g.lastSyncAt as string | null,
-                status: "active" as const,
-                calendarCount: Array.isArray(g.calendars) ? g.calendars.length : 0,
-              }))
+            data.map((g: Record<string, unknown>) => ({
+              id: g.id as string,
+              provider: g.provider as "google" | "icloud" | "microsoft" | "caldav" | "local" as any,
+              email: g.email as string,
+              lastSyncAt: g.lastSyncAt as string | null,
+              status: "active" as const,
+              calendarCount: Array.isArray(g.calendars) ? g.calendars.length : 0,
+            }))
           );
 
           // Process all individual calendars for the default selector
-          const flattened: { id: string; name: string; accountEmail: string }[] = [];
+          const flattened: { id: string; name: string; accountEmail: string; provider: string }[] = [];
           data.forEach((group: any) => {
             if (Array.isArray(group.calendars)) {
               group.calendars.forEach((cal: any) => {
@@ -140,13 +138,14 @@ function SettingsContent() {
                   flattened.push({
                     id: cal.id,
                     name: cal.name,
-                    accountEmail: group.provider === "local" ? "OpenCalendar" : (group.email || "Externe account"),
+                    accountEmail: group.email,
+                    provider: group.provider,
                   });
                 }
               });
             }
           });
-          setAllCalendars(flattened);
+          setAllCalendars(flattened as any);
         }
       }
     } catch { /* ignore */ } finally {
@@ -459,10 +458,27 @@ function SettingsContent() {
                   className="w-full max-w-md rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-foreground focus:outline-none focus:ring-1 focus:ring-foreground"
                 >
                   <option value="">Geen (gebruik eerste beschikbare)</option>
-                  {allCalendars.map((cal) => (
-                    <option key={cal.id} value={cal.id}>
-                      {cal.name} ({cal.accountEmail})
-                    </option>
+                  
+                  {/* Group local calendars */}
+                  {allCalendars.some((c: any) => c.provider === "local") && (
+                    <optgroup label="OpenCalendar">
+                      {allCalendars
+                        .filter((c: any) => c.provider === "local")
+                        .map((cal: any) => (
+                          <option key={cal.id} value={cal.id}>{cal.name}</option>
+                        ))}
+                    </optgroup>
+                  )}
+
+                  {/* Group other providers */}
+                  {Array.from(new Set(allCalendars.filter((c: any) => c.provider !== "local").map((c: any) => c.accountEmail))).map((email: any) => (
+                    <optgroup key={email} label={email}>
+                      {allCalendars
+                        .filter((c: any) => c.accountEmail === email)
+                        .map((cal: any) => (
+                          <option key={cal.id} value={cal.id}>{cal.name}</option>
+                        ))}
+                    </optgroup>
                   ))}
                 </select>
                 {!settings.defaultCalendarId && allCalendars.length > 0 && (
@@ -497,9 +513,9 @@ function SettingsContent() {
 
             {/* Verbonden accounts sectie */}
             <div className="mb-4 mt-8 border-t border-border pt-6">
-              <h2 className="mb-2 text-sm font-medium text-foreground">Externe Providers (Optioneel)</h2>
+              <h2 className="mb-2 text-sm font-medium text-foreground">Accounts & Agenda's</h2>
               <p className="text-xs text-muted-foreground">
-                Synchroniseer met externe kalender providers zoals Google, Microsoft, of iCloud
+                Overzicht van je persoonlijke OpenCalendar agenda's en verbonden externe accounts.
               </p>
             </div>
 
@@ -522,12 +538,6 @@ function SettingsContent() {
                     </div>
                   ))}
                 </div>
-              ) : accounts.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center">
-                  <CalendarIcon className="mx-auto h-8 w-8 text-muted-foreground/50" />
-                  <p className="mt-2 text-xs text-muted-foreground">Geen externe accounts verbonden</p>
-                  <p className="mt-1 text-xs text-muted-foreground/70">Dit is optioneel - je OpenCalendar kalenders werken zonder externe sync</p>
-                </div>
               ) : (
               <div className="space-y-2">
                 {accounts.map((account) => (
@@ -540,8 +550,10 @@ function SettingsContent() {
                           <MicrosoftIcon className="h-4 w-4" />
                         ) : account.provider === "caldav" ? (
                           <CalDAVIcon className="h-4 w-4 text-foreground" />
-                        ) : (
+                        ) : account.provider === "google" ? (
                           <GoogleIcon className="h-4 w-4" />
+                        ) : (
+                          <Monitor className="h-4 w-4 text-foreground" />
                         )}
                       </div>
                       <div className="min-w-0">
@@ -553,20 +565,22 @@ function SettingsContent() {
                           {account.provider === "google" ? "Google Calendar" : 
                            account.provider === "microsoft" ? "Microsoft Calendar" : 
                            account.provider === "icloud" ? "iCloud Calendar" :
-                           account.provider === "caldav" ? "CalDAV" : "OpenCalendar"}
-                          {account.calendarCount > 0 && ` · ${account.calendarCount} kalender${account.calendarCount !== 1 ? "s" : ""}`}
+                           account.provider === "caldav" ? "CalDAV" : "OpenCalendar Account"}
+                          {account.calendarCount > 0 && ` · ${account.calendarCount} agenda's`}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-0.5">
-                      <button
-                        onClick={() => handleSync(account.id, account.provider)}
-                        disabled={isSyncing === account.id}
-                        className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
-                        title="Synchroniseren"
-                      >
-                        <RefreshCw className={`h-3.5 w-3.5 ${isSyncing === account.id ? "animate-spin" : ""}`} />
-                      </button>
+                      {(account.provider as string) !== "local" && (
+                        <button
+                          onClick={() => handleSync(account.id, account.provider)}
+                          disabled={isSyncing === account.id}
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                          title="Synchroniseren"
+                        >
+                          <RefreshCw className={`h-3.5 w-3.5 ${isSyncing === account.id ? "animate-spin" : ""}`} />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(account.id, account.email)}
                         disabled={isDeleting === account.id}

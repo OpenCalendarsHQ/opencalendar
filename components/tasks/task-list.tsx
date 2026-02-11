@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { ExternalLink, Calendar, Clock, Tag, Plus, Trash2, Check, ChevronDown, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -56,7 +57,10 @@ const providerIcons = {
   manual: CheckSquare,
 };
 
+const DONE_STATUSES = ["done", "completed", "closed", "gereed", "voltooid", "klaar", "finished"];
+
 export function TaskList({ onTaskDragStart }: TaskListProps) {
+  const t = useTranslations("Tasks");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "scheduled" | "unscheduled">("unscheduled");
@@ -65,15 +69,25 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["personal", "notion", "github"]));
   const [editingStatus, setEditingStatus] = useState<string | null>(null);
+  const [notionStatusOptions, setNotionStatusOptions] = useState<Record<string, string[]>>({});
   const { setDraggingTask } = useDrag();
 
   useEffect(() => {
     fetchTasks();
   }, []);
 
+  useEffect(() => {
+    if (editingStatus) {
+      const task = tasks.find((t) => t.id === editingStatus);
+      if (task?.providerType === "notion") {
+        fetchNotionStatusOptionsForProvider(task.providerId);
+      }
+    }
+  }, [editingStatus, tasks]);
+
   async function fetchTasks() {
     try {
-      const response = await fetch("/api/tasks");
+      const response = await fetch("/api/tasks?includeCompleted=true");
       if (response.ok) {
         const data = await response.json();
         setTasks(data.tasks || []);
@@ -140,7 +154,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
   }
 
   async function handleDeleteTask(taskId: string) {
-    if (!confirm("Weet je zeker dat je deze taak wilt verwijderen?")) return;
+    if (!confirm(t("deleteConfirm"))) return;
 
     try {
       const response = await fetch(`/api/tasks?id=${taskId}&action=delete`, {
@@ -156,13 +170,14 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
   }
 
   async function handleToggleComplete(task: Task) {
+    const isCompleted = !!task.completedAt || DONE_STATUSES.includes((task.status || "").toLowerCase());
     try {
       const response = await fetch(`/api/tasks?id=${task.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: task.id,
-          completed: !task.completedAt,
+          completed: !isCompleted,
         }),
       });
 
@@ -172,6 +187,36 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
     } catch (error) {
       console.error("Failed to toggle task completion:", error);
     }
+  }
+
+  async function fetchNotionStatusOptionsForProvider(providerId: string): Promise<string[]> {
+    if (notionStatusOptions[providerId]) return notionStatusOptions[providerId];
+    try {
+      const res = await fetch(`/api/tasks/notion/status-options?providerId=${providerId}`);
+      if (res.ok) {
+        const { options } = await res.json();
+        setNotionStatusOptions((prev) => ({ ...prev, [providerId]: options }));
+        return options;
+      }
+    } catch (e) {
+      console.error("Failed to fetch Notion status options:", e);
+    }
+    return [];
+  }
+
+  async function fetchNotionStatusOptionsForProvider(providerId: string): Promise<string[]> {
+    if (notionStatusOptions[providerId]) return notionStatusOptions[providerId];
+    try {
+      const res = await fetch(`/api/tasks/notion/status-options?providerId=${providerId}`);
+      if (res.ok) {
+        const { options } = await res.json();
+        setNotionStatusOptions((prev) => ({ ...prev, [providerId]: options }));
+        return options;
+      }
+    } catch (e) {
+      console.error("Failed to fetch Notion status options:", e);
+    }
+    return [];
   }
 
   async function handleUpdateStatus(taskId: string, newStatus: string) {
@@ -195,6 +240,9 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
   }
 
   const filteredTasks = tasks.filter((task) => {
+    // By default, hide completed tasks in the sidebar unless they were just completed in this session
+    if (!!task.completedAt && filter !== "all") return false;
+    
     if (filter === "scheduled") return task.scheduledEventId !== null;
     if (filter === "unscheduled") return task.scheduledEventId === null;
     return true;
@@ -205,7 +253,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-4">
-        <div className="text-xs text-muted-foreground">Taken laden...</div>
+        <div className="text-xs text-muted-foreground">{t("loading")}</div>
       </div>
     );
   }
@@ -235,7 +283,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
           <div className="space-y-1.5 mt-1.5">
             {tasks.map((task) => {
               const ProviderIcon = providerIcons[task.providerType];
-              const isCompleted = !!task.completedAt;
+              const isCompleted = !!task.completedAt || DONE_STATUSES.includes((task.status || "").toLowerCase());
 
               return (
                 <div
@@ -273,7 +321,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
                             : "border-muted-foreground/30 hover:border-accent"
                         }`}
                         style={{ width: "14px", height: "14px" }}
-                        title={isCompleted ? "Markeer als niet voltooid" : "Markeer als voltooid"}
+                        title={isCompleted ? t("markIncomplete") : t("markComplete")}
                       >
                         {isCompleted && <Check className="h-2.5 w-2.5" strokeWidth={3} />}
                       </button>
@@ -290,10 +338,15 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
                             className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] text-muted-foreground border-none outline-none"
                             autoFocus
                           >
-                            <option value="Not started">Not started</option>
-                            <option value="In progress">In progress</option>
-                            <option value="Done">Done</option>
-                            <option value="Blocked">Blocked</option>
+                            {(() => {
+                              const fetched = notionStatusOptions[task.providerId] ?? [];
+                              const opts = fetched.length > 0
+                                ? (fetched.includes(task.status!) ? fetched : [task.status!, ...fetched])
+                                : (task.status ? [task.status] : []);
+                              return opts.map((opt) => (
+                                <option key={opt} value={opt}>{opt}</option>
+                              ));
+                            })()}
                           </select>
                         ) : (
                           <button
@@ -307,7 +360,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
                               task.providerType === "notion" ? "hover:bg-muted/80 cursor-pointer" : ""
                             }`}
                             disabled={task.providerType !== "notion"}
-                            title={task.providerType === "notion" ? "Klik om status te wijzigen" : ""}
+                            title={task.providerType === "notion" ? t("clickToChangeStatus") : ""}
                           >
                             {task.status}
                           </button>
@@ -322,7 +375,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
                             handleDeleteTask(task.id);
                           }}
                           className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive hover:text-destructive-foreground group-hover:opacity-100"
-                          title="Verwijder taak"
+                          title={t("delete")}
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -373,7 +426,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
                     {task.scheduledEventId && (
                       <div className="flex items-center gap-0.5 text-accent">
                         <Calendar className="h-2.5 w-2.5" />
-                        <span>Gepland</span>
+                        <span>{t("planned")}</span>
                       </div>
                     )}
                   </div>
@@ -405,12 +458,12 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
         {/* Header with add button */}
         <div className="flex items-center justify-between px-2 pt-0 pb-1">
           <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            Taken
+            {t("title")}
           </span>
           <button
             onClick={() => setIsCreating(true)}
             className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-            title="Taak toevoegen"
+            title={t("addTaskTitle")}
           >
             <Plus className="h-3.5 w-3.5" />
           </button>
@@ -421,7 +474,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
           <div className="mb-1 mx-2 rounded-lg border border-accent bg-card p-2">
             <input
               type="text"
-              placeholder="Nieuwe persoonlijke taak..."
+              placeholder={`${t("addPersonalTask")}...`}
               value={newTaskTitle}
               onChange={(e) => setNewTaskTitle(e.target.value)}
               onKeyDown={(e) => {
@@ -441,7 +494,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
                 disabled={!newTaskTitle.trim() || isSubmitting}
                 className="flex-1 rounded bg-accent px-2 py-1 text-xs font-medium hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Bezig..." : "Toevoegen"}
+                {isSubmitting ? t("adding") : t("add")}
               </button>
               <button
                 onClick={() => {
@@ -451,7 +504,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
                 disabled={isSubmitting}
                 className="flex-1 rounded px-2 py-1 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
               >
-                Annuleren
+                {t("cancel")}
               </button>
             </div>
           </div>
@@ -460,10 +513,10 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
         <div className="flex flex-col items-center justify-center gap-2 p-4 text-center">
           <CheckSquare className="h-8 w-8 text-muted-foreground/50" />
           <div className="text-xs text-muted-foreground">
-            Geen taken gevonden
+            {t("noTasks")}
           </div>
           <div className="text-[10px] text-muted-foreground/70">
-            Klik op + om een persoonlijke taak toe te voegen of verbind providers in instellingen
+            {t("noTasksHint")}
           </div>
         </div>
       </div>
@@ -480,7 +533,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
         <button
           onClick={() => setIsCreating(true)}
           className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-          title="Persoonlijke taak toevoegen"
+          title={t("addPersonalTask")}
         >
           <Plus className="h-3.5 w-3.5" />
         </button>
@@ -491,7 +544,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
         <div className="mb-1 mx-2 rounded-lg border border-accent bg-card p-2">
           <input
             type="text"
-            placeholder="Nieuwe persoonlijke taak..."
+            placeholder={`${t("addPersonalTask")}...`}
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
             onKeyDown={(e) => {
@@ -537,7 +590,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          Ongepland ({tasks.filter((t) => !t.scheduledEventId && !t.completedAt).length})
+          {t("unscheduled")} ({tasks.filter((task) => !task.scheduledEventId && !task.completedAt).length})
         </button>
         <button
           onClick={() => setFilter("scheduled")}
@@ -547,14 +600,14 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          Gepland ({tasks.filter((t) => t.scheduledEventId).length})
+          {t("scheduled")} ({tasks.filter((task) => task.scheduledEventId).length})
         </button>
       </div>
 
       {/* Grouped Task Lists */}
       <div className="space-y-1">
         {renderTaskGroup(
-          "Persoonlijke Taken",
+          t("personalTasks"),
           groupedTasks.personal,
           "personal",
           <CheckSquare className="h-3 w-3" />
@@ -575,7 +628,7 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
 
       {filteredTasks.length === 0 && (
         <div className="py-4 text-center text-[10px] text-muted-foreground">
-          Geen {filter === "scheduled" ? "geplande" : "ongeplande"} taken
+          {filter === "scheduled" ? t("noScheduledTasks") : t("noUnscheduledTasks")}
         </div>
       )}
     </div>

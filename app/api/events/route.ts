@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { events, calendars, calendarAccounts, eventRecurrences } from "@/lib/db/schema";
 import { verifyRequest } from "@/lib/auth/verify-request";
 import { ensureUserExists } from "@/lib/auth/ensure-user";
-import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
+import { eq, and, gte, lte, or, isNull, desc } from "drizzle-orm";
 import { z } from "zod";
 import { createICloudEvent, updateICloudEvent, deleteICloudEvent } from "@/lib/sync/icloud";
 import { createGoogleEvent, updateGoogleEvent, deleteGoogleEvent } from "@/lib/sync/google";
@@ -39,7 +39,7 @@ async function getCalendarProviderInfo(calendarId: string) {
 }
 
 const eventSchema = z.object({
-  calendarId: z.string().uuid(),
+  calendarId: z.string().optional(),
   title: z.string().min(1).default("(Geen titel)"),
   description: z.string().optional(),
   startTime: z.string().datetime(),
@@ -236,6 +236,32 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = eventSchema.parse(body);
 
+    let targetCalendarId = validated.calendarId;
+
+    // If no calendarId provided or it's the "local" placeholder, find a suitable default
+    if (!targetCalendarId || targetCalendarId === "local") {
+      const [calendar] = await db
+        .select({ id: calendars.id })
+        .from(calendars)
+        .innerJoin(calendarAccounts, eq(calendars.accountId, calendarAccounts.id))
+        .where(
+          and(
+            eq(calendarAccounts.userId, user.id),
+            eq(calendars.isReadOnly, false)
+          )
+        )
+        .orderBy(desc(calendarAccounts.provider)) // 'local' is high in descending order
+        .limit(1);
+      
+      if (calendar) {
+        targetCalendarId = calendar.id;
+      }
+    }
+
+    if (!targetCalendarId || targetCalendarId === "local") {
+      return NextResponse.json({ error: "Geen schrijfdbare kalender gevonden" }, { status: 400 });
+    }
+
     // Quick ownership check with single query
     const [cal] = await db
       .select({ id: calendars.id })
@@ -243,7 +269,7 @@ export async function POST(request: NextRequest) {
       .innerJoin(calendarAccounts, eq(calendars.accountId, calendarAccounts.id))
       .where(
         and(
-          eq(calendars.id, validated.calendarId),
+          eq(calendars.id, targetCalendarId),
           eq(calendarAccounts.userId, user.id)
         )
       );
@@ -255,7 +281,7 @@ export async function POST(request: NextRequest) {
     const [newEvent] = await db
       .insert(events)
       .values({
-        calendarId: validated.calendarId,
+        calendarId: targetCalendarId,
         title: validated.title,
         description: validated.description,
         startTime: new Date(validated.startTime),
@@ -288,7 +314,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Sync to external provider (non-blocking: don't fail if sync fails)
-    const providerInfo = await getCalendarProviderInfo(validated.calendarId);
+    const providerInfo = await getCalendarProviderInfo(targetCalendarId);
     if (providerInfo && !providerInfo.isReadOnly) {
       const syncData = {
         title: validated.title,
@@ -301,11 +327,11 @@ export async function POST(request: NextRequest) {
 
       try {
         if (providerInfo.provider === "icloud") {
-          const externalUid = await createICloudEvent(providerInfo.accountId, validated.calendarId, syncData);
+          const externalUid = await createICloudEvent(providerInfo.accountId, targetCalendarId!, syncData);
           // Store the external UID for future updates
           await db.update(events).set({ icsUid: externalUid }).where(eq(events.id, newEvent.id));
         } else if (providerInfo.provider === "google") {
-          const externalId = await createGoogleEvent(providerInfo.accountId, validated.calendarId, syncData);
+          const externalId = await createGoogleEvent(providerInfo.accountId, targetCalendarId!, syncData);
           if (externalId) {
             await db.update(events).set({ externalId }).where(eq(events.id, newEvent.id));
           }

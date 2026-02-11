@@ -39,11 +39,12 @@ export async function GET(request: NextRequest) {
     const accountsMap = new Map<string, any>();
 
     for (const row of results) {
+      const email = row.provider === "local" ? "OpenCalendar" : row.email;
       if (!accountsMap.has(row.accountId)) {
         accountsMap.set(row.accountId, {
           id: row.accountId,
           provider: row.provider,
-          email: row.email,
+          email: email,
           lastSyncAt: row.lastSyncAt,
           isActive: row.isActive,
           calendars: [],
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
         .values({
           userId: user.id,
           provider: "local",
-          email: user.email || "OpenCalendar",
+          email: "OpenCalendar",
         })
         .returning();
     }
