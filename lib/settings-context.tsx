@@ -124,7 +124,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   // localStorage is loaded in useEffect after mount
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const updateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSyncRef = useRef<number>(0);
 
   // Load from localStorage immediately after mount to prevent flash

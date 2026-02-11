@@ -350,7 +350,7 @@ function DashboardContent() {
 
     let pollCount = 0;
     const maxPolls = 15;
-    let timeoutId: NodeJS.Timeout | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let isCancelled = false;
 
     const pollEvents = async () => {
@@ -398,7 +398,7 @@ function DashboardContent() {
   useEffect(() => {
     if (isSyncing) return;
 
-    let interval: NodeJS.Timeout | null = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
 
     const startInterval = () => {
       if (interval) return;

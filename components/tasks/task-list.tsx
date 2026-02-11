@@ -204,21 +204,6 @@ export function TaskList({ onTaskDragStart }: TaskListProps) {
     return [];
   }
 
-  async function fetchNotionStatusOptionsForProvider(providerId: string): Promise<string[]> {
-    if (notionStatusOptions[providerId]) return notionStatusOptions[providerId];
-    try {
-      const res = await fetch(`/api/tasks/notion/status-options?providerId=${providerId}`);
-      if (res.ok) {
-        const { options } = await res.json();
-        setNotionStatusOptions((prev) => ({ ...prev, [providerId]: options }));
-        return options;
-      }
-    } catch (e) {
-      console.error("Failed to fetch Notion status options:", e);
-    }
-    return [];
-  }
-
   async function handleUpdateStatus(taskId: string, newStatus: string) {
     try {
       const response = await fetch(`/api/tasks?id=${taskId}`, {

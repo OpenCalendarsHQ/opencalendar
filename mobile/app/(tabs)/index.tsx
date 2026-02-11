@@ -402,6 +402,6 @@ const styles = StyleSheet.create({
   fabText: {
     fontSize: 32,
     color: '#fff',
-    fontWeight: FontWeights.light,
+    fontWeight: '300',
   },
 });

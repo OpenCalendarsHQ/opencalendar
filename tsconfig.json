@@ -38,6 +38,7 @@
   ],
   "exclude": [
     "node_modules",
-    "opencalendar-desktop"
+    "opencalendar-desktop",
+    "mobile"
   ]
 }

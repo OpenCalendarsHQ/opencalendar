@@ -3,16 +3,14 @@ import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+import { Config } from '../../constants/config';
 
 // Initialize WebBrowser for auth
 WebBrowser.maybeCompleteAuthSession();
 
-const SUPABASE_URL = 'https://xzpkqmyimynzufndsgrw.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6cGtxbXlpbXluenVmbmRzZ3J3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2NDg5ODMsImV4cCI6MjA4NjIyNDk4M30.qQZrQvHcVm2Y_CXHif0uAepI_qod7x_Oe8Vdr250VLM';
-
 // Redirect URL for OAuth
 const redirectUrl = AuthSession.makeRedirectUri({
-  scheme: 'opencalendar',
+  scheme: Config.OAUTH_REDIRECT_SCHEME,
   path: 'auth/callback',
 });
 
@@ -32,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   // Create Supabase client
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  const supabase = createClient(Config.SUPABASE_URL, Config.SUPABASE_ANON_KEY, {
     auth: {
       storage: {
         getItem: async (key: string) => {

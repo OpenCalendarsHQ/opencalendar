@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { 
   CheckSquare, 
@@ -128,7 +129,7 @@ export function TaskBoard() {
             const res = await fetch(`/api/tasks/notion/status-options?providerId=${pid}`);
             if (res.ok) {
               const { options } = await res.json();
-              setNotionStatusOptions((prev) => ({ ...prev, [pid]: options }));
+              setNotionStatusOptions((prev) => ({ ...prev, [String(pid)]: options }));
             }
           } catch (e) {
             console.error("Failed to fetch Notion status options:", e);
@@ -688,6 +689,7 @@ function TaskCard({ task, notionStatusOptions, onToggle, onDelete, onUpdateStatu
 }
 
 function TaskListItem({ task, onToggle, onDelete, onClick }: { task: Task; onToggle: () => void; onDelete: () => void; onClick: () => void }) {
+  const t = useTranslations("Tasks");
   const isCompleted = !!task.completedAt;
   
   return (

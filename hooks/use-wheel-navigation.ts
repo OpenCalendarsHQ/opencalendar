@@ -22,7 +22,7 @@ export function useWheelNavigation({
 }: UseWheelNavigationOptions) {
   const lastNavigationRef = useRef(0);
   const accumulatedDeltaRef = useRef(0);
-  const resetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
