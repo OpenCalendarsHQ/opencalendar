@@ -30,8 +30,10 @@ export default function PrivacyPage() {
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-6 py-6 md:px-12">
         <Link href="/" className="flex items-center gap-3">
-          <Image src="/icon.png" alt="OpenCalendar" width={40} height={40} />
-          <span className="font-pixel text-2xl font-bold text-white">OPENCALENDAR</span>
+          <Image src="/icon.png" alt="OpenCalendars"
+ width={40} height={40} />
+          <span className="font-pixel text-2xl font-bold text-white">OPENCALENDARS</span>
+
         </Link>
         <Link
           href="/welcome"
@@ -63,7 +65,8 @@ export default function PrivacyPage() {
             <section className="space-y-4">
               <h2 className="text-2xl font-semibold text-white">1. Introduction</h2>
               <p className="text-zinc-300">
-                Welcome to OpenCalendar. We respect your privacy and are committed to protecting your personal data. This privacy policy explains how we collect, use, and safeguard your information when you use our calendar synchronization service.
+                Welcome to OpenCalendars.
+ We respect your privacy and are committed to protecting your personal data. This privacy policy explains how we collect, use, and safeguard your information when you use our calendar synchronization service.
               </p>
             </section>
 
@@ -153,7 +156,8 @@ export default function PrivacyPage() {
               <h2 className="text-2xl font-semibold text-white">6. Third-Party Services</h2>
               <div className="space-y-3 text-zinc-300">
                 <p>
-                  OpenCalendar integrates with third-party calendar providers:
+                  OpenCalendars integrates with third-party
+ calendar providers:
                 </p>
                 <ul className="ml-6 list-disc space-y-1">
                   <li>Google Calendar (Google LLC)</li>
@@ -191,14 +195,16 @@ export default function PrivacyPage() {
             <section className="space-y-4">
               <h2 className="text-2xl font-semibold text-white">9. Children's Privacy</h2>
               <p className="text-zinc-300">
-                OpenCalendar is not intended for users under 13 years of age. We do not knowingly collect personal information from children under 13.
+                OpenCalendars is not intended for users
+ under 13 years of age. We do not knowingly collect personal information from children under 13.
               </p>
             </section>
 
             <section className="space-y-4">
               <h2 className="text-2xl font-semibold text-white">10. Changes to This Policy</h2>
               <p className="text-zinc-300">
-                We may update this privacy policy from time to time. We will notify you of significant changes by email or through a notice in the app. Your continued use of OpenCalendar after changes constitutes acceptance of the updated policy.
+                We may update this privacy policy from time to time. We will notify you of significant changes by email or through a notice in the app. Your continued use of OpenCalendars after changes
+ constitutes acceptance of the updated policy.
               </p>
             </section>
 
@@ -231,7 +237,8 @@ export default function PrivacyPage() {
         <div className="mx-auto max-w-4xl">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
             <p className="text-sm text-zinc-500">
-              © 2026 OpenCalendar. Open source software.
+© 2026 OpenCalendars. Open source software.
+
             </p>
             <div className="flex items-center gap-4 text-sm">
               <Link

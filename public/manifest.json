@@ -1,6 +1,7 @@
 {
-  "name": "OpenCalendar",
-  "short_name": "OpenCalendar",
+  "name": "OpenCalendars",
+  "short_name": "OpenCalendars",
+
   "description": "Een moderne kalender app met Google en iCloud sync",
   "start_url": "/",
   "scope": "/",

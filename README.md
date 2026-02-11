@@ -1,4 +1,4 @@
-# OpenCalendar
+# OpenCalendars
 
 Open-source calendar app that syncs Google Calendar, iCloud, Microsoft and CalDAV in one place.
 

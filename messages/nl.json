@@ -50,7 +50,8 @@
   },
   "Auth": {
     "signInTitle": "Welkom terug",
-    "signInSubtitle": "Log in op je OpenCalendar account",
+    "signInSubtitle": "Log in op je OpenCalendars account",
+
     "signUpTitle": "Account aanmaken",
     "signUpSubtitle": "Begin met het syncen van je kalenders",
     "continueWithGoogle": "Doorgaan met Google",
@@ -68,7 +69,8 @@
   },
   "Welcome": {
     "title": "Al je kalenders op één plek",
-    "subtitle": "OpenCalendar brengt al je Google Calendar en iCloud events samen. Bouw betere schema's met een unified view van je tijd.",
+    "subtitle": "OpenCalendars brengt al je Google Calendar en iCloud events samen. Bouw betere schema's met een unified view van je tijd.",
+
     "getStarted": "Aan de slag",
     "signIn": "Inloggen",
     "features": {

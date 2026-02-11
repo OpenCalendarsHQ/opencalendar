@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -32,15 +32,22 @@ export function Header({
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
-  // Auto-sync every 5 minutes when window is focused
+  const lastSyncRef = useRef<number>(0);
+
+  // Auto-sync every few minutes when window is focused
   useEffect(() => {
-    const syncData = async () => {
+    const syncData = async (force = false) => {
+      const now = Date.now();
+      const throttleMs = viewType === "month" ? 120000 : 30000; // 2 min for month, 30s for others
+
       // Only sync if onSync is provided and not already syncing
-      if (onSync && !isSyncing && document.hasFocus()) {
+      // and if it's been long enough since the last sync (unless forced)
+      if (onSync && !isSyncing && (force || now - lastSyncRef.current > throttleMs) && document.hasFocus()) {
         setIsSyncing(true);
         try {
           await onSync();
           setLastSyncTime(new Date());
+          lastSyncRef.current = Date.now();
         } catch (error) {
           console.error("Auto-sync failed:", error);
         } finally {
@@ -49,15 +56,16 @@ export function Header({
       }
     };
 
-    // Initial sync
+    // Initial sync check
     syncData();
 
-    // Sync every 5 minutes (300000ms)
-    const interval = setInterval(syncData, 300000);
+    // Sync interval (check every 30 seconds)
+    const interval = setInterval(() => syncData(), 30000);
 
     // Listen for focus events to sync when window regains focus
     const handleFocus = () => {
-      syncData();
+      // Small delay to let focus stabilize
+      setTimeout(() => syncData(), 1000);
     };
 
     window.addEventListener("focus", handleFocus);
@@ -66,7 +74,7 @@ export function Header({
       clearInterval(interval);
       window.removeEventListener("focus", handleFocus);
     };
-  }, [onSync, isSyncing]);
+  }, [onSync, viewType]); // Removed isSyncing from deps to avoid loop
 
   const handleManualSync = async () => {
     if (onSync && !isSyncing) {
@@ -104,7 +112,7 @@ export function Header({
               title={lastSyncTime ? `Laatst gesynchroniseerd: ${lastSyncTime.toLocaleTimeString()}` : "Synchroniseren"}
             >
               <RefreshCw className={`h-3 w-3 ${isSyncing ? "animate-spin" : ""}`} />
-              <span>{isSyncing ? "..." : "Sync"}</span>
+              <span className="w-8 inline-block text-left">{isSyncing ? "..." : "Sync"}</span>
             </button>
           )}
         </div>

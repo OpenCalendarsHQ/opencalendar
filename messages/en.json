@@ -50,7 +50,8 @@
   },
   "Auth": {
     "signInTitle": "Welcome back",
-    "signInSubtitle": "Sign in to your OpenCalendar account",
+    "signInSubtitle": "Sign in to your OpenCalendars account",
+
     "signUpTitle": "Create account",
     "signUpSubtitle": "Start syncing your calendars",
     "continueWithGoogle": "Continue with Google",
@@ -68,7 +69,8 @@
   },
   "Welcome": {
     "title": "Sync all your calendars in one place",
-    "subtitle": "OpenCalendar brings all your Google Calendar and iCloud events together. Build better schedules with a unified view of your time.",
+    "subtitle": "OpenCalendars brings all your Google Calendar and iCloud events together. Build better schedules with a unified view of your time.",
+
     "getStarted": "Get Started",
     "signIn": "Sign In",
     "features": {

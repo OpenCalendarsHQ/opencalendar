@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode, type Dispatch, type SetStateAction } from "react";
 import { addWeeks, subWeeks, addMonths, subMonths, addDays } from "@/lib/utils/date";
 import { useSettings } from "@/lib/settings-context";
-import type { CalendarViewType, CalendarGroup } from "@/lib/types";
+import type { CalendarViewType, CalendarGroup, CalendarItem } from "@/lib/types";
 
 interface CalendarContextValue {
   currentDate: Date;
@@ -59,8 +59,8 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
           // We generally want to respect the user's current session visibility
           // But for the initial load, we sync with data
           const visible = new Set<string>();
-          data.forEach(group => {
-            group.calendars.forEach(cal => {
+          data.forEach((group: CalendarGroup) => {
+            group.calendars.forEach((cal: CalendarItem) => {
               if (cal.isVisible) visible.add(cal.id);
             });
           });

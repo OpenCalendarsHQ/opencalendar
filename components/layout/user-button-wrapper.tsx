@@ -86,7 +86,8 @@ export function UserButtonWrapper() {
                   {user.email}
                 </p>
                 <p className="text-xs text-neutral-500 mt-1">
-                  {user.user_metadata?.full_name || "OpenCalendar gebruiker"}
+                  {user.user_metadata?.full_name || "OpenCalendars gebruiker"}
+
                 </p>
               </div>
             </div>

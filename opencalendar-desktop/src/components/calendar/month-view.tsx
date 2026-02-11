@@ -81,20 +81,20 @@ export const MonthView = memo(function MonthView({
                     !isCurrentMonth ? "bg-gray-50/50" : ""
                   }`}
                   onClick={() => onDayClick(day)}>
-                  <div className="flex justify-center shrink-0">
-                    <span className={`flex h-5 w-5 items-center justify-center rounded-md text-[10px] md:h-6 md:w-6 md:text-xs ${
-                      today ? "bg-gray-900 font-bold text-white" : isCurrentMonth ? "text-gray-900" : "text-gray-400"
+                  <div className="flex justify-center shrink-0 mb-1">
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-md text-[11px] font-medium transition-all md:h-7 md:w-7 md:text-xs ${
+                      today ? "bg-gray-900 font-bold text-white shadow-sm scale-110" : isCurrentMonth ? "text-gray-900" : "text-gray-400"
                     }`}>
                       {formatDayNumber(day)}
                     </span>
                   </div>
-                  <div className="mt-0.5 space-y-px overflow-y-auto flex-1">
+                  <div className="mt-1 space-y-1 overflow-y-auto flex-1 px-1">
                     {dayEvents.map((event) => (
                       <button key={`${event.id}-${dayKey}`} onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
-                        className="flex w-full items-center gap-1 truncate rounded-sm px-0.5 py-px text-left text-[9px] hover:bg-gray-100 md:px-1 md:text-[10px]"
+                        className="flex w-full items-center gap-1.5 truncate rounded-md px-1.5 py-1 text-left text-[10px] hover:bg-gray-100 md:text-[11px] font-medium transition-all active:scale-[0.98]"
                         style={{
                           backgroundColor: `${event.color || "#737373"}15`,
-                          borderLeft: `2px solid ${event.color || "#737373"}`,
+                          borderLeft: `3px solid ${event.color || "#737373"}`,
                         }}>
                         <span className="truncate text-gray-900 pl-0.5">{event.title}</span>
                       </button>

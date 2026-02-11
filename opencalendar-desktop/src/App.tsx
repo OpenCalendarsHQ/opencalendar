@@ -93,7 +93,7 @@ function App() {
       <div className="flex items-center justify-center min-h-screen bg-neutral-50">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-neutral-300 border-t-neutral-900 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-neutral-600 text-lg">OpenCalendar wordt geladen...</p>
+          <p className="text-neutral-600 text-lg">OpenCalendars wordt geladen...</p>
         </div>
       </div>
     );
@@ -103,7 +103,7 @@ function App() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-neutral-50">
         <div className="bg-white rounded-lg border border-neutral-200 shadow-sm p-8 max-w-md w-full mx-4">
-          <h1 className="text-2xl font-semibold text-neutral-900 mb-2">OpenCalendar</h1>
+          <h1 className="text-2xl font-semibold text-neutral-900 mb-2">OpenCalendars</h1>
           <p className="text-neutral-600 mb-6 text-sm">Log in om je agenda's te bekijken</p>
           <button
             onClick={handleLogin}
@@ -166,33 +166,52 @@ function CalendarApp(props: { user: any; logout: () => void }) {
 
   const expandedEvents = useRecurringEvents(rawEvents, dateRange.start, dateRange.end);
 
-  // Fetch calendars and events once when user authenticates
-  useEffect(() => {
-    if (props.user?.id && !hasInitialized.current) {
-      hasInitialized.current = true;
-      console.log("User authenticated, fetching data...");
+  const fetchEvents = useCallback(async () => {
+    const now = new Date();
+    const startOfMonthDate = startOfMonth(now);
+    const endOfMonthDate = addDays(endOfMonth(now), 31); // Fetch a few months range
 
-      // Start sync manager for offline support
-      syncManager.startAutoSync();
-
-      fetchData();
+    try {
+      const eventsData = await apiClient.getEvents(startOfMonthDate, endOfMonthDate);
+      // Save to offline cache
+      offlineCache.saveEvents(eventsData);
+      setRawEvents(eventsData);
+    } catch (error) {
+      console.error("Failed to fetch events:", error);
     }
+  }, []);
 
-    // Cleanup on unmount
-    return () => {
-      syncManager.stopAutoSync();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.user?.id]); // Only re-run if user ID changes (i.e., login/logout)
+  const fetchCalendars = useCallback(async () => {
+    try {
+      const accounts = await apiClient.getCalendars();
+      // Save to offline cache
+      offlineCache.saveCalendars(accounts);
 
-  async function fetchData() {
+      const groups: CalendarGroup[] = accounts.map((account: any) => ({
+        id: account.id,
+        provider: account.provider as any,
+        email: account.email,
+        calendars: (account.calendars || []).map((cal: any) => ({
+          id: cal.id,
+          name: cal.name,
+          color: cal.color || "#737373",
+          isVisible: cal.isVisible !== false,
+          isReadOnly: cal.isReadOnly || false,
+        })),
+      }));
+      setCalendarGroups(groups);
+    } catch (error) {
+      console.error("Failed to fetch calendars:", error);
+    }
+  }, []);
+
+  const fetchData = useCallback(async () => {
     // Try to load from cache first (offline-first approach)
     const cachedCalendars = offlineCache.getCalendars();
     const cachedEvents = offlineCache.getEvents();
 
     if (cachedCalendars && cachedEvents) {
       console.log("📦 Loading from offline cache");
-      // Load cached data immediately
       const groups = cachedCalendars.map((account: any) => ({
         id: account.id,
         provider: account.provider,
@@ -218,54 +237,31 @@ function CalendarApp(props: { user: any; logout: () => void }) {
       await Promise.all([fetchCalendars(), fetchEvents()]);
     } catch (error) {
       console.error("Failed to fetch data:", error);
-      // If we have cache, we're OK (offline mode)
       if (!cachedCalendars || !cachedEvents) {
-        // No cache and network failed - show error
         alert("Kan geen verbinding maken met de server. Controleer je internetverbinding.");
-      } else {
-        console.log("✅ Using offline cache due to network error");
       }
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [fetchCalendars, fetchEvents]);
 
-  async function fetchCalendars() {
-    const accounts = await apiClient.getCalendars();
-    console.log("Fetched calendar accounts:", accounts);
+  // Fetch calendars and events once when user authenticates
+  useEffect(() => {
+    if (props.user?.id && !hasInitialized.current) {
+      hasInitialized.current = true;
+      console.log("User authenticated, fetching data...");
 
-    // Save to offline cache
-    offlineCache.saveCalendars(accounts);
+      // Start sync manager for offline support
+      syncManager.startAutoSync();
 
-    // API returns array of accounts with nested calendars
-    const groups: CalendarGroup[] = accounts.map((account: any) => ({
-      id: account.id,
-      provider: account.provider as any,
-      email: account.email,
-      calendars: (account.calendars || []).map((cal: any) => ({
-        id: cal.id,
-        name: cal.name,
-        color: cal.color || "#737373",
-        isVisible: cal.isVisible !== false, // Default to true if undefined
-        isReadOnly: cal.isReadOnly || false,
-      })),
-    }));
+      fetchData();
+    }
 
-    console.log("Processed calendar groups:", groups);
-    setCalendarGroups(groups);
-  }
-
-  async function fetchEvents() {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 2, 0);
-
-    const eventsData = await apiClient.getEvents(startOfMonth, endOfMonth);
-
-    // Save to offline cache
-    offlineCache.saveEvents(eventsData);
-    setRawEvents(eventsData);
-  }
+    // Cleanup on unmount
+    return () => {
+      syncManager.stopAutoSync();
+    };
+  }, [props.user?.id, fetchData]);
 
   // Navigation handlers - memoized to prevent unnecessary re-renders
   const handleNavigateBack = useCallback(() => {

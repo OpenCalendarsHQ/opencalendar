@@ -72,7 +72,8 @@ export async function GET() {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>OpenCalendar - Desktop Login</title>
+      <title>OpenCalendars - Desktop Login</title>
+
       <style>
         body {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -157,7 +158,8 @@ export async function GET() {
             if (data.name) redirectUrl.searchParams.set('name', data.name);
             if (data.image) redirectUrl.searchParams.set('image', data.image);
 
-            document.getElementById('status').textContent = 'Redirecting to OpenCalendar...';
+            document.getElementById('status').textContent = 'Redirecting to OpenCalendars...';
+
 
             // Try to redirect
             window.location.href = redirectUrl.toString();

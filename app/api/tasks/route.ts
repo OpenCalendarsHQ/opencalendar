@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { tasks, taskProviders, events, calendars } from "@/lib/db/schema";
-import { getUser } from "@/lib/auth/server";
+import { verifyRequest } from "@/lib/auth/verify-request";
 import { eq, isNull, and, desc } from "drizzle-orm";
 
 // GET /api/tasks - Fetch all tasks for the authenticated user
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUser();
+    const { user } = await verifyRequest(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
 
     // Fetch tasks with provider information
     const userTasks = await db
@@ -60,10 +61,11 @@ export async function GET(request: NextRequest) {
 // POST /api/tasks - Schedule a task or create a new task
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUser();
+    const { user } = await verifyRequest(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
 
     const body = await request.json();
     const { action, taskId, eventData } = body;
@@ -210,10 +212,11 @@ export async function POST(request: NextRequest) {
 // PUT /api/tasks - Update a manual task
 export async function PUT(request: NextRequest) {
   try {
-    const user = await getUser();
+    const { user } = await verifyRequest(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
 
     const body = await request.json();
     const { id, title, description, status } = body;
@@ -268,10 +271,11 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/tasks/:id - Unschedule or delete a task
 export async function DELETE(request: NextRequest) {
   try {
-    const user = await getUser();
+    const { user } = await verifyRequest(request);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
 
     const { searchParams } = new URL(request.url);
     const taskId = searchParams.get("id");
@@ -298,6 +302,7 @@ export async function DELETE(request: NextRequest) {
 
     // If action is delete and task is manual, permanently delete it
     if (action === "delete" && task.task_providers.provider === "manual") {
+
       // Delete linked calendar event if exists
       if (task.tasks.scheduledEventId) {
         await db.delete(events).where(eq(events.id, task.tasks.scheduledEventId));

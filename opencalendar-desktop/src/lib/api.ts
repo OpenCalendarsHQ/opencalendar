@@ -236,6 +236,25 @@ class ApiClient {
     });
   }
 
+  // Task endpoints
+  async getTasks(): Promise<{ tasks: any[] }> {
+    return this.request("/api/tasks");
+  }
+
+  async createTask(data: { action: string; title: string }): Promise<any> {
+    return this.request("/api/tasks", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTask(taskId: string): Promise<void> {
+    await this.request("/api/tasks", {
+      method: "DELETE",
+      body: JSON.stringify({ taskId }),
+    });
+  }
+
   // Sync endpoints
   async syncGoogle(): Promise<{ success: boolean }> {
     return this.request("/api/sync/google", { method: "POST" });

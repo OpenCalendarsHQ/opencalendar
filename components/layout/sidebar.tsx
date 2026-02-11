@@ -173,7 +173,7 @@ export function Sidebar({
         </button>
         <div className="h-px w-5 bg-border" />
         <div className="px-1.5 py-1">
-          <Image src="/icon.svg" alt="OpenCalendar" width={24} height={24} className="opacity-80" />
+          <Image src="/icon.svg" alt="OpenCalendars" width={24} height={24} className="opacity-80" />
         </div>
         <div className="h-px w-5 bg-border" />
         <button onClick={() => { onToggleCollapsed(); setActiveTab("calendars"); }}
@@ -197,8 +197,8 @@ export function Sidebar({
     <aside className={`flex flex-col border-r border-border bg-sidebar-bg ${isMobile ? "h-full w-full" : "w-64"}`}>
       <div className="flex items-center justify-between px-3 py-2">
         <div className="flex items-center gap-2">
-          <Image src="/icon.svg" alt="OpenCalendar" width={20} height={20} className="opacity-90" />
-          <span className="font-pixel text-xs font-bold tracking-wider text-foreground uppercase">OPENCALENDAR</span>
+          <Image src="/icon.svg" alt="OpenCalendars" width={20} height={20} className="opacity-90" />
+          <span className="font-pixel text-xs font-bold tracking-wider text-foreground uppercase">OPENCALENDARS</span>
         </div>
         <button onClick={onToggleCollapsed} className="touch-target rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
           <PanelLeftClose className={isMobile ? "h-5 w-5" : "h-3.5 w-3.5"} />

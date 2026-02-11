@@ -21,7 +21,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "OpenCalendar",
+  title: "OpenCalendars",
+
   description: "Een moderne kalender app met Google en iCloud sync",
   icons: {
     icon: [
@@ -43,7 +44,8 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "OpenCalendar",
+    title: "OpenCalendars",
+
   },
   other: {
     "mobile-web-app-capable": "yes",

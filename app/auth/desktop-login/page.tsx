@@ -64,7 +64,8 @@ export default function DesktopLoginPage() {
       <div className="bg-zinc-900 rounded-lg border border-zinc-800 shadow-sm p-8 max-w-md w-full mx-4">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-white mb-2">
-            OpenCalendar Desktop
+            OpenCalendars Desktop
+
           </h1>
           <p className="text-sm text-zinc-400">
             Log in om je desktop app te koppelen

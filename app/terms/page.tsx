@@ -30,8 +30,10 @@ export default function TermsPage() {
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-6 py-6 md:px-12">
         <Link href="/" className="flex items-center gap-3">
-          <Image src="/icon.png" alt="OpenCalendar" width={40} height={40} />
-          <span className="font-pixel text-2xl font-bold text-white">OPENCALENDAR</span>
+          <Image src="/icon.png" alt="OpenCalendars"
+ width={40} height={40} />
+          <span className="font-pixel text-2xl font-bold text-white">OPENCALENDARS</span>
+
         </Link>
         <Link
           href="/welcome"
@@ -63,14 +65,16 @@ export default function TermsPage() {
             <section className="space-y-4">
               <h2 className="text-2xl font-semibold text-white">1. Agreement to Terms</h2>
               <p className="text-zinc-300">
-                By accessing or using OpenCalendar, you agree to be bound by these Terms of Service and our Privacy Policy. If you disagree with any part of these terms, you may not use our service.
+                By accessing or using OpenCalendars
+, you agree to be bound by these Terms of Service and our Privacy Policy. If you disagree with any part of these terms, you may not use our service.
               </p>
             </section>
 
             <section className="space-y-4">
               <h2 className="text-2xl font-semibold text-white">2. Description of Service</h2>
               <p className="text-zinc-300">
-                OpenCalendar is a calendar synchronization and management platform that allows you to connect and view multiple calendar providers (Google Calendar, iCloud Calendar, Microsoft Outlook) in a unified interface. The service is provided "as is" and "as available."
+                OpenCalendars is a calendar synchronization
+ and management platform that allows you to connect and view multiple calendar providers (Google Calendar, iCloud Calendar, Microsoft Outlook) in a unified interface. The service is provided "as is" and "as available."
               </p>
             </section>
 
@@ -80,7 +84,8 @@ export default function TermsPage() {
                 <div>
                   <h3 className="mb-2 font-semibold text-white">3.1 Account Creation</h3>
                   <p>
-                    To use OpenCalendar, you must create an account. You agree to:
+                    To use OpenCalendars
+, you must create an account. You agree to:
                   </p>
                   <ul className="ml-6 mt-2 list-disc space-y-1">
                     <li>Provide accurate, current, and complete information</li>
@@ -109,7 +114,8 @@ export default function TermsPage() {
               <h2 className="text-2xl font-semibold text-white">4. Calendar Provider Authorization</h2>
               <div className="space-y-3 text-zinc-300">
                 <p>
-                  When you connect calendar providers to OpenCalendar, you authorize us to:
+                  When you connect calendar providers to OpenCalendars
+, you authorize us to:
                 </p>
                 <ul className="ml-6 list-disc space-y-1">
                   <li>Access your calendar events and metadata</li>
@@ -144,7 +150,8 @@ export default function TermsPage() {
               <h2 className="text-2xl font-semibold text-white">6. Open Source License</h2>
               <div className="space-y-3 text-zinc-300">
                 <p>
-                  OpenCalendar is open source software. The source code is available under the MIT License on GitHub. While the software is freely available, these Terms of Service govern the use of the hosted service at opencalendar.app.
+                  OpenCalendars is open source software
+. The source code is available under the MIT License on GitHub. While the software is freely available, these Terms of Service govern the use of the hosted service at opencalendar.app.
                 </p>
                 <p className="mt-3">
                   You may fork, modify, and distribute the source code according to the MIT License terms, but you must host your own instance if you make modifications.
@@ -155,7 +162,8 @@ export default function TermsPage() {
             <section className="space-y-4">
               <h2 className="text-2xl font-semibold text-white">7. Data and Privacy</h2>
               <p className="text-zinc-300">
-                Your use of OpenCalendar is also governed by our Privacy Policy. By using the service, you consent to our collection and use of your data as described in the Privacy Policy.
+                Your use of OpenCalendars is also governed
+ by our Privacy Policy. By using the service, you consent to our collection and use of your data as described in the Privacy Policy.
               </p>
             </section>
 
@@ -163,7 +171,9 @@ export default function TermsPage() {
               <h2 className="text-2xl font-semibold text-white">8. Third-Party Services</h2>
               <div className="space-y-3 text-zinc-300">
                 <p>
-                  OpenCalendar integrates with third-party services (Google, Apple, Microsoft). Your use of these services through OpenCalendar is subject to their respective terms of service:
+                  OpenCalendars integrates with third-party
+ services (Google, Apple, Microsoft). Your use of these services through OpenCalendars is subject
+ to their respective terms of service:
                 </p>
                 <ul className="ml-6 mt-2 list-disc space-y-1">
                   <li>Google Calendar: Google Terms of Service</li>
@@ -222,7 +232,8 @@ export default function TermsPage() {
             <section className="space-y-4">
               <h2 className="text-2xl font-semibold text-white">12. Indemnification</h2>
               <p className="text-zinc-300">
-                You agree to indemnify and hold harmless OpenCalendar, its contributors, and affiliates from any claims, damages, or expenses arising from your use of the service, your violation of these terms, or your violation of any rights of another party.
+                You agree to indemnify and hold harmless OpenCalendars
+, its contributors, and affiliates from any claims, damages, or expenses arising from your use of the service, your violation of these terms, or your violation of any rights of another party.
               </p>
             </section>
 
@@ -283,7 +294,8 @@ export default function TermsPage() {
         <div className="mx-auto max-w-4xl">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
             <p className="text-sm text-zinc-500">
-              © 2026 OpenCalendar. Open source software.
+© 2026 OpenCalendars. Open source software.
+
             </p>
             <div className="flex items-center gap-4 text-sm">
               <Link

@@ -1,4 +1,4 @@
-import { useMemo, memo, useCallback } from "react";
+import { useMemo, memo, useCallback, useState, useEffect } from "react";
 import {
   getWeekDays, formatWeekDay, formatDayNumber, isToday,
   getTimePosition, getEventHeight,
@@ -49,7 +49,7 @@ const DayColumn = memo(function DayColumn({
               e.stopPropagation();
               onEventClick(event);
             }}
-            className="absolute z-10 flex flex-col items-start justify-start overflow-hidden rounded-md border border-white/20 p-1.5 text-left transition-colors hover:z-20"
+            className="absolute z-10 flex flex-col items-start justify-start overflow-hidden rounded-md border border-black/10 p-1.5 text-left transition-all hover:z-20 hover:brightness-95 hover:shadow-md active:scale-[0.98]"
             style={{
               top: `${top}px`,
               height: `${height}px`,
@@ -57,12 +57,11 @@ const DayColumn = memo(function DayColumn({
               width: `${width}%`,
               backgroundColor: event.color || "#737373",
               color: "white",
-              boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
             }}
           >
-            <span className="truncate text-[11px] font-semibold leading-tight">{event.title}</span>
-            {height > 30 && (
-              <span className="mt-0.5 text-[9px] opacity-90">
+            <span className="truncate text-[11px] font-bold leading-tight">{event.title}</span>
+            {height > 35 && (
+              <span className="mt-0.5 text-[9px] font-medium opacity-90">
                 {event.startTime.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
@@ -80,6 +79,13 @@ export const WeekView = memo(function WeekView({
   onDayClick,
   weekStartsOn = 1,
 }: WeekViewProps) {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
   const weekDays = useMemo(() => getWeekDays(currentDate, weekStartsOn), [currentDate, weekStartsOn]);
 
   // Separate all-day + multi-day
@@ -128,14 +134,16 @@ export const WeekView = memo(function WeekView({
             return (
               <div
                 key={day.toISOString()}
-                className="flex flex-1 flex-col items-center py-2 border-l border-gray-100 first:border-l-0 cursor-pointer hover:bg-gray-50 transition-colors"
+                className={`flex flex-1 flex-col items-center py-3 border-l border-gray-100 first:border-l-0 cursor-pointer hover:bg-gray-50 transition-colors ${
+                  today ? "bg-blue-50/30" : ""
+                }`}
                 onClick={() => onDayClick(day)}
               >
-                <span className={`text-[10px] font-medium uppercase tracking-wider ${today ? "text-blue-600" : "text-gray-500"}`}>
+                <span className={`text-[10px] font-bold uppercase tracking-widest ${today ? "text-blue-600" : "text-gray-400"}`}>
                   {formatWeekDay(day)}
                 </span>
-                <span className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-full text-lg font-semibold ${
-                  today ? "bg-blue-600 text-white" : "text-gray-900"
+                <span className={`mt-1 flex h-9 w-9 items-center justify-center rounded-full text-xl font-bold transition-all ${
+                  today ? "bg-blue-600 text-white shadow-sm" : "text-gray-900 hover:bg-gray-200"
                 }`}>
                   {formatDayNumber(day)}
                 </span>
@@ -230,6 +238,18 @@ export const WeekView = memo(function WeekView({
 
           {/* Day Columns */}
           <div className="flex flex-1 ml-[60px] relative">
+            {/* Current time indicator */}
+            {weekDays.some(d => isToday(d)) && (
+              <div 
+                className="absolute left-0 right-0 z-30 pointer-events-none flex items-center"
+                style={{ 
+                  top: `${getTimePosition(now, HOUR_HEIGHT)}px`,
+                }}
+              >
+                <div className="w-2 h-2 rounded-full bg-red-500 -ml-1" />
+                <div className="flex-1 h-px bg-red-500" />
+              </div>
+            )}
             {weekDays.map((day) => {
               const dayKey = toDateKey(day);
               const layoutEvents = layoutByDay.get(dayKey) || [];

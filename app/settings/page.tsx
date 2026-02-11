@@ -631,7 +631,7 @@ function SettingsContent() {
                   className="text-foreground underline hover:text-foreground/80">account.apple.com</a></li>
                 <li>Log in met je Apple ID</li>
                 <li>Ga naar &quot;Beveiliging&quot; → &quot;App-specifieke wachtwoorden&quot;</li>
-                <li>Genereer een nieuw wachtwoord voor &quot;OpenCalendar&quot;</li>
+                <li>Genereer een nieuw wachtwoord voor &quot;OpenCalendars&quot;</li>
               </ol>
             </div>
             {error && (

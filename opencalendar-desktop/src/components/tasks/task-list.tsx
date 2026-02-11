@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { ExternalLink, Plus, Trash2, CheckSquare, Square } from "lucide-react";
+import { apiClient } from "../../lib/api";
 
 interface Task {
   id: string;
@@ -55,11 +56,8 @@ export function TaskList() {
 
   async function fetchTasks() {
     try {
-      const response = await fetch("/api/tasks");
-      if (response.ok) {
-        const data = await response.json();
-        setTasks(data.tasks || []);
-      }
+      const data = await apiClient.getTasks();
+      setTasks(data.tasks || []);
     } catch (error) {
       console.error("Failed to fetch tasks:", error);
     } finally {
@@ -72,20 +70,14 @@ export function TaskList() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "create",
-          title: newTaskTitle.trim(),
-        }),
+      await apiClient.createTask({
+        action: "create",
+        title: newTaskTitle.trim(),
       });
 
-      if (response.ok) {
-        setIsCreating(false);
-        setNewTaskTitle("");
-        fetchTasks();
-      }
+      setIsCreating(false);
+      setNewTaskTitle("");
+      fetchTasks();
     } catch (error) {
       console.error("Failed to create task:", error);
     } finally {
@@ -99,15 +91,8 @@ export function TaskList() {
     }
 
     try {
-      const response = await fetch("/api/tasks", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId }),
-      });
-
-      if (response.ok) {
-        fetchTasks();
-      }
+      await apiClient.deleteTask(taskId);
+      fetchTasks();
     } catch (error) {
       console.error("Failed to delete task:", error);
     }
