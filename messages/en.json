@@ -10,18 +10,13 @@
   "Settings": {
     "title": "Settings",
     "description": "Manage your preferences",
-    "tabs": {
+"tabs": {
       "calendars": "Calendar accounts",
       "account": "Account",
       "appearance": "Appearance",
       "region": "Language & region",
-      "tasks": "Tasks"
-    },
-    "region": {
-      "language": "Language",
-      "selectLanguage": "Select language",
-      "dutch": "Dutch",
-      "english": "English"
+      "tasks": "Tasks",
+      "desktop": "Desktop app"
     }
   },
   "Dashboard": {
@@ -70,9 +65,13 @@
   "Welcome": {
     "title": "Sync all your calendars in one place",
     "subtitle": "OpenCalendars brings all your Google Calendar and iCloud events together. Build better schedules with a unified view of your time.",
-
     "getStarted": "Get Started",
     "signIn": "Sign In",
+    "brand": "OPENCALENDARS",
+    "github": "GitHub",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "madeBy": "Made by",
     "features": {
       "syncTitle": "Multi-Calendar Sync",
       "syncDesc": "Connect Google Calendar and iCloud in one unified view",
@@ -84,8 +83,11 @@
     "download": {
       "title": "Desktop App",
       "subtitle": "Native performance with offline support",
-      "comingSoon": "Coming soon",
-      "version": "Version"
+      "comingSoon": "Not available",
+      "version": "Version",
+      "windowsLabel": "Windows (.msi)",
+      "macLabel": "macOS (.dmg)",
+      "linuxLabel": "Linux (.AppImage)"
     }
   }
 }

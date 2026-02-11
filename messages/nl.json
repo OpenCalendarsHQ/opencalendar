@@ -10,18 +10,13 @@
   "Settings": {
     "title": "Instellingen",
     "description": "Beheer je voorkeuren",
-    "tabs": {
+"tabs": {
       "calendars": "Kalender accounts",
       "account": "Account",
       "appearance": "Weergave",
       "region": "Taal & regio",
-      "tasks": "Taken"
-    },
-    "region": {
-      "language": "Taal",
-      "selectLanguage": "Selecteer taal",
-      "dutch": "Nederlands",
-      "english": "Engels"
+      "tasks": "Taken",
+      "desktop": "Desktop app"
     }
   },
   "Dashboard": {
@@ -70,9 +65,13 @@
   "Welcome": {
     "title": "Al je kalenders op één plek",
     "subtitle": "OpenCalendars brengt al je Google Calendar en iCloud events samen. Bouw betere schema's met een unified view van je tijd.",
-
     "getStarted": "Aan de slag",
     "signIn": "Inloggen",
+    "brand": "OPENCALENDARS",
+    "github": "GitHub",
+    "privacy": "Privacy",
+    "terms": "Voorwaarden",
+    "madeBy": "Gemaakt door",
     "features": {
       "syncTitle": "Multi-Kalender Sync",
       "syncDesc": "Verbind Google Calendar en iCloud in één overzicht",
@@ -84,8 +83,11 @@
     "download": {
       "title": "Desktop App",
       "subtitle": "Native prestaties met offline ondersteuning",
-      "comingSoon": "Binnenkort",
-      "version": "Versie"
+      "comingSoon": "Niet beschikbaar",
+      "version": "Versie",
+      "windowsLabel": "Windows (.msi)",
+      "macLabel": "macOS (.dmg)",
+      "linuxLabel": "Linux (.AppImage)"
     }
   }
 }

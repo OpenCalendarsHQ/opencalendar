@@ -17,12 +17,14 @@ import {
   CheckSquare,
   Calendar as CalendarIcon,
   Monitor,
+  Laptop,
 } from "lucide-react";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { AccountTab } from "./components/account-tab";
 import { AppearanceTab } from "./components/appearance-tab";
 import { RegionTab } from "./components/region-tab";
 import { TasksTab } from "./components/tasks-tab";
+import { DesktopTab } from "./components/desktop-tab";
 import { useSettings } from "@/lib/settings-context";
 
 // Inline Apple SVG icon
@@ -70,7 +72,7 @@ interface ConnectedAccount {
   calendarCount: number;
 }
 
-type TabType = "calendars" | "account" | "appearance" | "region" | "tasks";
+type TabType = "calendars" | "account" | "appearance" | "region" | "tasks" | "desktop";
 
 function SettingsContent() {
   const t = useTranslations("Settings");
@@ -105,6 +107,7 @@ function SettingsContent() {
     { id: "appearance" as TabType, label: t("tabs.appearance"), icon: Palette },
     { id: "region" as TabType, label: t("tabs.region"), icon: Globe },
     { id: "tasks" as TabType, label: t("tabs.tasks"), icon: CheckSquare },
+    { id: "desktop" as TabType, label: t("tabs.desktop"), icon: Laptop },
   ];
 
   const fetchAccounts = async (showLoading = true) => {
@@ -616,6 +619,7 @@ function SettingsContent() {
         {activeTab === "appearance" && <AppearanceTab />}
         {activeTab === "region" && <RegionTab />}
         {activeTab === "tasks" && <TasksTab />}
+        {activeTab === "desktop" && <DesktopTab />}
       </div>
 
       {/* iCloud Modal */}
