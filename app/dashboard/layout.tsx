@@ -96,12 +96,26 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       const syncPromises = calendarGroups
         .filter((group) => group.provider !== "local")
         .map(async (group) => {
-          let endpoint = "/api/sync/icloud";
-          if (group.provider === "google") {
-            endpoint = `/api/sync/google?accountId=${group.id}`;
-          } else if (group.provider === "microsoft") {
-            endpoint = "/api/sync/microsoft/callback";
+          // Map provider to endpoint
+          let endpoint: string;
+          switch (group.provider) {
+            case "google":
+              endpoint = `/api/sync/google?accountId=${group.id}`;
+              break;
+            case "microsoft":
+              endpoint = "/api/sync/microsoft/callback";
+              break;
+            case "icloud":
+              endpoint = "/api/sync/icloud";
+              break;
+            case "caldav":
+              endpoint = "/api/sync/caldav";
+              break;
+            default:
+              console.warn(`Unknown provider: ${group.provider}`);
+              return;
           }
+
           try {
             const res = await fetch(endpoint, {
               method: "POST",

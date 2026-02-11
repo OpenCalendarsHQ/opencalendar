@@ -15,7 +15,8 @@
       "Bash(npm run db:migrate:*)",
       "Bash(test:*)",
       "Bash(node run-migration.js:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(check-sync-consistency.md << 'EOF'\n# Sync Provider Consistency Check\n\n## Google\n- Endpoint: `/api/sync/google?accountId={id}` \\(POST\\)\n- accountId: **Query string** ✅\n- Body: { action: \"sync\", accountId }\n\n## Microsoft  \n- Endpoint: `/api/sync/microsoft/callback` \\(POST\\)\n- accountId: **Request body** ✅\n- Body: { accountId }\n\n## iCloud\n- Endpoint: `/api/sync/icloud` \\(POST\\)\n- accountId: **Request body** ✅\n- Body: { action: \"sync\", accountId }\n\n## CalDAV\n- Endpoint: `/api/sync/caldav` \\(POST\\)\n- accountId: **Request body** ✅\n- Body: { action: \"sync\", accountId }\n\n## Dashboard Layout Implementation\nAll providers send accountId in body ✅\nGoogle additionally has it in query string ✅\nEOF)"
     ]
   }
 }

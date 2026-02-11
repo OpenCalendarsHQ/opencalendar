@@ -343,14 +343,27 @@ function SettingsContent() {
     setIsSyncing(accountId);
     setError(null);
     try {
-      let endpoint = "/api/sync/icloud";
-      if (provider === "google") {
-        endpoint = `/api/sync/google?accountId=${accountId}`;
-      } else if (provider === "microsoft") {
-        endpoint = "/api/sync/microsoft/callback";
-      } else if (provider === "caldav") {
-        endpoint = "/api/sync/caldav";
+      // Map provider to endpoint
+      let endpoint: string;
+      switch (provider) {
+        case "google":
+          endpoint = `/api/sync/google?accountId=${accountId}`;
+          break;
+        case "microsoft":
+          endpoint = "/api/sync/microsoft/callback";
+          break;
+        case "icloud":
+          endpoint = "/api/sync/icloud";
+          break;
+        case "caldav":
+          endpoint = "/api/sync/caldav";
+          break;
+        default:
+          setError(`Onbekende provider: ${provider}`);
+          setIsSyncing(null);
+          return;
       }
+
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

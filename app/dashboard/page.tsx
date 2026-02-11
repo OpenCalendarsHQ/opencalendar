@@ -260,10 +260,26 @@ function DashboardContent() {
         for (let i = 0; i < nonLocalGroups.length; i += 3) {
           const batch = nonLocalGroups.slice(i, i + 3);
           const syncPromises = batch.map(group => {
-            const endpoint =
-              group.provider === "google"
-                ? `/api/sync/google?accountId=${group.id}`
-                : "/api/sync/icloud";
+            // Map provider to endpoint
+            let endpoint: string;
+            switch (group.provider) {
+              case "google":
+                endpoint = `/api/sync/google?accountId=${group.id}`;
+                break;
+              case "microsoft":
+                endpoint = "/api/sync/microsoft/callback";
+                break;
+              case "icloud":
+                endpoint = "/api/sync/icloud";
+                break;
+              case "caldav":
+                endpoint = "/api/sync/caldav";
+                break;
+              default:
+                console.warn(`Unknown provider: ${group.provider}`);
+                return Promise.resolve();
+            }
+
             return fetch(endpoint, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
