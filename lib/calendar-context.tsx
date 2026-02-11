@@ -46,7 +46,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const openEventRef = useRef<((eventId: string) => void) | null>(null);
   const refreshEventsRef = useRef<(() => void) | null>(null);
 
-  const refreshCalendars = useCallback(async () => {
+  const refreshCalendars = useCallback(async (force = false) => {
     setIsLoadingCalendars(true);
     try {
       const res = await fetch("/api/calendars");
@@ -54,7 +54,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         const data = await res.json();
         if (Array.isArray(data)) {
           setCalendarGroups(data);
-          
+
           // Only update visibleCalendarIds if they haven't been touched yet or after fresh fetch
           // We generally want to respect the user's current session visibility
           // But for the initial load, we sync with data
@@ -65,8 +65,13 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
             });
           });
           setVisibleCalendarIds(visible);
-          
-          localStorage.setItem("opencalendar_calendars", JSON.stringify(data));
+
+          // Cache with timestamp
+          const cacheData = {
+            data,
+            timestamp: Date.now(),
+          };
+          localStorage.setItem("opencalendar_calendars", JSON.stringify(cacheData));
         }
       }
     } catch (err) {
@@ -76,12 +81,18 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Initial load from cache then refresh
+  // Initial load from cache then refresh if stale
   useEffect(() => {
     const cached = localStorage.getItem("opencalendar_calendars");
+    let shouldRefresh = true;
+
     if (cached) {
       try {
-        const data = JSON.parse(cached);
+        const parsed = JSON.parse(cached);
+        // Support both old format (direct data) and new format (with timestamp)
+        const data = parsed.data || parsed;
+        const timestamp = parsed.timestamp || 0;
+
         setCalendarGroups(data);
         const visible = new Set<string>();
         data.forEach((group: CalendarGroup) => {
@@ -90,9 +101,21 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
           });
         });
         setVisibleCalendarIds(visible);
-      } catch (e) {}
+
+        // Only refresh if cache is older than 5 minutes
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+        const cacheAge = Date.now() - timestamp;
+        shouldRefresh = cacheAge > CACHE_DURATION;
+      } catch (e) {
+        shouldRefresh = true;
+      }
     }
-    refreshCalendars();
+
+    if (shouldRefresh) {
+      refreshCalendars();
+    } else {
+      setIsLoadingCalendars(false);
+    }
   }, [refreshCalendars]);
 
   const navigateBack = useCallback(() => {

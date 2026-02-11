@@ -154,39 +154,50 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
     try {
       // Check if this is a single occurrence edit of a recurring event
       if (eventData.isSingleOccurrenceEdit && eventData.originalRecurringEventId && eventData.originalOccurrenceDate) {
-        // Step 1: Add EXDATE to the original recurring event
-        const exRes = await fetch("/api/events/exception", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            eventId: eventData.originalRecurringEventId,
-            exceptionDate: eventData.originalOccurrenceDate,
-          }),
-        });
+        const { toast } = await import("sonner");
 
-        if (!exRes.ok) {
-          console.error("Failed to add exception date");
-          return;
-        }
+        try {
+          // Step 1: Add EXDATE to the original recurring event
+          const exRes = await fetch("/api/events/exception", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              eventId: eventData.originalRecurringEventId,
+              exceptionDate: eventData.originalOccurrenceDate,
+            }),
+          });
 
-        // Step 2: Create a new single event with the edited details
-        const createRes = await fetch("/api/events", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            calendarId: eventData.calendarId,
-            title: eventData.title || "(Geen titel)",
-            description: eventData.description,
-            startTime: eventData.startTime?.toISOString(),
-            endTime: eventData.endTime?.toISOString(),
-            isAllDay: eventData.isAllDay || false,
-            location: eventData.location,
-            color: eventData.color,
-          }),
-        });
+          if (!exRes.ok) {
+            const errorData = await exRes.json().catch(() => ({ error: "Onbekende fout" }));
+            toast.error("Kon uitzondering niet toevoegen: " + (errorData.error || "Onbekende fout"));
+            return;
+          }
 
-        if (createRes.ok) {
-          onEventsChange();
+          // Step 2: Create a new single event with the edited details
+          const createRes = await fetch("/api/events", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              calendarId: eventData.calendarId,
+              title: eventData.title || "(Geen titel)",
+              description: eventData.description,
+              startTime: eventData.startTime?.toISOString(),
+              endTime: eventData.endTime?.toISOString(),
+              isAllDay: eventData.isAllDay || false,
+              location: eventData.location,
+              color: eventData.color,
+            }),
+          });
+
+          if (createRes.ok) {
+            onEventsChange();
+            toast.success("Deze gebeurtenis bijgewerkt");
+          } else {
+            const errorData = await createRes.json().catch(() => ({ error: "Onbekende fout" }));
+            toast.error("Kon bewerkte gebeurtenis niet aanmaken: " + (errorData.error || "Onbekende fout"));
+          }
+        } catch (error) {
+          toast.error("Netwerkfout bij bewerken gebeurtenis");
         }
         return;
       }
@@ -196,54 +207,82 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
         onEventsChange();
 
         // Create new event via API (background, non-blocking)
-        fetch("/api/events", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            calendarId: eventData.calendarId,
-            title: eventData.title || "(Geen titel)",
-            description: eventData.description,
-            startTime: eventData.startTime?.toISOString(),
-            endTime: eventData.endTime?.toISOString(),
-            isAllDay: eventData.isAllDay || false,
-            location: eventData.location,
-            color: eventData.color,
-            rrule: (eventData as any).rrule || null,
-            isRecurring: (eventData as any).isRecurring || false,
-          }),
-        }).then(res => {
+        const { toast } = await import("sonner");
+
+        try {
+          const res = await fetch("/api/events", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              calendarId: eventData.calendarId,
+              title: eventData.title || "(Geen titel)",
+              description: eventData.description,
+              startTime: eventData.startTime?.toISOString(),
+              endTime: eventData.endTime?.toISOString(),
+              isAllDay: eventData.isAllDay || false,
+              location: eventData.location,
+              color: eventData.color,
+              rrule: (eventData as any).rrule || null,
+              isRecurring: (eventData as any).isRecurring || false,
+            }),
+          });
+
           if (res.ok) {
-            // Refetch to ensure consistency
+            // Success - refetch to ensure consistency
             onEventsChange();
+            toast.success("Event aangemaakt");
+          } else {
+            // API error - rollback optimistic update
+            const errorData = await res.json().catch(() => ({ error: "Onbekende fout" }));
+            toast.error("Event kon niet worden aangemaakt: " + (errorData.error || "Onbekende fout"));
+            onEventsChange(); // Refetch to restore correct state
           }
-        });
+        } catch (error) {
+          // Network error - rollback optimistic update
+          toast.error("Netwerkfout bij aanmaken event. Check je internetverbinding.");
+          onEventsChange(); // Refetch to restore correct state
+        }
       } else {
         // Optimistic update: trigger refetch immediately
         onEventsChange();
 
         // Update existing event via API (background, non-blocking)
-        fetch("/api/events", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: eventData.id,
-            calendarId: eventData.calendarId,
-            title: eventData.title,
-            description: eventData.description,
-            startTime: eventData.startTime?.toISOString(),
-            endTime: eventData.endTime?.toISOString(),
-            isAllDay: eventData.isAllDay,
-            location: eventData.location,
-            color: eventData.color,
-            rrule: (eventData as any).rrule || null,
-            isRecurring: (eventData as any).isRecurring || false,
-          }),
-        }).then(res => {
+        const { toast } = await import("sonner");
+
+        try {
+          const res = await fetch("/api/events", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: eventData.id,
+              calendarId: eventData.calendarId,
+              title: eventData.title,
+              description: eventData.description,
+              startTime: eventData.startTime?.toISOString(),
+              endTime: eventData.endTime?.toISOString(),
+              isAllDay: eventData.isAllDay,
+              location: eventData.location,
+              color: eventData.color,
+              rrule: (eventData as any).rrule || null,
+              isRecurring: (eventData as any).isRecurring || false,
+            }),
+          });
+
           if (res.ok) {
-            // Refetch to ensure consistency
+            // Success - refetch to ensure consistency
             onEventsChange();
+            toast.success("Event bijgewerkt");
+          } else {
+            // API error - rollback optimistic update
+            const errorData = await res.json().catch(() => ({ error: "Onbekende fout" }));
+            toast.error("Event kon niet worden bijgewerkt: " + (errorData.error || "Onbekende fout"));
+            onEventsChange(); // Refetch to restore correct state
           }
-        });
+        } catch (error) {
+          // Network error - rollback optimistic update
+          toast.error("Netwerkfout bij bijwerken event. Check je internetverbinding.");
+          onEventsChange(); // Refetch to restore correct state
+        }
       }
     } catch (error) {
       console.error("Failed to save event:", error);
@@ -267,15 +306,29 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
       // Optimistic update: trigger refetch immediately
       onEventsChange();
 
-      // Regular event - delete directly (background, non-blocking)
-      fetch(`/api/events?id=${eventId}`, {
-        method: "DELETE",
-      }).then(res => {
+      // Regular event - delete directly
+      const { toast } = await import("sonner");
+
+      try {
+        const res = await fetch(`/api/events?id=${eventId}`, {
+          method: "DELETE",
+        });
+
         if (res.ok) {
-          // Refetch to ensure consistency
+          // Success - refetch to ensure consistency
           onEventsChange();
+          toast.success("Event verwijderd");
+        } else {
+          // API error - rollback optimistic update
+          const errorData = await res.json().catch(() => ({ error: "Onbekende fout" }));
+          toast.error("Event kon niet worden verwijderd: " + (errorData.error || "Onbekende fout"));
+          onEventsChange(); // Refetch to restore correct state
         }
-      });
+      } catch (error) {
+        // Network error - rollback optimistic update
+        toast.error("Netwerkfout bij verwijderen event. Check je internetverbinding.");
+        onEventsChange(); // Refetch to restore correct state
+      }
     } catch (error) {
       console.error("Failed to delete event:", error);
     }
@@ -327,13 +380,15 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
     if (!pendingEvent) return;
     setShowRecurringDialog(false);
 
+    const { toast } = await import("sonner");
+
     try {
       // Find the original recurring event
       const originalId = pendingEvent.originalId || pendingEvent.id;
       const originalEvent = rawEvents.find((e) => e.id === originalId);
 
       if (!originalEvent) {
-        console.error("Original recurring event not found");
+        toast.error("Origineel herhalend event niet gevonden");
         setPendingEvent(null);
         return;
       }
@@ -351,10 +406,13 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
 
       if (res.ok) {
         onEventsChange();
+        toast.success("Deze gebeurtenis verwijderd");
       } else {
-        console.error("Failed to add exception date");
+        const errorData = await res.json().catch(() => ({ error: "Onbekende fout" }));
+        toast.error("Kon deze gebeurtenis niet verwijderen: " + (errorData.error || "Onbekende fout"));
       }
     } catch (error) {
+      toast.error("Netwerkfout bij verwijderen gebeurtenis");
       console.error("Failed to delete single occurrence:", error);
     }
 
@@ -365,15 +423,23 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
     if (!pendingEvent) return;
     setShowRecurringDialog(false);
 
+    const { toast } = await import("sonner");
+
     try {
       const realId = pendingEvent.rrule ? pendingEvent.id : (pendingEvent.originalId || pendingEvent.id);
       const res = await fetch(`/api/events?id=${realId}`, {
         method: "DELETE",
       });
+
       if (res.ok) {
         onEventsChange();
+        toast.success("Alle gebeurtenissen verwijderd");
+      } else {
+        const errorData = await res.json().catch(() => ({ error: "Onbekende fout" }));
+        toast.error("Kon alle gebeurtenissen niet verwijderen: " + (errorData.error || "Onbekende fout"));
       }
     } catch (error) {
+      toast.error("Netwerkfout bij verwijderen gebeurtenissen");
       console.error("Failed to delete event:", error);
     }
     setPendingEvent(null);

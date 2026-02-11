@@ -94,42 +94,63 @@ export function DesktopTab() {
           <>
             {/* Windows */}
             {winAsset ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <a
                   href={winAsset.browser_download_url}
-                  className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 hover:bg-accent/50 transition-colors"
+                  className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 hover:bg-accent/50 transition-colors group"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
                     <WindowsIcon className="h-5 w-5 text-blue-500" />
                   </div>
                   <div className="flex-1">
                     <div className="text-sm font-medium text-foreground">{t("download.windowsLabel")}</div>
                     <div className="text-xs text-muted-foreground">{formatSize(winAsset.size)}</div>
                   </div>
-                  <Download className="h-4 w-4 text-muted-foreground" />
+                  <Download className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                 </a>
-                <div className="flex items-center justify-center gap-2 text-xs">
-                  <button
-                    onClick={() => setWinFormat("msi")}
-                    className={`px-2 py-1 rounded transition-colors ${
-                      winFormat === "msi"
-                        ? "bg-blue-500/20 text-blue-500 border border-blue-500/40"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    .msi
-                  </button>
-                  <span className="text-muted-foreground">/</span>
-                  <button
-                    onClick={() => setWinFormat("exe")}
-                    className={`px-2 py-1 rounded transition-colors ${
-                      winFormat === "exe"
-                        ? "bg-blue-500/20 text-blue-500 border border-blue-500/40"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    .exe
-                  </button>
+
+                {/* Improved Format Selector */}
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+                  <span className="text-xs text-muted-foreground font-medium">Formaat:</span>
+                  <div className="inline-flex items-center rounded-lg border border-border bg-muted/30 p-1 gap-1" role="group" aria-label="Installer formaat selectie">
+                    <button
+                      onClick={() => setWinFormat("msi")}
+                      className={`
+                        px-4 py-1.5 rounded-md text-xs font-medium transition-all duration-200
+                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background
+                        ${
+                          winFormat === "msi"
+                            ? "bg-blue-500/90 text-white shadow-sm hover:bg-blue-600"
+                            : "text-foreground/70 hover:text-foreground hover:bg-background/50"
+                        }
+                      `}
+                      aria-pressed={winFormat === "msi"}
+                      aria-label="MSI installer selecteren"
+                      type="button"
+                    >
+                      .msi
+                    </button>
+                    <button
+                      onClick={() => setWinFormat("exe")}
+                      className={`
+                        px-4 py-1.5 rounded-md text-xs font-medium transition-all duration-200
+                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background
+                        ${
+                          winFormat === "exe"
+                            ? "bg-blue-500/90 text-white shadow-sm hover:bg-blue-600"
+                            : "text-foreground/70 hover:text-foreground hover:bg-background/50"
+                        }
+                      `}
+                      aria-pressed={winFormat === "exe"}
+                      aria-label="EXE installer selecteren"
+                      type="button"
+                    >
+                      .exe
+                    </button>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {winFormat === "msi" ? "(Aanbevolen voor bedrijven)" : "(Snelle installatie)"}
+                  </div>
                 </div>
               </div>
             ) : (
