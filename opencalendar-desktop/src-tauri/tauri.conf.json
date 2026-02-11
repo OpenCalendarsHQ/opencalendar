@@ -48,9 +48,9 @@
     ],
     "windows": {
       "nsis": {
-        "headerImage": "icons/nsis-header.png",
-        "sidebarImage": "icons/nsis-sidebar.png",
-        "installerIcon": "icons/icon.ico",
+        "headerImage": "icons/nsis-header.bmp",
+        "sidebarImage": "icons/nsis-sidebar.bmp",
+        "installerIcon": "icons/installer-icon.ico",
         "installMode": "perMachine",
         "languages": ["English", "Dutch"],
         "displayLanguageSelector": true

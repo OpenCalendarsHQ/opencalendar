@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm install @vercel/analytics)",
       "Bash(magick identify:*)",
-      "Bash(python -c:*)"
+      "Bash(python -c:*)",
+      "Bash(node -e:*)"
     ]
   }
 }
