@@ -10,6 +10,7 @@ import { RecurringEventDialog } from "./recurring-event-dialog";
 import { useSwipe } from "@/hooks/use-swipe";
 import { useWheelNavigation } from "@/hooks/use-wheel-navigation";
 import { useCalendar } from "@/lib/calendar-context";
+import { useSettings } from "@/lib/settings-context";
 import type { CalendarEvent, CalendarViewType, Todo } from "@/lib/types";
 import { setHours, setMinutes } from "@/lib/utils/date";
 
@@ -41,6 +42,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
   onViewTypeChange,
   onToggleTodo,
 }, ref) => {
+  const { settings } = useSettings();
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewEvent, setIsNewEvent] = useState(false);
@@ -72,12 +74,12 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
       startTime,
       endTime,
       color: "#6366f1",
-      calendarId: "cal-1",
+      calendarId: settings.defaultCalendarId || "local",
       isAllDay: false,
     });
     setIsNewEvent(true);
     setIsModalOpen(true);
-  }, []);
+  }, [settings.defaultCalendarId]);
 
   // Drag-to-create: precise start/end with minute-level granularity
   const handleDragCreate = useCallback((date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => {
@@ -91,12 +93,12 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
       startTime,
       endTime,
       color: "#6366f1",
-      calendarId: "cal-1",
+      calendarId: settings.defaultCalendarId || "local",
       isAllDay: false,
     });
     setIsNewEvent(true);
     setIsModalOpen(true);
-  }, []);
+  }, [settings.defaultCalendarId]);
 
   // Handle task drop from sidebar
   const handleTaskDrop = useCallback(async (task: any, date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => {
@@ -118,6 +120,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
             endTime: endTime.toISOString(),
             isAllDay: false,
             color: "#8b5cf6", // Purple for tasks
+            calendarId: settings.defaultCalendarId || "local",
           },
         }),
       });
@@ -131,7 +134,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
     } catch (error) {
       console.error("Error scheduling task:", error);
     }
-  }, [onEventsChange]);
+  }, [onEventsChange, settings.defaultCalendarId]);
 
   const handleDayClick = useCallback((date: Date) => {
     onDateChange(date);
@@ -387,12 +390,12 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
       startTime,
       endTime,
       color: "#6366f1",
-      calendarId: "cal-1",
+      calendarId: settings.defaultCalendarId || "local",
       isAllDay: false,
     });
     setIsNewEvent(true);
     setIsModalOpen(true);
-  }, []);
+  }, [settings.defaultCalendarId]);
 
   // Expose open event for external trigger
   const openEventModal = useCallback((eventId: string) => {

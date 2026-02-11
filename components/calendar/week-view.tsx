@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, memo, useCallback } from "react";
+import { useMemo, memo, useCallback, useState, useEffect } from "react";
 import {
   getWeekDays, formatWeekDay, formatDayNumber, isToday,
   getTimePosition, getEventHeight, getWeekNumber,
@@ -28,7 +28,6 @@ interface WeekViewProps {
 }
 
 const DayColumn = memo(function DayColumn({
-  dayKey,
   layoutEvents,
   onEventClick,
 }: {
@@ -54,8 +53,21 @@ const DayColumn = memo(function DayColumn({
   );
 });
 
-export const WeekView = memo(function WeekView({ currentDate, events, todos, onEventClick, onTimeSlotClick, onDragCreate, onTaskDrop }: WeekViewProps) {
+export const WeekView = memo(function WeekView({ 
+  currentDate, 
+  events, 
+  todos, 
+  onEventClick, 
+  onDragCreate, 
+  onTaskDrop 
+}: WeekViewProps) {
   const { settings } = useSettings();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const weekDays = useMemo(() => getWeekDays(currentDate, settings.weekStartsOn), [currentDate, settings.weekStartsOn]);
 
   // Separate: all-day + multi-day go to header, single-day timed go to grid
@@ -63,7 +75,6 @@ export const WeekView = memo(function WeekView({ currentDate, events, todos, onE
     const allDayAndMultiDay = events.filter((e) => e.isAllDay || isMultiDayEvent(e));
     const spans = computeMultiDaySpans(allDayAndMultiDay, weekDays);
 
-    // Single-day all-day events (span === 1) shown per-day, multi-day shown as banner
     const singleDay = new Map<string, CalendarEvent[]>();
     const multiDay = spans.filter((s) => s.span > 1);
 
@@ -79,7 +90,7 @@ export const WeekView = memo(function WeekView({ currentDate, events, todos, onE
     return { multiDaySpans: multiDay, singleDayAllDay: singleDay };
   }, [events, weekDays]);
 
-  // For each day, compute timed event layout (including multi-day timed clipped to that day)
+  // For each day, compute timed event layout
   const layoutByDay = useMemo(() => {
     const map = new Map<string, ReturnType<typeof computeEventLayout>>();
     weekDays.forEach((day) => {
@@ -112,12 +123,10 @@ export const WeekView = memo(function WeekView({ currentDate, events, todos, onE
 
   return (
     <div className="flex h-full flex-col">
-      {/* Day headers + all-day/multi-day section */}
       <div className="shrink-0 border-b border-border">
-        {/* Day labels row */}
         <div className="flex">
           <div className="flex w-[36px] shrink-0 items-end justify-center pb-1 md:w-[52px]">
-            {weekNumber !== null && (
+            {mounted && weekNumber !== null && (
               <span className="text-[9px] font-medium text-muted-foreground">W{weekNumber}</span>
             )}
           </div>
@@ -127,11 +136,11 @@ export const WeekView = memo(function WeekView({ currentDate, events, todos, onE
 
             return (
               <div key={dayKey} className="flex flex-1 flex-col items-center border-l border-border-light py-1.5">
-                <span className={`text-[10px] font-medium uppercase tracking-wider ${today ? "text-foreground" : "text-muted-foreground"}`}>
+                <span className={`text-[10px] font-medium uppercase tracking-wider ${mounted && today ? "text-foreground" : "text-muted-foreground"}`}>
                   {formatWeekDay(day)}
                 </span>
                 <span className={`mt-0.5 flex h-7 w-7 items-center justify-center rounded-md font-pixel text-sm ${
-                  today ? "bg-foreground font-bold text-background" : "text-foreground"
+                  mounted && today ? "bg-foreground font-bold text-background" : "text-foreground"
                 }`}>
                   {formatDayNumber(day)}
                 </span>
@@ -140,13 +149,11 @@ export const WeekView = memo(function WeekView({ currentDate, events, todos, onE
           })}
         </div>
 
-        {/* Multi-day events banner area */}
-        {(multiDaySpans.length > 0 || [...singleDayAllDay.values()].some((v) => v.length > 0)) && (
+        {(multiDaySpans.length > 0 || Array.from(singleDayAllDay.values()).some((v) => v.length > 0)) && (
           <div className="relative border-t border-border-light">
             <div className="flex">
               <div className="w-[36px] shrink-0 md:w-[52px]" />
               <div className="relative flex flex-1">
-                {/* Multi-day spanning events */}
                 {multiDaySpans.map((span, idx) => (
                   <div
                     key={`${span.event.id}-md`}
@@ -173,7 +180,6 @@ export const WeekView = memo(function WeekView({ currentDate, events, todos, onE
                   </div>
                 ))}
 
-                {/* Single-day all-day events per column */}
                 {weekDays.map((day, colIdx) => {
                   const dayKey = toDateKey(day);
                   const dayAllDay = singleDayAllDay.get(dayKey) || [];
@@ -207,22 +213,13 @@ export const WeekView = memo(function WeekView({ currentDate, events, todos, onE
               </div>
             </div>
 
-            {/* Spacer to push content down */}
             <div style={{
-              height: Math.max(
-                multiDaySpans.length * 22,
-                0
-              ) + (
-                [...singleDayAllDay.values()].some((v) => v.length > 0)
-                  ? 22
-                  : 0
-              ) + 2,
+              height: (multiDaySpans.length * 22) + (Array.from(singleDayAllDay.values()).some((v) => v.length > 0) ? 22 : 0) + 2,
             }} />
           </div>
         )}
       </div>
 
-      {/* Time grid */}
       <TimeGrid columnCount={7} dates={weekDays} onDragCreate={handleDragCreate} onTaskDrop={onTaskDrop}>
         {weekDays.map((day) => {
           const dayKey = toDateKey(day);

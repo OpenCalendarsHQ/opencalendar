@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, memo } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import {
@@ -81,6 +81,54 @@ const providerIcons: Record<string, React.ComponentType<{ className?: string }>>
   local: Monitor,
 };
 
+const CalendarItem = memo(function CalendarItem({ cal, onToggle, onChangeColor }: {
+  cal: { id: string; name: string; color: string; isVisible: boolean };
+  onToggle: (id: string) => void;
+  onChangeColor: (id: string, color: string) => void;
+}) {
+  const [showPicker, setShowPicker] = useState(false);
+
+  return (
+    <div className="group relative flex items-center gap-2 rounded-md px-1.5 py-1 text-xs hover:bg-muted">
+      <div
+        className="h-2.5 w-2.5 shrink-0 rounded-sm"
+        style={{ backgroundColor: cal.color }}
+      />
+      <span className={`flex-1 truncate ${cal.isVisible ? "text-foreground" : "text-muted-foreground line-through"}`}>
+        {cal.name}
+      </span>
+      <button
+        onClick={() => onToggle(cal.id)}
+        className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-accent"
+        title={cal.isVisible ? "Verberg kalender" : "Toon kalender"}
+      >
+        {cal.isVisible ? (
+          <Eye className="h-3 w-3 text-muted-foreground" />
+        ) : (
+          <EyeOff className="h-3 w-3 text-muted-foreground" />
+        )}
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); setShowPicker(!showPicker); }}
+        className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-accent"
+        title="Wijzig kleur"
+      >
+        <div className="h-2.5 w-2.5 rounded-full border border-border" style={{ backgroundColor: cal.color }} />
+      </button>
+
+      {showPicker && (
+        <div className="absolute right-0 top-full z-50 mt-1">
+          <ColorPicker
+            value={cal.color}
+            onChange={(color) => onChangeColor(cal.id, color)}
+            onClose={() => setShowPicker(false)}
+          />
+        </div>
+      )}
+    </div>
+  );
+});
+
 export function Sidebar({
   selectedDate, onDateSelect, calendarGroups, onToggleCalendar,
   onChangeCalendarColor, onAddAccount, isCollapsed, onToggleCollapsed,
@@ -88,28 +136,34 @@ export function Sidebar({
 }: SidebarProps) {
   const t = useTranslations("Sidebar");
   const [activeTab, setActiveTab] = useState<SidebarTab>("calendars");
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(calendarGroups.map((g) => g.id)));
-  const [newTodoText, setNewTodoText] = useState("");
-  const [showCompleted, setShowCompleted] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set(calendarGroups.map((g) => g.id)));
 
   // Auto-expand new calendar groups
   useEffect(() => {
-    setExpandedGroups((prev) => {
-      const newSet = new Set(prev);
-      calendarGroups.forEach((g) => newSet.add(g.id));
-      return newSet;
-    });
+    if (calendarGroups.length > 0) {
+      setExpandedGroups((prev) => {
+        const newSet = new Set(prev);
+        let changed = false;
+        calendarGroups.forEach((g) => {
+          if (!newSet.has(g.id)) {
+            newSet.add(g.id);
+            changed = true;
+          }
+        });
+        return changed ? newSet : prev;
+      });
+    }
   }, [calendarGroups]);
 
   const toggleGroup = (id: string) => {
-    setExpandedGroups((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setExpandedGroups((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
   };
-  const handleAddTodo = useCallback(() => {
-    if (newTodoText.trim()) { onAddTodo(newTodoText.trim()); setNewTodoText(""); }
-  }, [newTodoText, onAddTodo]);
 
   const incompleteTodos = todos.filter((t) => !t.completed);
-  const completedTodos = todos.filter((t) => t.completed);
 
   if (isCollapsed) {
     return (
@@ -177,7 +231,7 @@ export function Sidebar({
               </button>
             </div>
             {calendarGroups.map((group) => {
-              const Icon = providerIcons[group.provider];
+              const Icon = providerIcons[group.provider] || Monitor;
               const isExpanded = expandedGroups.has(group.id);
               return (
                 <div key={group.id} className="mb-0.5">
@@ -203,88 +257,5 @@ export function Sidebar({
         )}
       </div>
     </aside>
-  );
-}
-
-function CalendarItem({ cal, onToggle, onChangeColor }: {
-  cal: { id: string; name: string; color: string; isVisible: boolean };
-  onToggle: (id: string) => void;
-  onChangeColor: (id: string, color: string) => void;
-}) {
-  const [showPicker, setShowPicker] = useState(false);
-
-  return (
-    <div className="group relative flex items-center gap-2 rounded-md px-1.5 py-1 text-xs hover:bg-muted">
-      {/* Color indicator */}
-      <div
-        className="h-2.5 w-2.5 shrink-0 rounded-sm"
-        style={{ backgroundColor: cal.color }}
-      />
-
-      {/* Calendar name */}
-      <span className={`flex-1 truncate ${cal.isVisible ? "text-foreground" : "text-muted-foreground line-through"}`}>
-        {cal.name}
-      </span>
-
-      {/* Visibility toggle (Eye icon) */}
-      <button
-        onClick={() => onToggle(cal.id)}
-        className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-accent"
-        title={cal.isVisible ? "Verberg kalender" : "Toon kalender"}
-      >
-        {cal.isVisible ? (
-          <Eye className="h-3 w-3 text-muted-foreground" />
-        ) : (
-          <EyeOff className="h-3 w-3 text-muted-foreground" />
-        )}
-      </button>
-
-      {/* Color picker button */}
-      <button
-        onClick={(e) => { e.stopPropagation(); setShowPicker(!showPicker); }}
-        className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-accent"
-        title="Wijzig kleur"
-      >
-        <div className="h-2.5 w-2.5 rounded-full border border-border" style={{ backgroundColor: cal.color }} />
-      </button>
-
-      {showPicker && (
-        <div className="absolute right-0 top-full z-50 mt-1">
-          <ColorPicker
-            value={cal.color}
-            onChange={(color) => onChangeColor(cal.id, color)}
-            onClose={() => setShowPicker(false)}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TodoItem({ todo, onToggle, onDelete }: { todo: Todo; onToggle: (id: string) => void; onDelete: (id: string) => void }) {
-  return (
-    <div className={`group flex items-start gap-2 rounded-md px-1.5 py-1.5 hover:bg-muted ${todo.completed ? "opacity-50" : ""}`}>
-      <button onClick={() => onToggle(todo.id)} className="mt-px shrink-0">
-        <div className={`flex h-3.5 w-3.5 items-center justify-center rounded-sm border ${
-          todo.completed ? "border-foreground bg-foreground" : "border-muted-foreground/40 hover:border-foreground"
-        }`}>
-          {todo.completed && (
-            <svg className="h-2 w-2 text-background" viewBox="0 0 12 12" fill="none">
-              <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          )}
-        </div>
-      </button>
-      <div className="min-w-0 flex-1">
-        <span className={`text-xs leading-snug ${todo.completed ? "text-muted-foreground line-through" : "text-foreground"}`}>{todo.title}</span>
-        {todo.dueDate && !todo.completed && (
-          <div className="text-[10px] text-muted-foreground">{todo.dueDate.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}</div>
-        )}
-      </div>
-      <button onClick={() => onDelete(todo.id)}
-        className="shrink-0 rounded p-0.5 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100">
-        <Trash2 className="h-3 w-3" />
-      </button>
-    </div>
   );
 }

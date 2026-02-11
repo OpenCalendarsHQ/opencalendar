@@ -15,6 +15,14 @@ import { EventDetailModal } from "./components/calendar/event-detail-modal";
 import { EventEditModal } from "./components/calendar/event-edit-modal";
 import { TaskList } from "./components/tasks/task-list";
 import { TodayView } from "./components/views/today-view";
+import { useRecurringEvents } from "./hooks/use-recurring-events";
+import { 
+  startOfMonth, 
+  endOfMonth, 
+  startOfWeek as startOfWeekFn, 
+  endOfWeek as endOfWeekFn,
+  addDays
+} from "date-fns";
 import type { CalendarEvent, CalendarGroup, CalendarViewType } from "./lib/types";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
@@ -120,7 +128,7 @@ function CalendarApp(props: { user: any; logout: () => void }) {
   const [viewType, setViewType] = useState<CalendarViewType>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [rawEvents, setRawEvents] = useState<any[]>([]);
   const [calendarGroups, setCalendarGroups] = useState<CalendarGroup[]>([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -129,6 +137,34 @@ function CalendarApp(props: { user: any; logout: () => void }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isNewEvent, setIsNewEvent] = useState(false);
   const hasInitialized = useRef(false);
+
+  // Date range for expansion
+  const dateRange = useMemo(() => {
+    let start: Date;
+    let end: Date;
+
+    if (viewType === "day") {
+      start = new Date(currentDate);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(currentDate);
+      end.setHours(23, 59, 59, 999);
+    } else if (viewType === "week") {
+      start = startOfWeekFn(currentDate, { weekStartsOn: 1 });
+      end = endOfWeekFn(currentDate, { weekStartsOn: 1 });
+    } else {
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+      start = startOfWeekFn(monthStart, { weekStartsOn: 1 });
+      end = endOfWeekFn(monthEnd, { weekStartsOn: 1 });
+    }
+
+    return {
+      start: addDays(start, -7),
+      end: addDays(end, 7),
+    };
+  }, [currentDate, viewType]);
+
+  const expandedEvents = useRecurringEvents(rawEvents, dateRange.start, dateRange.end);
 
   // Fetch calendars and events once when user authenticates
   useEffect(() => {
@@ -170,11 +206,7 @@ function CalendarApp(props: { user: any; logout: () => void }) {
         })),
       }));
       setCalendarGroups(groups);
-      setEvents(cachedEvents.map((e: any) => ({
-        ...e,
-        startTime: new Date(e.startTime),
-        endTime: new Date(e.endTime),
-      })));
+      setRawEvents(cachedEvents);
       setIsLoading(false);
     } else {
       setIsLoading(true);
@@ -232,13 +264,7 @@ function CalendarApp(props: { user: any; logout: () => void }) {
 
     // Save to offline cache
     offlineCache.saveEvents(eventsData);
-
-    setEvents(eventsData.map((e: any) => ({
-      ...e,
-      startTime: new Date(e.startTime),
-      endTime: new Date(e.endTime),
-      color: e.color || "#737373",
-    })));
+    setRawEvents(eventsData);
   }
 
   // Navigation handlers - memoized to prevent unnecessary re-renders
@@ -324,7 +350,6 @@ function CalendarApp(props: { user: any; logout: () => void }) {
   }, []);
 
   // Filter events based on visible calendars - memoized for performance
-  // MUST be before early return to follow Rules of Hooks
   const visibleEvents = useMemo(() => {
     const visibleCalendarIds = new Set(
       calendarGroups
@@ -332,8 +357,8 @@ function CalendarApp(props: { user: any; logout: () => void }) {
         .filter((c) => c.isVisible)
         .map((c) => c.id)
     );
-    return events.filter((event) => visibleCalendarIds.has(event.calendarId));
-  }, [events, calendarGroups]);
+    return expandedEvents.filter((event) => visibleCalendarIds.has(event.calendarId));
+  }, [expandedEvents, calendarGroups]);
 
   if (isLoading) {
     return (
@@ -365,7 +390,7 @@ function CalendarApp(props: { user: any; logout: () => void }) {
         {/* Header with navigation */}
         <div className="bg-white border-b border-gray-200">
           {/* Main view tabs */}
-          <div className="flex items-center gap-1 px-4 pt-3 border-b border-gray-100">
+          <div className="mx-auto flex w-full max-w-(--breakpoint-2xl) items-center gap-1 px-4 pt-3 border-b border-gray-100">
             <button
               onClick={() => setMainView("today")}
               className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   if (error) {
     console.error("Notion OAuth error:", error);
     return NextResponse.redirect(
-      new URL(`/settings/tasks?error=${error}`, request.url)
+      new URL(`/settings?tab=tasks?error=${error}`, request.url)
     );
   }
 
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
       if (!userId) {
         console.error("Notion OAuth: Invalid or expired state token");
         return NextResponse.redirect(
-          new URL("/settings/tasks?error=oauth_state_invalid", request.url)
+          new URL("/settings?tab=tasks?error=oauth_state_invalid", request.url)
         );
       }
 
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
         const errorData = await tokenResponse.json();
         console.error("Notion token exchange failed:", errorData);
         return NextResponse.redirect(
-          new URL("/settings/tasks?error=notion_token_failed", request.url)
+          new URL("/settings?tab=tasks?error=notion_token_failed", request.url)
         );
       }
 
@@ -136,12 +136,12 @@ export async function GET(request: NextRequest) {
       );
 
       return NextResponse.redirect(
-        new URL("/settings/tasks?success=notion_connected", request.url)
+        new URL("/settings?tab=tasks?success=notion_connected", request.url)
       );
     } catch (error) {
       console.error("Notion OAuth callback error:", error);
       return NextResponse.redirect(
-        new URL("/settings/tasks?error=notion_callback_failed", request.url)
+        new URL("/settings?tab=tasks?error=notion_callback_failed", request.url)
       );
     }
   }

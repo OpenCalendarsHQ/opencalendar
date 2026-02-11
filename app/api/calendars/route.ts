@@ -14,10 +14,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
     }
 
-    await ensureUserExists(user);
+    // PERFORMANCE: Use simple query without ensureUserExists for GET requests
+    // to reduce overhead on every refresh.
 
-    // OPTIMIZED: Single query with LEFT JOIN instead of N+1 queries
-    // This reduces database round-trips from 1+N to just 1
     const results = await db
       .select({
         accountId: calendarAccounts.id,
@@ -51,7 +50,6 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      // Only add calendar if it exists (LEFT JOIN might return null)
       if (row.calendarId) {
         accountsMap.get(row.accountId).calendars.push({
           id: row.calendarId,
@@ -66,7 +64,11 @@ export async function GET(request: NextRequest) {
 
     const result = Array.from(accountsMap.values());
 
-    return NextResponse.json(result);
+    return NextResponse.json(result, {
+      headers: {
+        "Cache-Control": "private, max-age=10, stale-while-revalidate=60",
+      },
+    });
   } catch (error) {
     console.error("GET /api/calendars error:", error);
     return NextResponse.json(
@@ -79,7 +81,6 @@ export async function GET(request: NextRequest) {
 // POST /api/calendars - Create a local calendar
 export async function POST(request: NextRequest) {
   try {
-    // Accept both JWT (desktop) and session cookies (web)
     const { user } = await verifyRequest(request);
     if (!user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
@@ -91,13 +92,9 @@ export async function POST(request: NextRequest) {
     const { name, color } = body;
 
     if (!name) {
-      return NextResponse.json(
-        { error: "Naam is verplicht" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Naam is verplicht" }, { status: 400 });
     }
 
-    // Ensure a local account exists for the user
     let localAccountResults = await db
       .select()
       .from(calendarAccounts)
@@ -134,17 +131,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(newCalendar, { status: 201 });
   } catch (error) {
     console.error("POST /api/calendars error:", error);
-    return NextResponse.json(
-      { error: "Er is een fout opgetreden" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Er is een fout opgetreden" }, { status: 500 });
   }
 }
 
 // PATCH /api/calendars - Update calendar color/visibility/name
 export async function PATCH(request: NextRequest) {
   try {
-    // Accept both JWT (desktop) and session cookies (web)
     const { user } = await verifyRequest(request);
     if (!user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
@@ -157,7 +150,6 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Calendar ID is verplicht" }, { status: 400 });
     }
 
-    // Verify calendar belongs to user
     const [cal] = await db.select().from(calendars).where(eq(calendars.id, id));
     if (!cal) {
       return NextResponse.json({ error: "Kalender niet gevonden" }, { status: 404 });
@@ -186,10 +178,9 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// DELETE /api/calendars?accountId=... - Delete a connected account and all its data
+// DELETE /api/calendars?accountId=... - Delete a connected account
 export async function DELETE(request: NextRequest) {
   try {
-    // Accept both JWT (desktop) and session cookies (web)
     const { user } = await verifyRequest(request);
     if (!user) {
       return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
@@ -202,7 +193,6 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Account ID is verplicht" }, { status: 400 });
     }
 
-    // Verify the account belongs to this user
     const [account] = await db
       .select()
       .from(calendarAccounts)
@@ -212,7 +202,6 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Account niet gevonden" }, { status: 404 });
     }
 
-    // Get all calendar IDs for this account
     const accountCalendars = await db
       .select({ id: calendars.id })
       .from(calendars)
@@ -221,28 +210,14 @@ export async function DELETE(request: NextRequest) {
     const calendarIds = accountCalendars.map((c) => c.id);
 
     if (calendarIds.length > 0) {
-      // Delete all events for these calendars
-      await db
-        .delete(events)
-        .where(inArray(events.calendarId, calendarIds));
-
-      // Delete all sync states for these calendars
-      await db
-        .delete(syncStates)
-        .where(inArray(syncStates.calendarId, calendarIds));
-
-      // Delete all calendars for this account
-      await db
-        .delete(calendars)
-        .where(eq(calendars.accountId, accountId));
+      await db.delete(events).where(inArray(events.calendarId, calendarIds));
+      await db.delete(syncStates).where(inArray(syncStates.calendarId, calendarIds));
+      await db.delete(calendars).where(eq(calendars.accountId, accountId));
     }
 
-    // Delete the account itself
-    await db
-      .delete(calendarAccounts)
-      .where(eq(calendarAccounts.id, accountId));
+    await db.delete(calendarAccounts).where(eq(calendarAccounts.id, accountId));
 
-    return NextResponse.json({ success: true, message: "Account en alle bijbehorende data verwijderd" });
+    return NextResponse.json({ success: true, message: "Account verwijderd" });
   } catch (error) {
     console.error("DELETE /api/calendars error:", error);
     return NextResponse.json({ error: "Er is een fout opgetreden" }, { status: 500 });

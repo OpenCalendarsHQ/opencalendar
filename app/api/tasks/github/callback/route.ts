@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   if (error) {
     console.error("GitHub OAuth error:", error);
     return NextResponse.redirect(
-      new URL(`/settings/tasks?error=${encodeURIComponent(error)}`, request.url)
+      new URL(`/settings?tab=tasks?error=${encodeURIComponent(error)}`, request.url)
     );
   }
 
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   if (!code || !state) {
     console.error("GitHub callback: Missing code or state");
     return NextResponse.redirect(
-      new URL("/settings/tasks?error=missing_parameters", request.url)
+      new URL("/settings?tab=tasks?error=missing_parameters", request.url)
     );
   }
 
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     if (!userId) {
       console.error("GitHub OAuth: Invalid or expired state token");
       return NextResponse.redirect(
-        new URL("/settings/tasks?error=oauth_state_invalid", request.url)
+        new URL("/settings?tab=tasks?error=oauth_state_invalid", request.url)
       );
     }
 
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       const errorData = await tokenResponse.text();
       console.error("GitHub token exchange failed:", errorData);
       return NextResponse.redirect(
-        new URL("/settings/tasks?error=github_token_failed", request.url)
+        new URL("/settings?tab=tasks?error=github_token_failed", request.url)
       );
     }
 
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
     if (!access_token) {
       console.error("GitHub: No access token received");
       return NextResponse.redirect(
-        new URL("/settings/tasks?error=github_no_token", request.url)
+        new URL("/settings?tab=tasks?error=github_no_token", request.url)
       );
     }
 
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
     if (!userResponse.ok) {
       console.error("Failed to fetch GitHub user info");
       return NextResponse.redirect(
-        new URL("/settings/tasks?error=github_user_failed", request.url)
+        new URL("/settings?tab=tasks?error=github_user_failed", request.url)
       );
     }
 
@@ -140,12 +140,12 @@ export async function GET(request: NextRequest) {
     );
 
     return NextResponse.redirect(
-      new URL("/settings/tasks?success=github_connected", request.url)
+      new URL("/settings?tab=tasks?success=github_connected", request.url)
     );
   } catch (error) {
     console.error("GitHub OAuth callback error:", error);
     return NextResponse.redirect(
-      new URL("/settings/tasks?error=github_callback_failed", request.url)
+      new URL("/settings?tab=tasks?error=github_callback_failed", request.url)
     );
   }
 }

@@ -120,19 +120,46 @@ interface SettingsContextValue {
 export const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    // Load from localStorage immediately for instant UI
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("opencalendar_settings");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return { ...DEFAULT_SETTINGS, ...parsed };
+        }
+      } catch (e) {
+        console.error("Failed to parse cached settings", e);
+      }
+    }
+    return DEFAULT_SETTINGS;
+  });
   const [isLoading, setIsLoading] = useState(true);
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSyncRef = useRef<number>(0);
 
-  // Load settings from database on mount
+  // Load settings from database on mount and sync periodically
   useEffect(() => {
-    const loadSettings = async () => {
+    const loadSettings = async (force = false) => {
+      // Only sync if forced or if 5 minutes have passed since last sync
+      const now = Date.now();
+      const fiveMinutes = 5 * 60 * 1000;
+      if (!force && now - lastSyncRef.current < fiveMinutes) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const res = await fetch("/api/settings");
         if (res.ok) {
           const data = await res.json();
           if (data) {
-            setSettings({ ...DEFAULT_SETTINGS, ...data });
+            const newSettings = { ...DEFAULT_SETTINGS, ...data };
+            setSettings(newSettings);
+            // Cache for next load
+            localStorage.setItem("opencalendar_settings", JSON.stringify(data));
+            lastSyncRef.current = now;
           }
         } else if (res.status === 401) {
           // Not authenticated - silently use defaults (e.g., on landing/welcome page)
@@ -149,12 +176,28 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Initial load (respects 5-min cache)
     loadSettings();
+
+    // Listen for custom event to force refresh (e.g., after hard refresh or explicit sync)
+    const handleForceSync = () => loadSettings(true);
+    window.addEventListener("opencalendar:sync-settings", handleForceSync);
+
+    return () => {
+      window.removeEventListener("opencalendar:sync-settings", handleForceSync);
+    };
   }, []);
 
   const updateSettings = useCallback((partial: Partial<AppSettings>) => {
     setSettings((prev) => {
       const next = { ...prev, ...partial };
+
+      // Immediately update localStorage for instant persistence
+      try {
+        localStorage.setItem("opencalendar_settings", JSON.stringify(next));
+      } catch (e) {
+        console.error("Failed to cache settings", e);
+      }
 
       // Debounce database save (150ms for faster feedback)
       if (updateTimeoutRef.current) {
@@ -174,6 +217,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
             body: JSON.stringify(next),
           });
 
+          // Update last sync time
+          lastSyncRef.current = Date.now();
+
           // If language changed, reload to apply changes
           if (partial.language) {
             window.location.reload();
@@ -189,12 +235,20 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const resetSettings = useCallback(async () => {
     setSettings(DEFAULT_SETTINGS);
+    // Clear localStorage cache
+    try {
+      localStorage.removeItem("opencalendar_settings");
+    } catch (e) {
+      console.error("Failed to clear cached settings", e);
+    }
     try {
       await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(DEFAULT_SETTINGS),
       });
+      // Update last sync time
+      lastSyncRef.current = Date.now();
     } catch (error) {
       console.error("Failed to reset settings:", error);
     }

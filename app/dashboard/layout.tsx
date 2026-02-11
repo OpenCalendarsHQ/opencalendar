@@ -17,60 +17,16 @@ import { SettingsProvider } from "@/lib/settings-context";
 
 function DashboardInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const calendar = useCalendar();
+  const { 
+    currentDate, viewType, setViewType, navigateBack, navigateForward, 
+    navigateToday, createEvent, toggleCommandMenu, openEvent, refreshEvents,
+    calendarGroups, setCalendarGroups, refreshCalendars, setVisibleCalendarIds
+  } = useCalendar();
   const { data: session, isPending } = useSession();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [calendarGroups, setCalendarGroups] = useState<CalendarGroup[]>([]);
   const { todos, lists, addTodo, toggleTodo, deleteTodo } = useTodos();
-
-  // Fetch calendars function
-  const fetchCalendars = useCallback(async () => {
-    try {
-      const res = await fetch("/api/calendars");
-
-      // Handle auth errors
-      if (res.status === 401) {
-        router.push("/auth/sign-in");
-        return [];
-      }
-
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setCalendarGroups(data);
-          return data;
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch calendars:", err);
-    }
-    return [];
-  }, [router]);
-
-  // Fetch calendars when session becomes available
-  useEffect(() => {
-    if (isPending) return; // Wait for session check
-    if (!session) {
-      router.push("/auth/sign-in");
-      return;
-    }
-
-    // Session is available, fetch calendars
-    fetchCalendars();
-  }, [session, isPending, fetchCalendars, router]);
-
-  // Sync visible calendars to context
-  useEffect(() => {
-    const visible = new Set<string>();
-    calendarGroups.forEach((group) => {
-      group.calendars.forEach((cal) => {
-        if (cal.isVisible) visible.add(cal.id);
-      });
-    });
-    calendar.setVisibleCalendarIds(visible);
-  }, [calendarGroups, calendar.setVisibleCalendarIds]);
 
   const handleToggleCalendar = useCallback((calendarId: string) => {
     // Find current visibility
@@ -109,7 +65,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: calendarId, isVisible: newVisibility }),
     }).catch(() => {});
-  }, [calendarGroups]);
+  }, [calendarGroups, setCalendarGroups]);
 
   const handleChangeCalendarColor = useCallback((calendarId: string, color: string) => {
     setCalendarGroups((prev) =>
@@ -128,20 +84,16 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     })
       .then(() => {
         // Refresh calendar view to show new colors immediately
-        calendar.refreshEvents();
+        refreshEvents();
       })
       .catch(() => {});
-  }, [calendar]);
+  }, [setCalendarGroups, refreshEvents]);
 
   const handleSync = useCallback(async () => {
     try {
-      const res = await fetch("/api/calendars");
-      if (!res.ok) return;
-      const groups = await res.json();
-      if (!Array.isArray(groups)) return;
-
-      // Sync all non-local calendar accounts (local calendars don't need syncing)
-      const syncPromises = groups
+      // Use calendarGroups from context instead of refetching everything
+      // Sync all non-local calendar accounts
+      const syncPromises = calendarGroups
         .filter((group) => group.provider !== "local")
         .map(async (group) => {
           let endpoint = "/api/sync/icloud";
@@ -164,48 +116,45 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       await Promise.all(syncPromises);
 
       // Refresh both calendars list AND events after sync
-      await fetchCalendars();
-      calendar.refreshEvents();
+      await refreshCalendars();
+      refreshEvents();
     } catch (error) {
       console.error("Sync failed:", error);
       throw error;
     }
-  }, [fetchCalendars, calendar]);
+  }, [calendarGroups, refreshCalendars, refreshEvents]);
 
-  // Close mobile sidebar on navigation
-  const prevDateRef = useRef(calendar.currentDate);
-  const prevViewRef = useRef(calendar.viewType);
+  // Track changes and close mobile sidebar
+  const prevDateRef = useRef(currentDate);
+  const prevViewRef = useRef(viewType);
 
-  // Track changes and close sidebar (no setState in effect, just refs)
   if (
-    (prevDateRef.current !== calendar.currentDate ||
-     prevViewRef.current !== calendar.viewType) &&
+    (prevDateRef.current !== currentDate ||
+     prevViewRef.current !== viewType) &&
     mobileSidebarOpen
   ) {
-    // Schedule state update for next render
     queueMicrotask(() => setMobileSidebarOpen(false));
   }
 
-  prevDateRef.current = calendar.currentDate;
-  prevViewRef.current = calendar.viewType;
+  prevDateRef.current = currentDate;
+  prevViewRef.current = viewType;
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background safe-top">
       <Header
-        currentDate={calendar.currentDate}
-        viewType={calendar.viewType}
-        onViewTypeChange={calendar.setViewType}
-        onNavigateBack={calendar.navigateBack}
-        onNavigateForward={calendar.navigateForward}
-        onNavigateToday={calendar.navigateToday}
-        onCreateEvent={calendar.createEvent}
-        onOpenSearch={calendar.toggleCommandMenu}
+        currentDate={currentDate}
+        viewType={viewType}
+        onViewTypeChange={setViewType}
+        onNavigateBack={navigateBack}
+        onNavigateForward={navigateForward}
+        onNavigateToday={navigateToday}
+        onCreateEvent={createEvent}
+        onOpenSearch={toggleCommandMenu}
         onSync={handleSync}
         isMobile={isMobile}
         onToggleMobileSidebar={() => setMobileSidebarOpen((p) => !p)}
       />
       <div className="flex flex-1 overflow-hidden">
-        {/* Mobile sidebar overlay */}
         {isMobile && mobileSidebarOpen && (
           <>
             <div
@@ -214,9 +163,9 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
             />
             <div className="fixed inset-y-0 left-0 z-50 w-72 animate-slide-in-left safe-top">
               <Sidebar
-                selectedDate={calendar.currentDate}
+                selectedDate={currentDate}
                 onDateSelect={(date) => {
-                  calendar.setCurrentDate(date);
+                  router.push("/dashboard");
                   setMobileSidebarOpen(false);
                 }}
                 calendarGroups={calendarGroups}
@@ -235,11 +184,10 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
             </div>
           </>
         )}
-        {/* Desktop sidebar */}
         {!isMobile && (
           <Sidebar
-            selectedDate={calendar.currentDate}
-            onDateSelect={calendar.setCurrentDate}
+            selectedDate={currentDate}
+            onDateSelect={(date) => {}} // Handle navigation via URL in real app
             calendarGroups={calendarGroups}
             onToggleCalendar={handleToggleCalendar}
             onChangeCalendarColor={handleChangeCalendarColor}
@@ -255,20 +203,19 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         )}
         <main className="flex-1 overflow-hidden">{children}</main>
       </div>
-      {/* Mobile bottom navigation */}
       {isMobile && (
         <MobileNav
-          viewType={calendar.viewType}
-          onViewTypeChange={calendar.setViewType}
+          viewType={viewType}
+          onViewTypeChange={setViewType}
         />
       )}
       <CommandMenu
-        onCreateEvent={calendar.createEvent}
+        onCreateEvent={createEvent}
         onNavigateToSettings={() => router.push("/settings")}
-        onNavigateToday={calendar.navigateToday}
+        onNavigateToday={navigateToday}
         onNavigateToTasks={() => router.push("/dashboard/tasks")}
         onNavigateToFocus={() => router.push("/dashboard/today")}
-        onEventClick={calendar.openEvent}
+        onEventClick={openEvent}
       />
     </div>
   );

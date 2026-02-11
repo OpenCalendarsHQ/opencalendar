@@ -230,6 +230,10 @@ export async function fetchGitHubRepositories(
 
   if (!response.ok) {
     const error = await response.text();
+    if (response.status === 401) {
+      console.error("[GitHub] Bad credentials, unauthorized");
+      return []; // Return empty list instead of throwing to avoid 500
+    }
     throw new Error(`Failed to fetch GitHub repositories: ${error}`);
   }
 

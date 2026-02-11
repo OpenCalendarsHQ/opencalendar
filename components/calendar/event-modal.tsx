@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { X, MapPin, AlignLeft, Clock, Trash2, Calendar, ExternalLink, Repeat } from "lucide-react";
 import { format } from "@/lib/utils/date";
+import { useSettings } from "@/lib/settings-context";
+import { useCalendar } from "@/lib/calendar-context";
 import type { CalendarEvent } from "@/lib/types";
 import { RecurrenceEditor } from "./recurrence-editor";
 
@@ -23,6 +25,8 @@ interface CalendarOption {
 }
 
 export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: EventModalProps) {
+  const { settings } = useSettings();
+  const { calendarGroups } = useCalendar();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
@@ -39,40 +43,34 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
   const [rrule, setRrule] = useState<string | null>(null);
   const [showRecurrence, setShowRecurrence] = useState(false);
 
-  // Fetch calendars
+  // Sync calendars from context - NO API FETCH HERE
   useEffect(() => {
-    const fetchCalendars = async () => {
-      try {
-        const res = await fetch("/api/calendars");
-        if (res.ok) {
-          const data = await res.json();
-          const allCalendars: CalendarOption[] = [];
-          data.forEach((account: any) => {
-            account.calendars?.forEach((cal: any) => {
-              if (!cal.isReadOnly) {
-                allCalendars.push({
-                  id: cal.id,
-                  name: cal.name,
-                  color: cal.color,
-                  isReadOnly: cal.isReadOnly || false,
-                });
-              }
+    if (isOpen && calendarGroups.length > 0) {
+      const allCalendars: CalendarOption[] = [];
+      calendarGroups.forEach((account: any) => {
+        account.calendars?.forEach((cal: any) => {
+          if (!cal.isReadOnly) {
+            allCalendars.push({
+              id: cal.id,
+              name: cal.name,
+              color: cal.color,
+              isReadOnly: cal.isReadOnly || false,
             });
-          });
-          setCalendars(allCalendars);
-          // Set default calendar if creating new event
-          if (isNew && allCalendars.length > 0 && !calendarId) {
-            setCalendarId(allCalendars[0].id);
           }
-        }
-      } catch (error) {
-        console.error("Failed to fetch calendars:", error);
+        });
+      });
+      setCalendars(allCalendars);
+      
+      // Set default calendar if creating new event
+      if (isNew && allCalendars.length > 0 && !calendarId) {
+        const defaultId = settings.defaultCalendarId && allCalendars.some(c => c.id === settings.defaultCalendarId)
+          ? settings.defaultCalendarId
+          : allCalendars[0].id;
+        
+        setCalendarId(defaultId);
       }
-    };
-    if (isOpen) {
-      fetchCalendars();
     }
-  }, [isOpen, isNew, calendarId]);
+  }, [isOpen, isNew, calendarGroups, calendarId, settings.defaultCalendarId]);
 
   useEffect(() => {
     if (event) {
@@ -233,7 +231,7 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
             <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <div className="flex flex-wrap items-center gap-1.5">
               <input type="date" value={startDate} onChange={(e) => handleStartDateChange(e.target.value)}
-                className="rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground" />
+                className="rounded-md border border-border bg-background px-2.5 py-1 text-xs text-foreground" />
               {!isAllDay && (
                 <input type="time" value={startTime} onChange={(e) => handleStartTimeChange(e.target.value)}
                   step="900"
@@ -246,7 +244,7 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
                   className="rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground" />
               )}
               <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
-                className="rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground" />
+                className="rounded-md border border-border bg-background px-2.5 py-1 text-xs text-foreground" />
             </div>
           </div>
 

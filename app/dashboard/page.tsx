@@ -23,10 +23,21 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const { data: session, isPending } = useSession();
   const [rawEvents, setRawEvents] = useState<any[]>([]);
+  const eventCache = useRef<Map<string, any[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { currentDate, viewType, weekStartsOn, setCurrentDate, setViewType, registerCreateEvent, registerOpenEvent, registerRefreshEvents, visibleCalendarIds } = useCalendar();
+  const { 
+    currentDate, 
+    viewType, 
+    weekStartsOn, 
+    setCurrentDate, 
+    setViewType, 
+    registerCreateEvent, 
+    registerOpenEvent, 
+    registerRefreshEvents, 
+    visibleCalendarIds 
+  } = useCalendar();
   const { todos, toggleTodo } = useTodos();
   const hasSynced = useRef(false);
   const hasInitialized = useRef(false);
@@ -91,6 +102,14 @@ function DashboardContent() {
 
   const fetchEvents = useCallback(
     async (signal?: AbortSignal) => {
+      const cacheKey = `${dateRange.start}-${dateRange.end}`;
+      
+      // Use cache for instant feedback if available
+      if (eventCache.current.has(cacheKey)) {
+        setRawEvents(eventCache.current.get(cacheKey)!);
+        setLoading(false);
+      }
+
       try {
         setError(null); // Clear previous errors
         const url = `/api/events?start=${encodeURIComponent(dateRange.start)}&end=${encodeURIComponent(dateRange.end)}`;
@@ -122,8 +141,8 @@ function DashboardContent() {
         const data = await res.json();
         if (Array.isArray(data)) {
           // Store raw events (including RRULE metadata)
-          // Client-side hook will expand recurring events
           setRawEvents(data);
+          eventCache.current.set(cacheKey, data);
           setLoading(false);
           return data.length;
         } else {
@@ -132,19 +151,18 @@ function DashboardContent() {
           return 0;
         }
       } catch (err) {
-        // Ignore abort errors (expected when switching views)
+        // Ignore abort errors
         if (err instanceof DOMException && err.name === "AbortError") {
           return 0;
         }
 
-        // Handle network errors
         console.error("Fetch events error:", err);
         setError(t("networkError"));
         setLoading(false);
         return 0;
       }
     },
-    [dateRange, router]
+    [dateRange, router, t]
   );
 
   // Auto-sync on first load if no events (background, non-blocking)
@@ -154,24 +172,17 @@ function DashboardContent() {
     try {
       const res = await fetch("/api/calendars");
 
-      // Handle authentication errors
       if (res.status === 401) {
         router.push("/auth/sign-in");
         return;
       }
 
-      if (!res.ok) {
-        console.warn("Failed to fetch calendars for sync:", res.status);
-        return;
-      }
+      if (!res.ok) return;
 
       const groups = await res.json();
-      if (!Array.isArray(groups)) {
-        console.warn("Invalid calendars response:", groups);
-        return;
-      }
+      if (!Array.isArray(groups)) return;
 
-      // Sync all accounts in parallel for better performance
+      // Sync all accounts in parallel
       const syncPromises = groups
         .filter(group => group.provider !== "local")
         .map(group => {
@@ -182,25 +193,21 @@ function DashboardContent() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: "sync", accountId: group.id }),
           }).catch((err) => {
-            console.warn(`Sync failed for ${group.provider} account ${group.id}:`, err);
+            console.warn(`Sync failed for ${group.provider}:`, err);
           });
         });
 
-      // Wait for all syncs to complete, then refresh events
       await Promise.all(syncPromises);
       await fetchEvents();
     } catch (err) {
       console.error("Trigger sync error:", err);
-      // Don't show error to user - sync is best-effort background operation
     }
   }, [fetchEvents, router]);
 
   // Fetch events when date range changes or session becomes available
   useEffect(() => {
-    // Only fetch if session is available
     if (isPending || !session) return;
 
-    // Cancel previous request
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -215,7 +222,7 @@ function DashboardContent() {
     return () => controller.abort();
   }, [fetchEvents, triggerSync, session, isPending]);
 
-  // Rapid polling during initial sync (every 2 seconds for 60 seconds)
+  // Rapid polling during initial sync
   useEffect(() => {
     if (!isSyncing) return;
 
@@ -224,23 +231,16 @@ function DashboardContent() {
 
     const pollEvents = async () => {
       const eventCount = await fetchEvents();
-      // If we got events, stop rapid polling after a short delay
       if (eventCount > 0) {
-        setTimeout(() => {
-          setIsSyncing(false);
-        }, 3000); // Wait 3s to catch any remaining events
+        setTimeout(() => setIsSyncing(false), 3000);
       }
     };
 
-    // Poll every 2 seconds
     pollInterval = setInterval(pollEvents, 2000);
 
-    // Stop rapid polling after 60 seconds max
     checkInterval = setInterval(() => {
       const elapsed = Date.now() - syncingStartTime.current;
-      if (elapsed > 60000) {
-        setIsSyncing(false);
-      }
+      if (elapsed > 60000) setIsSyncing(false);
     }, 1000);
 
     return () => {
@@ -249,15 +249,15 @@ function DashboardContent() {
     };
   }, [isSyncing, fetchEvents]);
 
-  // Periodic refresh (every 5 minutes) - only when tab is visible and not rapid polling
+  // Periodic refresh
   useEffect(() => {
-    if (isSyncing) return; // Skip normal polling during rapid sync
+    if (isSyncing) return;
 
     let interval: NodeJS.Timeout | null = null;
 
     const startInterval = () => {
-      if (interval) return; // Already running
-      interval = setInterval(() => fetchEvents(), 300_000); // 5 minutes
+      if (interval) return;
+      interval = setInterval(() => fetchEvents(), 300_000);
     };
 
     const stopInterval = () => {
@@ -271,16 +271,12 @@ function DashboardContent() {
       if (document.hidden) {
         stopInterval();
       } else {
-        // When tab becomes visible, fetch immediately and restart interval
         fetchEvents();
         startInterval();
       }
     };
 
-    // Start interval if tab is visible
-    if (!document.hidden) {
-      startInterval();
-    }
+    if (!document.hidden) startInterval();
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
@@ -290,7 +286,6 @@ function DashboardContent() {
     };
   }, [fetchEvents, isSyncing]);
 
-  // Register create event and refresh functions with context
   useEffect(() => {
     if (calendarRef.current) {
       registerCreateEvent(() => calendarRef.current?.openCreateModal());
@@ -301,28 +296,14 @@ function DashboardContent() {
 
   return (
     <>
-      {/* Error notification */}
       {error && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 backdrop-blur-sm px-4 py-2 shadow-lg">
-            <svg
-              className="h-4 w-4 text-destructive"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
+            <svg className="h-4 w-4 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span className="text-sm font-medium text-destructive">{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="ml-2 text-destructive hover:text-destructive/80 transition-colors"
-            >
+            <button onClick={() => setError(null)} className="ml-2 text-destructive hover:text-destructive/80 transition-colors">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -331,7 +312,6 @@ function DashboardContent() {
         </div>
       )}
 
-      {/* Sync notification */}
       {isSyncing && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex items-center gap-2 rounded-full border border-border bg-popover/95 backdrop-blur-sm px-4 py-2 shadow-lg">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   getMonthDays, formatMonthYear, formatWeekDay, formatDayNumber,
@@ -16,9 +16,23 @@ interface MiniCalendarProps {
 export function MiniCalendar({ selectedDate, onDateSelect }: MiniCalendarProps) {
   const { settings } = useSettings();
   const [viewMonth, setViewMonth] = useState(new Date());
-  const monthDays = getMonthDays(viewMonth, settings.weekStartsOn);
-  const weekDayHeaders = getWeekDays(new Date(), settings.weekStartsOn).map((d) =>
-    formatWeekDay(d).charAt(0).toUpperCase()
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering settings-dependent content after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const monthDays = useMemo(() => 
+    getMonthDays(viewMonth, mounted ? settings.weekStartsOn : 1),
+    [viewMonth, settings.weekStartsOn, mounted]
+  );
+
+  const weekDayHeaders = useMemo(() => 
+    getWeekDays(new Date(), mounted ? settings.weekStartsOn : 1).map((d) =>
+      formatWeekDay(d).charAt(0).toUpperCase()
+    ),
+    [settings.weekStartsOn, mounted]
   );
 
   return (

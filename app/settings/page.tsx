@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
@@ -23,6 +23,7 @@ import { AccountTab } from "./components/account-tab";
 import { AppearanceTab } from "./components/appearance-tab";
 import { RegionTab } from "./components/region-tab";
 import { TasksTab } from "./components/tasks-tab";
+import { useSettings } from "@/lib/settings-context";
 
 // Inline Apple SVG icon
 function AppleIcon({ className }: { className?: string }) {
@@ -71,12 +72,15 @@ interface ConnectedAccount {
 
 type TabType = "calendars" | "account" | "appearance" | "region" | "tasks";
 
-export default function SettingsPage() {
+function SettingsContent() {
   const t = useTranslations("Settings");
   const commonT = useTranslations("Common");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { settings, updateSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<TabType>("calendars");
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
+  const [allCalendars, setAllCalendars] = useState<{ id: string; name: string; accountEmail: string }[]>([]);
   const [showICloudModal, setShowICloudModal] = useState(false);
   const [iCloudEmail, setICloudEmail] = useState("");
   const [iCloudPassword, setICloudPassword] = useState("");
@@ -110,6 +114,7 @@ export default function SettingsPage() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
+          // Process accounts
           setAccounts(
             data
               .filter((g: Record<string, unknown>) => g.provider !== "local")
@@ -122,6 +127,23 @@ export default function SettingsPage() {
                 calendarCount: Array.isArray(g.calendars) ? g.calendars.length : 0,
               }))
           );
+
+          // Process all individual calendars for the default selector
+          const flattened: { id: string; name: string; accountEmail: string }[] = [];
+          data.forEach((group: any) => {
+            if (Array.isArray(group.calendars)) {
+              group.calendars.forEach((cal: any) => {
+                if (!cal.isReadOnly) {
+                  flattened.push({
+                    id: cal.id,
+                    name: cal.name,
+                    accountEmail: group.email || "Lokaal",
+                  });
+                }
+              });
+            }
+          });
+          setAllCalendars(flattened);
         }
       }
     } catch { /* ignore */ } finally {
@@ -132,13 +154,17 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchAccounts();
 
+    // Set active tab from URL parameter if present
+    const tab = searchParams.get("tab") as TabType;
+    if (tab && tabs.some(t => t.id === tab)) {
+      setActiveTab(tab);
+    }
+
     // Check for syncing flag or connected flag in URL
-    const params = new URLSearchParams(window.location.search);
-    const connected = params.get('connected');
-    const syncing = params.get('syncing');
+    const connected = searchParams.get('connected');
+    const syncing = searchParams.get('syncing');
 
     if (syncing === 'true' || connected) {
-      // Show success message
       if (connected === 'google') {
         setSuccess('Google Calendar succesvol verbonden - synchronisatie loopt...');
       } else if (connected === 'microsoft') {
@@ -147,12 +173,10 @@ export default function SettingsPage() {
         setSuccess('Account verbonden - synchronisatie loopt...');
       }
 
-      // Poll for updates while syncing (without showing loading spinner)
       const interval = setInterval(() => {
         fetchAccounts(false);
-      }, 2000); // Refresh every 2 seconds
+      }, 2000);
 
-      // Stop polling and clear message after 30 seconds
       setTimeout(() => {
         clearInterval(interval);
         setSuccess(null);
@@ -160,7 +184,15 @@ export default function SettingsPage() {
 
       return () => clearInterval(interval);
     }
-  }, []);
+  }, [searchParams]);
+
+  const handleTabChange = (tabId: TabType) => {
+    setActiveTab(tabId);
+    // Update URL without full refresh
+    const params = new URLSearchParams(window.location.search);
+    params.set("tab", tabId);
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+  };
 
   const handleConnectGoogle = () => {
     window.location.href = "/api/sync/google?action=connect";
@@ -187,12 +219,10 @@ export default function SettingsPage() {
         return;
       }
       if (res.ok) {
-        // Close modal and refresh accounts
         setShowICloudModal(false);
         setICloudEmail("");
         setICloudPassword("");
-        // Start polling for updates
-        window.history.replaceState(null, "", "/settings?syncing=true");
+        window.history.replaceState(null, "", "/settings?tab=calendars&syncing=true");
         const interval = setInterval(() => {
           fetchAccounts(false);
         }, 2000);
@@ -230,14 +260,12 @@ export default function SettingsPage() {
         return;
       }
       if (res.ok) {
-        // Close modal and reset fields
         setShowCalDAVModal(false);
         setCaldavServerUrl("");
         setCaldavUsername("");
         setCaldavEmail("");
         setCaldavPassword("");
-        // Start polling for updates
-        window.history.replaceState(null, "", "/settings?syncing=true");
+        window.history.replaceState(null, "", "/settings?tab=calendars&syncing=true");
         setSuccess("CalDAV account verbonden - synchronisatie loopt...");
         const interval = setInterval(() => {
           fetchAccounts(false);
@@ -329,7 +357,6 @@ export default function SettingsPage() {
       if (res.ok) {
         await fetchAccounts();
       } else if (res.status === 401) {
-        // Invalid credentials error
         const data = await res.json().catch(() => ({}));
         const errorData = data as { error?: string; message?: string };
         if (errorData.error === "invalid_credentials") {
@@ -369,7 +396,7 @@ export default function SettingsPage() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-xs font-medium transition-colors ${
                   activeTab === tab.id
                     ? "border-foreground text-foreground"
@@ -386,7 +413,6 @@ export default function SettingsPage() {
 
       {/* Tab Content */}
       <div className="min-h-[400px]">
-        {/* Kalender accounts tab */}
         {activeTab === "calendars" && (
           <div>
             {error && (
@@ -402,6 +428,34 @@ export default function SettingsPage() {
                 <span>{success}</span>
               </div>
             )}
+
+            <div className="mb-6 rounded-lg border border-border bg-card p-4 shadow-sm">
+              <h2 className="mb-1 text-sm font-medium text-foreground">Standaard kalender</h2>
+              <p className="mb-4 text-xs text-muted-foreground">
+                Deze kalender wordt automatisch geselecteerd voor nieuwe evenementen en taken.
+              </p>
+              
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Selecteer kalender</label>
+                <select
+                  value={settings.defaultCalendarId || ""}
+                  onChange={(e) => updateSettings({ defaultCalendarId: e.target.value || null })}
+                  className="w-full max-w-md rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-foreground focus:outline-none focus:ring-1 focus:ring-foreground"
+                >
+                  <option value="">Geen (gebruik eerste beschikbare)</option>
+                  {allCalendars.map((cal) => (
+                    <option key={cal.id} value={cal.id}>
+                      {cal.name} ({cal.accountEmail})
+                    </option>
+                  ))}
+                </select>
+                {!settings.defaultCalendarId && allCalendars.length > 0 && (
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Tip: Selecteer een kalender om sneller nieuwe items toe te voegen.
+                  </p>
+                )}
+              </div>
+            </div>
 
             <div className="mb-4">
               <h2 className="mb-2 text-sm font-medium text-foreground">Verbonden accounts</h2>
@@ -490,7 +544,6 @@ export default function SettingsPage() {
               )}
             </div>
 
-            {/* Account toevoegen */}
             <div className="mt-4">
               <h3 className="mb-2 text-xs font-medium text-muted-foreground">Account toevoegen</h3>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -537,7 +590,6 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Lokale kalenders sectie */}
             <div className="mt-6">
               <h3 className="mb-2 text-xs font-medium text-muted-foreground">Lokale kalenders</h3>
               <p className="mb-3 text-xs text-muted-foreground">
@@ -560,16 +612,9 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Account tab */}
         {activeTab === "account" && <AccountTab />}
-
-        {/* Weergave tab */}
         {activeTab === "appearance" && <AppearanceTab />}
-
-        {/* Taal & regio tab */}
         {activeTab === "region" && <RegionTab />}
-
-        {/* Taken tab */}
         {activeTab === "tasks" && <TasksTab />}
       </div>
 
@@ -577,7 +622,7 @@ export default function SettingsPage() {
       {showICloudModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
           <div className="fixed inset-0 bg-black/20" onClick={() => setShowICloudModal(false)} />
-          <div className="relative w-full max-w-sm rounded-t-xl border border-border bg-popover p-5 shadow-lg safe-bottom md:rounded-lg">
+          <div className="relative w-full max-sm rounded-t-xl border border-border bg-popover p-5 shadow-lg safe-bottom md:rounded-lg">
             <h2 className="text-sm font-medium text-foreground">iCloud Calendar verbinden</h2>
             <div className="mt-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
               <p className="font-medium text-foreground">Hoe krijg ik een app-wachtwoord?</p>
@@ -626,7 +671,7 @@ export default function SettingsPage() {
       {showCalDAVModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
           <div className="fixed inset-0 bg-black/20" onClick={() => setShowCalDAVModal(false)} />
-          <div className="relative w-full max-w-md rounded-t-xl border border-border bg-popover p-5 shadow-lg safe-bottom md:rounded-lg">
+          <div className="relative w-full max-md rounded-t-xl border border-border bg-popover p-5 shadow-lg safe-bottom md:rounded-lg">
             <h2 className="text-sm font-medium text-foreground">CalDAV account verbinden</h2>
 
             {error && (
@@ -708,7 +753,7 @@ export default function SettingsPage() {
       {showLocalCalendarModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
           <div className="fixed inset-0 bg-black/20" onClick={() => setShowLocalCalendarModal(false)} />
-          <div className="relative w-full max-w-sm rounded-t-xl border border-border bg-popover p-5 shadow-lg safe-bottom md:rounded-lg">
+          <div className="relative w-full max-sm rounded-t-xl border border-border bg-popover p-5 shadow-lg safe-bottom md:rounded-lg">
             <h2 className="text-sm font-medium text-foreground">Lokale kalender aanmaken</h2>
 
             {error && (
@@ -779,3 +824,10 @@ export default function SettingsPage() {
   );
 }
 
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}>
+      <SettingsContent />
+    </Suspense>
+  );
+}

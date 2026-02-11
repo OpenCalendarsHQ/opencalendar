@@ -90,18 +90,28 @@ export async function POST(request: NextRequest) {
       }
 
       // Get default calendar for tasks or user's first writable calendar
-      const [calendar] = await db
-        .select()
-        .from(calendars)
-        .where(
-          and(
-            eq(calendars.isReadOnly, false),
-            eq(calendars.isVisible, true)
-          )
-        )
-        .limit(1);
+      let targetCalendarId = eventData.calendarId;
 
-      if (!calendar) {
+      if (!targetCalendarId) {
+        const [calendar] = await db
+          .select()
+          .from(calendars)
+          .innerJoin(taskProviders, eq(calendars.accountId, taskProviders.id))
+          .where(
+            and(
+              eq(taskProviders.userId, user.id),
+              eq(calendars.isReadOnly, false),
+              eq(calendars.isVisible, true)
+            )
+          )
+          .limit(1);
+        
+        if (calendar) {
+          targetCalendarId = calendar.calendars.id;
+        }
+      }
+
+      if (!targetCalendarId) {
         return NextResponse.json(
           { error: "No writable calendar found" },
           { status: 400 }
@@ -112,7 +122,7 @@ export async function POST(request: NextRequest) {
       const [event] = await db
         .insert(events)
         .values({
-          calendarId: calendar.id,
+          calendarId: targetCalendarId,
           title: task.tasks.title,
           description: `${task.tasks.description || ""}\n\nSource: ${task.tasks.externalUrl}`,
           startTime: new Date(eventData.startTime),
