@@ -119,15 +119,19 @@ function DashboardContent() {
         if (res.status === 401) {
           setError(t("sessionExpired"));
           router.push("/auth/sign-in");
-          return 0;
+          return -1; // Return -1 to indicate auth error (stops polling)
         }
 
         // Handle rate limiting
         if (res.status === 429) {
-          const data = await res.json();
-          setError(t("tooManyRequests", { seconds: Math.ceil((new Date(data.resetAt).getTime() - Date.now()) / 1000) }));
+          const retryAfter = res.headers.get('Retry-After');
+          const waitSeconds = retryAfter ? parseInt(retryAfter) : 60;
+          console.warn(`Rate limited, waiting ${waitSeconds}s`);
+          setError(t("tooManyRequests", { seconds: waitSeconds }));
           setLoading(false);
-          return 0;
+          // Stop syncing if we hit rate limits
+          setIsSyncing(false);
+          return -1; // Return -1 to stop polling
         }
 
         // Handle other errors
@@ -165,10 +169,34 @@ function DashboardContent() {
     [dateRange, router, t]
   );
 
+  // Check if user has any calendars before syncing
+  const hasCalendars = useCallback(async () => {
+    try {
+      const res = await fetch("/api/calendars");
+      if (res.status === 401) {
+        router.push("/auth/sign-in");
+        return false;
+      }
+      if (!res.ok) return false;
+      const groups = await res.json();
+      return Array.isArray(groups) && groups.length > 0;
+    } catch {
+      return false;
+    }
+  }, [router]);
+
   // Auto-sync on first load if no events (background, non-blocking)
   const triggerSync = useCallback(async () => {
     if (hasSynced.current) return;
     hasSynced.current = true;
+    
+    // First check if there are any calendars
+    const calendarsExist = await hasCalendars();
+    if (!calendarsExist) {
+      console.log("No calendars found, skipping sync");
+      return;
+    }
+    
     try {
       const res = await fetch("/api/calendars");
 
@@ -182,10 +210,14 @@ function DashboardContent() {
       const groups = await res.json();
       if (!Array.isArray(groups)) return;
 
-      // Sync all accounts in parallel
-      const syncPromises = groups
-        .filter(group => group.provider !== "local")
-        .map(group => {
+      // Sync all accounts in parallel (max 3 at a time to avoid rate limits)
+      const nonLocalGroups = groups.filter(group => group.provider !== "local");
+      if (nonLocalGroups.length === 0) return;
+      
+      // Sync in batches of 3 to avoid overwhelming the server
+      for (let i = 0; i < nonLocalGroups.length; i += 3) {
+        const batch = nonLocalGroups.slice(i, i + 3);
+        const syncPromises = batch.map(group => {
           const endpoint =
             group.provider === "google" ? "/api/sync/google" : "/api/sync/icloud";
           return fetch(endpoint, {
@@ -196,13 +228,18 @@ function DashboardContent() {
             console.warn(`Sync failed for ${group.provider}:`, err);
           });
         });
-
-      await Promise.all(syncPromises);
+        await Promise.all(syncPromises);
+        // Small delay between batches
+        if (i + 3 < nonLocalGroups.length) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
       await fetchEvents();
     } catch (err) {
       console.error("Trigger sync error:", err);
     }
-  }, [fetchEvents, router]);
+  }, [fetchEvents, router, hasCalendars]);
 
   // Fetch events when date range changes or session becomes available
   useEffect(() => {
@@ -214,7 +251,10 @@ function DashboardContent() {
 
     const init = async () => {
       const count = await fetchEvents(controller.signal);
-      if (count === 0 && !hasSynced.current) await triggerSync();
+      // Only trigger sync if we got 0 events (not -1 which means error)
+      if (count === 0 && !hasSynced.current) {
+        await triggerSync();
+      }
       hasInitialized.current = true;
     };
     init();
@@ -222,30 +262,53 @@ function DashboardContent() {
     return () => controller.abort();
   }, [fetchEvents, triggerSync, session, isPending]);
 
-  // Rapid polling during initial sync
+  // Rapid polling during initial sync - max 15 attempts with exponential backoff
   useEffect(() => {
     if (!isSyncing) return;
 
-    let pollInterval: NodeJS.Timeout | null = null;
-    let checkInterval: NodeJS.Timeout | null = null;
+    let pollCount = 0;
+    const maxPolls = 15;
+    let timeoutId: NodeJS.Timeout | null = null;
+    let isCancelled = false;
 
     const pollEvents = async () => {
+      if (isCancelled || pollCount >= maxPolls) {
+        setIsSyncing(false);
+        return;
+      }
+
+      pollCount++;
       const eventCount = await fetchEvents();
-      if (eventCount > 0) {
+      
+      // Stop polling if we got events, hit rate limit (-1), or auth error
+      if (eventCount > 0 || eventCount === -1) {
         setTimeout(() => setIsSyncing(false), 3000);
+        return;
+      }
+
+      // Exponential backoff: 2s, 2s, 2s, 4s, 4s, 4s, 8s, 8s...
+      const delay = Math.min(2000 * Math.pow(2, Math.floor((pollCount - 1) / 3)), 10000);
+      
+      if (pollCount < maxPolls) {
+        timeoutId = setTimeout(pollEvents, delay);
+      } else {
+        setIsSyncing(false);
       }
     };
 
-    pollInterval = setInterval(pollEvents, 2000);
+    // Start first poll immediately
+    timeoutId = setTimeout(pollEvents, 1000);
 
-    checkInterval = setInterval(() => {
-      const elapsed = Date.now() - syncingStartTime.current;
-      if (elapsed > 60000) setIsSyncing(false);
-    }, 1000);
+    // Safety timeout after 60 seconds
+    const safetyTimeout = setTimeout(() => {
+      isCancelled = true;
+      setIsSyncing(false);
+    }, 60000);
 
     return () => {
-      if (pollInterval) clearInterval(pollInterval);
-      if (checkInterval) clearInterval(checkInterval);
+      isCancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      clearTimeout(safetyTimeout);
     };
   }, [isSyncing, fetchEvents]);
 

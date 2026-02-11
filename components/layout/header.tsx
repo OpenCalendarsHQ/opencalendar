@@ -47,25 +47,24 @@ export function Header({
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
-  // Auto-sync every 5 minutes when tab is visible
+  // Auto-sync every 5 minutes when tab is visible - only if we have a sync function
   useEffect(() => {
+    if (!onSync) return;
+    
     const syncData = async () => {
-      // Only sync if tab is visible and onSync is provided
-      if (onSync && !isSyncing && !document.hidden) {
-        setIsSyncing(true);
-        try {
-          await onSync();
-          setLastSyncTime(new Date());
-        } catch (error) {
-          console.error("Auto-sync failed:", error);
-        } finally {
-          setIsSyncing(false);
-        }
+      // Only sync if tab is visible and not already syncing
+      if (isSyncing || document.hidden) return;
+      
+      setIsSyncing(true);
+      try {
+        await onSync();
+        setLastSyncTime(new Date());
+      } catch (error) {
+        console.error("Auto-sync failed:", error);
+      } finally {
+        setIsSyncing(false);
       }
     };
-
-    // Initial sync
-    syncData();
 
     // Sync every 5 minutes (300000ms)
     const interval = setInterval(syncData, 300000);
@@ -73,8 +72,8 @@ export function Header({
     // Listen for visibility changes to pause/resume sync
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        // Tab became visible, sync immediately
-        syncData();
+        // Tab became visible, sync after a short delay
+        setTimeout(syncData, 2000);
       }
     };
 
@@ -84,7 +83,7 @@ export function Header({
       clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [onSync, isSyncing]);
+  }, [onSync]);
 
   const handleManualSync = async () => {
     if (onSync && !isSyncing) {
