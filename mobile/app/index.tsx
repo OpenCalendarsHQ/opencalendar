@@ -36,17 +36,21 @@ export default function LoginScreen() {
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Logo/Icon */}
+        {/* Logo */}
         <View style={styles.logoContainer}>
           <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>📅</Text>
+            <Image
+              source={require('../assets/icon.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
         </View>
 
         {/* Title */}
-        <Text style={styles.title}>OpenCalendar</Text>
+        <Text style={styles.title}>OpenCalendars</Text>
         <Text style={styles.subtitle}>
-          Your calendar, beautifully organized
+          Build better schedules with OpenCalendars
         </Text>
 
         {/* Sign In Button */}
@@ -107,8 +111,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  logoText: {
-    fontSize: 60,
+  logoImage: {
+    width: 80,
+    height: 80,
   },
   title: {
     fontSize: FontSizes.xxxl,

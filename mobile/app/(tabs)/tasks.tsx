@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../lib/api/client';
+import { TaskSheet, TaskFormData } from '../../components/tasks/TaskSheet';
 import { Colors, Spacing, FontSizes, FontWeights, BorderRadius } from '../../constants/theme';
 
 interface Task {
@@ -27,6 +28,7 @@ interface Task {
 export default function TasksScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showTaskSheet, setShowTaskSheet] = useState(false);
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -52,6 +54,11 @@ export default function TasksScreen() {
     } catch (error) {
       console.error('Failed to update task:', error);
     }
+  };
+
+  const handleSaveTask = async (taskData: TaskFormData) => {
+    await apiClient.createTask(taskData);
+    await fetchTasks();
   };
 
   const todoTasks = tasks.filter(t => t.status === 'todo');
@@ -91,11 +98,18 @@ export default function TasksScreen() {
         </ScrollView>
 
         {/* Add Task Button */}
-        <TouchableOpacity style={styles.fab}>
+        <TouchableOpacity style={styles.fab} onPress={() => setShowTaskSheet(true)}>
           <BlurView intensity={40} tint="dark" style={styles.fabBlur}>
             <Text style={styles.fabText}>+</Text>
           </BlurView>
         </TouchableOpacity>
+
+        {/* Task Sheet */}
+        <TaskSheet
+          visible={showTaskSheet}
+          onClose={() => setShowTaskSheet(false)}
+          onSave={handleSaveTask}
+        />
       </SafeAreaView>
     </View>
   );

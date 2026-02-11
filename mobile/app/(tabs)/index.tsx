@@ -6,12 +6,14 @@ import {
   TouchableOpacity,
   SafeAreaView,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useEvents } from '../../lib/hooks/useEvents';
 import { useCalendars } from '../../lib/hooks/useCalendars';
+import { EventSheet, EventFormData } from '../../components/calendar/EventSheet';
 import { useState, useMemo } from 'react';
 import {
   format,
@@ -29,7 +31,8 @@ import { Colors, Spacing, FontSizes, FontWeights, BorderRadius } from '../../con
 
 export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const { events, loading, refetch, currentMonth, setCurrentMonth } = useEvents();
+  const [showEventSheet, setShowEventSheet] = useState(false);
+  const { events, loading, refetch, currentMonth, setCurrentMonth, createEvent } = useEvents();
   const { calendars } = useCalendars();
 
   // Get visible calendar IDs
@@ -62,6 +65,11 @@ export default function CalendarScreen() {
     setCurrentMonth(newMonth);
   };
 
+  const handleSaveEvent = async (eventData: EventFormData) => {
+    await createEvent(eventData);
+    await refetch();
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -75,18 +83,28 @@ export default function CalendarScreen() {
       />
 
       <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
+        {/* Header - web app style */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>
-            {format(currentMonth, 'MMMM yyyy')}
-          </Text>
-          <View style={styles.headerButtons}>
-            <TouchableOpacity onPress={goToPreviousMonth} style={styles.navButton}>
-              <Text style={styles.navButtonText}>‹</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={goToNextMonth} style={styles.navButton}>
-              <Text style={styles.navButtonText}>›</Text>
-            </TouchableOpacity>
+          <View style={styles.headerTop}>
+            <Image
+              source={require('../../assets/icon.png')}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.headerBrand}>OPENCALENDARS</Text>
+          </View>
+          <View style={styles.headerNav}>
+            <Text style={styles.headerTitle}>
+              {format(currentMonth, 'MMMM yyyy')}
+            </Text>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity onPress={goToPreviousMonth} style={styles.navButton}>
+                <Text style={styles.navButtonText}>‹</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={goToNextMonth} style={styles.navButton}>
+                <Text style={styles.navButtonText}>›</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -124,11 +142,19 @@ export default function CalendarScreen() {
         </ScrollView>
 
         {/* Add Event Button */}
-        <TouchableOpacity style={styles.fab}>
+        <TouchableOpacity style={styles.fab} onPress={() => setShowEventSheet(true)}>
           <BlurView intensity={40} tint="dark" style={styles.fabBlur}>
             <Text style={styles.fabText}>+</Text>
           </BlurView>
         </TouchableOpacity>
+
+        {/* Event Sheet */}
+        <EventSheet
+          visible={showEventSheet}
+          onClose={() => setShowEventSheet(false)}
+          onSave={handleSaveEvent}
+          selectedDate={selectedDate}
+        />
       </SafeAreaView>
     </View>
   );
@@ -239,11 +265,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  headerLogo: {
+    width: 32,
+    height: 32,
+  },
+  headerBrand: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.bold,
+    color: '#fff',
+    letterSpacing: 1,
+  },
+  headerNav: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
   },
   headerTitle: {
     fontSize: FontSizes.xxl,

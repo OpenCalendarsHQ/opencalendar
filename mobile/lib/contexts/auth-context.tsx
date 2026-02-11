@@ -3,16 +3,27 @@ import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 import { Config } from '../../constants/config';
 
 // Initialize WebBrowser for auth
 WebBrowser.maybeCompleteAuthSession();
 
 // Redirect URL for OAuth
-const redirectUrl = AuthSession.makeRedirectUri({
-  scheme: Config.OAUTH_REDIRECT_SCHEME,
-  path: 'auth/callback',
-});
+// Expo Go: use default (exp://...) - add to Supabase Redirect URLs
+// Dev/Production build: opencalendar://auth/callback - add to Supabase
+function getRedirectUrl(): string {
+  // In Expo Go, custom scheme doesn't work - use default exp:// URL
+  if (__DEV__ && (Platform.OS === 'ios' || Platform.OS === 'android')) {
+    const url = AuthSession.makeRedirectUri({ path: 'auth/callback' });
+    // If we get exp:// URL, use it for Expo Go
+    if (url.startsWith('exp://')) return url;
+  }
+  return AuthSession.makeRedirectUri({
+    scheme: Config.OAUTH_REDIRECT_SCHEME,
+    path: 'auth/callback',
+  });
+}
 
 interface AuthContextType {
   session: Session | null;
@@ -79,12 +90,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async () => {
     try {
+      const redirectUrl = getRedirectUrl();
+      if (__DEV__) {
+        console.log('[Auth] Redirect URL - voeg toe aan Supabase:', redirectUrl);
+      }
       // Create auth session
       const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google', // Change to your preferred provider
+        provider: 'google',
         options: {
           redirectTo: redirectUrl,
-          skipBrowserRedirect: false,
+          skipBrowserRedirect: true, // We handle redirect in WebBrowser
         },
       });
 
@@ -98,9 +113,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
 
         if (result.type === 'success') {
-          // Extract tokens from URL
+          // Supabase returns tokens in hash fragment (#access_token=...)
           const url = result.url;
-          const params = new URL(url).searchParams;
+          const hashPart = url.includes('#') ? url.split('#')[1] : '';
+          const params = new URLSearchParams(hashPart || url.split('?')[1] || '');
           const accessToken = params.get('access_token');
           const refreshToken = params.get('refresh_token');
 

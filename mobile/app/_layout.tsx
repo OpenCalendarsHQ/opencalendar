@@ -28,12 +28,11 @@ function RootLayoutNav() {
     <Stack
       screenOptions={{
         headerShown: false,
-        animation: 'fade',
         contentStyle: { backgroundColor: '#000' },
       }}
     >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="index" options={{ animation: 'fade' }} />
+      <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
     </Stack>
   );
 }
