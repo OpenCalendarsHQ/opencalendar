@@ -6,7 +6,6 @@ import { format } from "@/lib/utils/date";
 import { useSettings } from "@/lib/settings-context";
 import { useCalendar } from "@/lib/calendar-context";
 import type { CalendarEvent } from "@/lib/types";
-import { RecurrenceEditor } from "./recurrence-editor";
 
 interface EventModalProps {
   event: CalendarEvent | null;
@@ -41,7 +40,6 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
   const [calendarId, setCalendarId] = useState("");
   const [calendars, setCalendars] = useState<CalendarOption[]>([]);
   const [rrule, setRrule] = useState<string | null>(null);
-  const [showRecurrence, setShowRecurrence] = useState(false);
 
   // Sync calendars from context - NO API FETCH HERE
   useEffect(() => {
@@ -84,7 +82,6 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
       setIsAllDay(event.isAllDay);
       setCalendarId(event.calendarId || "");
       setRrule(event.rrule || null);
-      setShowRecurrence(!!event.rrule);
       // Reset map state when event changes
       setShowMap(false);
       setMapCoords(null);
@@ -253,39 +250,191 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
             <span className="text-xs text-foreground">Hele dag</span>
           </label>
 
-          {showRecurrence ? (
-            <div className="rounded-lg border border-border bg-muted/30 p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-medium text-foreground">Herhaling</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowRecurrence(false);
+          <div className="space-y-3">
+            <div className="flex items-center gap-2.5">
+              <Repeat className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <select
+                value={rrule ? (rrule.includes('FREQ=WEEKLY') ? 'weekly' : rrule.includes('FREQ=DAILY') ? 'daily' : rrule.includes('FREQ=MONTHLY') ? 'monthly' : 'none') : 'none'}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === 'none') {
                     setRrule(null);
-                  }}
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Verwijderen
-                </button>
-              </div>
-              <RecurrenceEditor
-                rrule={rrule}
-                startDate={new Date(startDate)}
-                onChange={(newRrule) => {
-                  setRrule(newRrule);
+                  } else if (value === 'daily') {
+                    setRrule('FREQ=DAILY;INTERVAL=1');
+                  } else if (value === 'weekly') {
+                    const dayMap = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+                    const dayIndex = new Date(startDate).getDay();
+                    setRrule(`FREQ=WEEKLY;INTERVAL=1;BYDAY=${dayMap[dayIndex]}`);
+                  } else if (value === 'monthly') {
+                    const date = new Date(startDate).getDate();
+                    setRrule(`FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=${date}`);
+                  }
                 }}
-              />
+                className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground focus:border-foreground focus:outline-none"
+              >
+                <option value="none">Nooit herhalen</option>
+                <option value="daily">Dagelijks</option>
+                <option value="weekly">Wekelijks</option>
+                <option value="monthly">Maandelijks</option>
+              </select>
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowRecurrence(true)}
-              className="flex items-center gap-2.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Repeat className="h-3.5 w-3.5" />
-              <span>Herhaling toevoegen</span>
-            </button>
-          )}
+            
+            {rrule && (
+              <div className="ml-6 space-y-3 rounded-md border border-border bg-muted/30 p-3">
+                {/* Interval */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Herhaal elke</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="52"
+                    value={parseInt(rrule.match(/INTERVAL=(\d+)/)?.[1] || '1')}
+                    onChange={(e) => {
+                      const interval = Math.max(1, parseInt(e.target.value) || 1);
+                      setRrule(rrule.replace(/INTERVAL=\d+/, `INTERVAL=${interval}`));
+                    }}
+                    className="w-16 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {rrule.includes('FREQ=DAILY') ? (parseInt(rrule.match(/INTERVAL=(\d+)/)?.[1] || '1') === 1 ? 'dag' : 'dagen') : 
+                     rrule.includes('FREQ=WEEKLY') ? (parseInt(rrule.match(/INTERVAL=(\d+)/)?.[1] || '1') === 1 ? 'week' : 'weken') : 
+                     (parseInt(rrule.match(/INTERVAL=(\d+)/)?.[1] || '1') === 1 ? 'maand' : 'maanden')}
+                  </span>
+                </div>
+
+                {/* Weekday selector for weekly */}
+                {rrule.includes('FREQ=WEEKLY') && (
+                  <div className="space-y-2">
+                    <span className="text-xs text-muted-foreground">Op</span>
+                    <div className="flex gap-1">
+                      {[
+                        { value: 'MO', label: 'Ma' },
+                        { value: 'TU', label: 'Di' },
+                        { value: 'WE', label: 'Wo' },
+                        { value: 'TH', label: 'Do' },
+                        { value: 'FR', label: 'Vr' },
+                        { value: 'SA', label: 'Za' },
+                        { value: 'SU', label: 'Zo' },
+                      ].map((day) => {
+                        const isSelected = rrule.includes(`BYDAY=${day.value}`) || rrule.includes(`BYDAY=${day.value},`) || rrule.includes(`,${day.value}`);
+                        return (
+                          <button
+                            key={day.value}
+                            type="button"
+                            onClick={() => {
+                              const currentDays = rrule.match(/BYDAY=([^;]+)/)?.[1]?.split(',') || [];
+                              let newDays;
+                              if (currentDays.includes(day.value)) {
+                                newDays = currentDays.filter((d: string) => d !== day.value);
+                                if (newDays.length === 0) newDays = [day.value]; // Keep at least one day
+                              } else {
+                                newDays = [...currentDays, day.value].sort((a: string, b: string) => {
+                                  const order = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+                                  return order.indexOf(a) - order.indexOf(b);
+                                });
+                              }
+                              setRrule(rrule.replace(/BYDAY=[^;]+/, `BYDAY=${newDays.join(',')}`));
+                            }}
+                            className={`h-7 w-7 rounded-full text-[10px] font-medium transition-colors ${
+                              isSelected
+                                ? 'bg-foreground text-background'
+                                : 'bg-background text-muted-foreground hover:bg-muted'
+                            }`}
+                          >
+                            {day.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* End condition */}
+                <div className="space-y-2">
+                  <span className="text-xs text-muted-foreground">Eindigt</span>
+                  <div className="flex gap-2">
+                    <label className="flex items-center gap-1.5 text-xs text-foreground cursor-pointer">
+                      <input
+                        type="radio"
+                        name="endType"
+                        checked={!rrule.includes('COUNT=') && !rrule.includes('UNTIL=')}
+                        onChange={() => setRrule(rrule.replace(/;?(COUNT|UNTIL)=[^;]+/g, ''))}
+                        className="h-3 w-3"
+                      />
+                      Nooit
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-foreground cursor-pointer">
+                      <input
+                        type="radio"
+                        name="endType"
+                        checked={rrule.includes('COUNT=')}
+                        onChange={() => {
+                          const newRrule = rrule.replace(/;?(UNTIL)=[^;]+/g, '');
+                          if (!newRrule.includes('COUNT=')) {
+                            setRrule(newRrule + ';COUNT=10');
+                          }
+                        }}
+                        className="h-3 w-3"
+                      />
+                      Na
+                      {rrule.includes('COUNT=') && (
+                        <input
+                          type="number"
+                          min="1"
+                          max="999"
+                          value={parseInt(rrule.match(/COUNT=(\d+)/)?.[1] || '10')}
+                          onChange={(e) => {
+                            const count = Math.max(1, parseInt(e.target.value) || 1);
+                            setRrule(rrule.replace(/COUNT=\d+/, `COUNT=${count}`));
+                          }}
+                          className="w-14 rounded-md border border-border bg-background px-1.5 py-0.5 text-xs text-foreground"
+                        />
+                      )}
+                      <span className="text-xs text-muted-foreground">keer</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs text-foreground cursor-pointer">
+                      <input
+                        type="radio"
+                        name="endType"
+                        checked={rrule.includes('UNTIL=')}
+                        onChange={() => {
+                          const newRrule = rrule.replace(/;?(COUNT)=[^;]+/g, '');
+                          if (!newRrule.includes('UNTIL=')) {
+                            const untilDate = new Date(startDate);
+                            untilDate.setFullYear(untilDate.getFullYear() + 1);
+                            const untilStr = untilDate.toISOString().split('T')[0].replace(/-/g, '');
+                            setRrule(newRrule + `;UNTIL=${untilStr}`);
+                          }
+                        }}
+                        className="h-3 w-3"
+                      />
+                      Op datum
+                    </label>
+                  </div>
+                  {rrule.includes('UNTIL=') && (
+                    <input
+                      type="date"
+                      value={(() => {
+                        const match = rrule.match(/UNTIL=(\d{8})/);
+                        if (match) {
+                          const y = match[1].slice(0, 4);
+                          const m = match[1].slice(4, 6);
+                          const d = match[1].slice(6, 8);
+                          return `${y}-${m}-${d}`;
+                        }
+                        return '';
+                      })()}
+                      onChange={(e) => {
+                        const date = e.target.value.replace(/-/g, '');
+                        setRrule(rrule.replace(/UNTIL=\d{8}/, `UNTIL=${date}`));
+                      }}
+                      className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="space-y-2">
             <div className="flex items-center gap-2.5">
