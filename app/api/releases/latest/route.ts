@@ -84,23 +84,6 @@ export async function GET() {
         };
       }
       
-      // macOS universal - Look for .app.tar.gz.sig files
-      else if (name.includes("universal") && name.endsWith(".app.tar.gz.sig")) {
-        const downloadUrl = asset.browser_download_url.replace(".sig", "");
-        const sigResponse = await fetch(asset.browser_download_url, { headers });
-        const signature = await sigResponse.text();
-        
-        // Universal builds work for both x86_64 and aarch64
-        tauriResponse.platforms["darwin-x86_64"] = {
-          signature: signature.trim(),
-          url: downloadUrl,
-        };
-        tauriResponse.platforms["darwin-aarch64"] = {
-          signature: signature.trim(),
-          url: downloadUrl,
-        };
-      }
-      
       // Linux x64 - Look for .AppImage.tar.gz.sig files
       else if (name.includes("amd64") && name.endsWith(".appimage.tar.gz.sig")) {
         const downloadUrl = asset.browser_download_url.replace(".sig", "");
