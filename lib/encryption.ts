@@ -109,6 +109,15 @@ export function decryptIfNeeded(value: string | null): string | null {
     return decrypt(value);
   } catch (error) {
     console.error("Failed to decrypt value:", error);
-    return null;
+    console.error(
+      "⚠️  ENCRYPTION_KEY mismatch detected! " +
+      "The tokens were encrypted with a different key. " +
+      "Please ensure ENCRYPTION_KEY is the same across all environments, " +
+      "or reconnect the account on this environment."
+    );
+    throw new Error(
+      "Token decryption failed - ENCRYPTION_KEY mismatch. " +
+      "Please reconnect your account or update ENCRYPTION_KEY environment variable."
+    );
   }
 }
