@@ -5,6 +5,7 @@ import { GeistPixelSquare } from "geist/font/pixel";
 import { Providers } from "@/components/providers";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { StructuredData } from "@/components/seo/structured-data";
+import { Analytics } from "@vercel/analytics/react";
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import "./globals.css";
@@ -171,6 +172,7 @@ export default async function RootLayout({
         </NextIntlClientProvider>
         <StructuredData />
         <ServiceWorkerRegister />
+        <Analytics />
       </body>
     </html>
   );
