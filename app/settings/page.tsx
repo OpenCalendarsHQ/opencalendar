@@ -626,7 +626,7 @@ function SettingsContent() {
       {showICloudModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
           <div className="fixed inset-0 bg-black/20" onClick={() => setShowICloudModal(false)} />
-          <div className="relative w-full max-sm rounded-t-xl border border-border bg-popover p-5 shadow-lg safe-bottom md:rounded-lg">
+          <div className="relative w-full max-w-md mx-4 rounded-t-xl border border-border bg-popover p-5 shadow-lg safe-bottom md:rounded-lg">
             <h2 className="text-sm font-medium text-foreground">iCloud Calendar verbinden</h2>
             <div className="mt-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
               <p className="font-medium text-foreground">Hoe krijg ik een app-wachtwoord?</p>
@@ -675,7 +675,7 @@ function SettingsContent() {
       {showCalDAVModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
           <div className="fixed inset-0 bg-black/20" onClick={() => setShowCalDAVModal(false)} />
-          <div className="relative w-full max-md rounded-t-xl border border-border bg-popover p-5 shadow-lg safe-bottom md:rounded-lg">
+          <div className="relative w-full max-w-md mx-4 rounded-t-xl border border-border bg-popover p-5 shadow-lg safe-bottom md:rounded-lg">
             <h2 className="text-sm font-medium text-foreground">CalDAV account verbinden</h2>
 
             {error && (
@@ -757,7 +757,7 @@ function SettingsContent() {
       {showLocalCalendarModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
           <div className="fixed inset-0 bg-black/20" onClick={() => setShowLocalCalendarModal(false)} />
-          <div className="relative w-full max-sm rounded-t-xl border border-border bg-popover p-5 shadow-lg safe-bottom md:rounded-lg">
+          <div className="relative w-full max-w-md mx-4 rounded-t-xl border border-border bg-popover p-5 shadow-lg safe-bottom md:rounded-lg">
             <h2 className="text-sm font-medium text-foreground">Lokale kalender aanmaken</h2>
 
             {error && (
