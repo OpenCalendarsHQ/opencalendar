@@ -1,0 +1,1 @@
+ALTER TABLE "user_settings" ADD COLUMN "event_text_alignment" text DEFAULT 'left' NOT NULL;

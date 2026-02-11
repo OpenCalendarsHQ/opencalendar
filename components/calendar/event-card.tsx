@@ -71,6 +71,12 @@ export const EventCard = memo(function EventCard({ event, style, onClick }: Even
     bold: "font-bold",
   }[settings.eventTitleWeight];
 
+  const alignmentClass = {
+    left: "items-start text-left",
+    center: "items-center text-center",
+    right: "items-end text-right",
+  }[settings.eventTextAlignment || "left"];
+
   return (
     <EventHoverCard event={event}>
       <button
@@ -80,7 +86,7 @@ export const EventCard = memo(function EventCard({ event, style, onClick }: Even
           e.stopPropagation();
           onClick(event);
         }}
-        className={`absolute z-10 flex cursor-pointer flex-col justify-start overflow-hidden transition-colors hover:z-20 ${paddingClass} ${fontSizeClass} ${shadowClass}`}
+        className={`absolute z-10 flex cursor-pointer flex-col justify-start overflow-hidden transition-colors hover:z-20 ${alignmentClass} ${paddingClass} ${fontSizeClass} ${shadowClass}`}
         style={{
           ...style,
           left: `${left}%`,

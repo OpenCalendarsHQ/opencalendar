@@ -53,6 +53,7 @@ export interface AppSettings {
   eventShadow: "none" | "sm" | "md";
   showEventBorder: boolean;
   eventTitleWeight: "normal" | "medium" | "semibold" | "bold";
+  eventTextAlignment: "left" | "center" | "right";
 
   // Notifications (for later)
   defaultReminders: number[]; // minutes before event: [15, 60, 1440]
@@ -102,6 +103,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   eventShadow: "none",
   showEventBorder: true,
   eventTitleWeight: "medium",
+  eventTextAlignment: "left",
 
   // Notifications (for later)
   defaultReminders: [15, 60], // 15 min and 1 hour before

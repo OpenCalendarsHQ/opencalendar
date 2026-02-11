@@ -272,60 +272,62 @@ export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, o
           style={{ cursor: onDragCreate ? "crosshair" : undefined }}
         >
           {children}
+
+          {/* Drag preview overlay */}
+          {dragPreview && (
+            <div
+              className="pointer-events-none absolute z-30"
+              style={{
+                top: `${dragPreview.top}px`,
+                height: `${dragPreview.height}px`,
+                left: dragPreview.left,
+                width: dragPreview.width,
+                marginLeft: dragPreview.marginLeft,
+              }}
+            >
+              <div className="h-full w-full rounded-[4px] border-2 border-accent/60 bg-accent/15 px-2 py-1">
+                <span className="text-[11px] font-medium text-foreground/80 select-none">
+                  {dragPreview.label}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Task drop indicator */}
+          {taskDragOver && (
+            <div
+              className="pointer-events-none absolute z-30"
+              style={{
+                top: `${minutesToPosition(taskDragOver.minutes)}px`,
+                height: `${minutesToPosition(60)}px`,
+                left: `${(taskDragOver.columnIndex / columnCount) * 100}%`,
+                width: `calc(${(1 / columnCount) * 100}% - 8px)`,
+                marginLeft: "4px",
+              }}
+            >
+              <div className="flex h-full w-full items-center justify-center rounded-[4px] border-2 border-dashed border-accent/80 bg-accent/10 px-2 py-1">
+                <span className="select-none text-[11px] font-medium text-foreground/80">
+                  Taak hier plaatsen
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Current time indicator */}
+          {hasTodayColumn && (
+            <div
+              className="absolute z-20 flex items-center pointer-events-none"
+              style={{
+                top: currentTimeTop,
+                left: todayIndex >= 0 ? `${(todayIndex / columnCount) * 100}%` : "0",
+                width: todayIndex >= 0 ? `${(1 / columnCount) * 100}%` : "100%",
+              }}
+            >
+              <div className="h-3 w-3 -translate-x-[5px] rounded-full bg-red-500 shadow-sm z-10" />
+              <div className="h-[2px] w-full bg-red-500 shadow-sm -ml-1.5" />
+            </div>
+          )}
         </div>
-
-        {/* Drag preview overlay */}
-        {dragPreview && (
-          <div
-            className="pointer-events-none absolute z-30 ml-[36px] md:ml-[52px]"
-            style={{
-              top: `${dragPreview.top}px`,
-              height: `${dragPreview.height}px`,
-              left: dragPreview.left,
-              width: dragPreview.width,
-              marginLeft: dragPreview.marginLeft,
-            }}
-          >
-            <div className="h-full w-full rounded-[4px] border-2 border-accent/60 bg-accent/15 px-2 py-1">
-              <span className="text-[11px] font-medium text-foreground/80 select-none">
-                {dragPreview.label}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Task drop indicator */}
-        {taskDragOver && (
-          <div
-            className="pointer-events-none absolute z-30 ml-[36px] md:ml-[52px]"
-            style={{
-              top: `${minutesToPosition(taskDragOver.minutes)}px`,
-              height: `${minutesToPosition(60)}px`,
-              left: `${(taskDragOver.columnIndex / columnCount) * 100}%`,
-              width: `calc(${(1 / columnCount) * 100}% - 8px)`,
-              marginLeft: "4px",
-            }}
-          >
-            <div className="h-full w-full rounded-[4px] border-2 border-dashed border-accent/80 bg-accent/10 px-2 py-1 flex items-center justify-center">
-              <span className="text-[11px] font-medium text-foreground/80 select-none">
-                Taak hier plaatsen
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Current time indicator */}
-        {hasTodayColumn && (
-          <div className="absolute z-20 flex items-center time-indicator-position"
-            style={{
-              top: currentTimeTop,
-              left: todayIndex >= 0 ? `calc(var(--time-gutter) + ${(todayIndex / columnCount) * 100}%)` : "var(--time-gutter)",
-              width: todayIndex >= 0 ? `calc(${(1 / columnCount) * 100}%)` : "calc(100% - var(--time-gutter))",
-            }}>
-            <div className="h-2.5 w-2.5 -translate-x-1 rounded-full bg-current-time" />
-            <div className="h-[1.5px] flex-1 bg-current-time" />
-          </div>
-        )}
       </div>
     </div>
   );

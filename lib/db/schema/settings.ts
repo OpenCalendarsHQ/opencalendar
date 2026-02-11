@@ -49,6 +49,7 @@ export const userSettings = pgTable("user_settings", {
   eventShadow: text("event_shadow").notNull().default("none"), // "none" | "sm" | "md"
   showEventBorder: boolean("show_event_border").notNull().default(true),
   eventTitleWeight: text("event_title_weight").notNull().default("medium"), // "normal" | "medium" | "semibold" | "bold"
+  eventTextAlignment: text("event_text_alignment").notNull().default("left"), // "left" | "center" | "right"
 
   // Notifications (for later)
   defaultReminders: text("default_reminders").notNull().default("[15,60]"), // JSON array of minutes
