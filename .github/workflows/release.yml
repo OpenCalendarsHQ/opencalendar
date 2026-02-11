@@ -65,7 +65,7 @@ jobs:
         working-directory: opencalendar-desktop
         env:
           VITE_API_URL: https://opencalendars.app
-        run: npm run tauri build -- --target ${{ matrix.target }} --bundles ${{ matrix.platform == 'windows-latest' && 'msi' || matrix.platform == 'ubuntu-22.04' && 'appimage' || 'dmg' }}
+        run: npm run tauri build -- --target ${{ matrix.target }}
 
       - name: Release Build
         uses: softprops/action-gh-release@v2
