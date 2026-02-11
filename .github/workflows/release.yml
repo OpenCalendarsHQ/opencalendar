@@ -67,5 +67,5 @@ jobs:
             opencalendar-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
             opencalendar-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
             opencalendar-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
-          token: "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"
+          token: ${{ secrets.RELEASE_TOKEN }}
 

@@ -78,6 +78,12 @@
       "recurringDesc": "Full support for recurring events with flexible editing options",
       "openSourceTitle": "Open Source",
       "openSourceDesc": "Free and open source software built for the community"
+    },
+    "download": {
+      "title": "Desktop App",
+      "subtitle": "Native performance with offline support",
+      "comingSoon": "Coming soon",
+      "version": "Version"
     }
   }
 }
