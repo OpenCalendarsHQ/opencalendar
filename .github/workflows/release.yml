@@ -54,6 +54,8 @@ jobs:
 
       - name: Build Tauri app
         working-directory: opencalendar-desktop
+        env:
+          VITE_API_URL: https://opencalendars.app
         run: npm run tauri build -- --target ${{ matrix.target }}
 
       - name: Release Build

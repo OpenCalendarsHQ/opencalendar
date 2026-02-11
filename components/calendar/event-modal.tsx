@@ -254,16 +254,28 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
           </label>
 
           {showRecurrence ? (
-            <RecurrenceEditor
-              rrule={rrule}
-              startDate={new Date(startDate)}
-              onChange={(newRrule) => {
-                setRrule(newRrule);
-                if (newRrule === null) {
-                  setShowRecurrence(false);
-                }
-              }}
-            />
+            <div className="rounded-lg border border-border bg-muted/30 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-medium text-foreground">Herhaling</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRecurrence(false);
+                    setRrule(null);
+                  }}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Verwijderen
+                </button>
+              </div>
+              <RecurrenceEditor
+                rrule={rrule}
+                startDate={new Date(startDate)}
+                onChange={(newRrule) => {
+                  setRrule(newRrule);
+                }}
+              />
+            </div>
           ) : (
             <button
               type="button"

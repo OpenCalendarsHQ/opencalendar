@@ -127,7 +127,7 @@ export function RecurrenceEditor({ rrule, startDate, onChange }: RecurrenceEdito
         <select
           value={frequency}
           onChange={(e) => handleFrequencyChange(e.target.value)}
-          className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground"
+          className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground focus:border-foreground focus:outline-none"
         >
           {FREQUENCY_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -136,6 +136,12 @@ export function RecurrenceEditor({ rrule, startDate, onChange }: RecurrenceEdito
           ))}
         </select>
       </div>
+      
+      {frequency === "NONE" && (
+        <p className="text-xs text-muted-foreground ml-6">
+          Selecteer een frequentie om herhaling in te stellen
+        </p>
+      )}
 
       {/* Show details only when recurring */}
       {frequency !== "NONE" && (
