@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X, MapPin, AlignLeft, Clock, Trash2, Calendar, ExternalLink } from "lucide-react";
+import { X, MapPin, AlignLeft, Clock, Trash2, Calendar, ExternalLink, Repeat } from "lucide-react";
 import { format } from "@/lib/utils/date";
 import type { CalendarEvent } from "@/lib/types";
 import { RecurrenceEditor } from "./recurrence-editor";
@@ -37,6 +37,7 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
   const [calendarId, setCalendarId] = useState("");
   const [calendars, setCalendars] = useState<CalendarOption[]>([]);
   const [rrule, setRrule] = useState<string | null>(null);
+  const [showRecurrence, setShowRecurrence] = useState(false);
 
   // Fetch calendars
   useEffect(() => {
@@ -85,6 +86,7 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
       setIsAllDay(event.isAllDay);
       setCalendarId(event.calendarId || "");
       setRrule(event.rrule || null);
+      setShowRecurrence(!!event.rrule);
       // Reset map state when event changes
       setShowMap(false);
       setMapCoords(null);
@@ -253,11 +255,27 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
             <span className="text-xs text-foreground">Hele dag</span>
           </label>
 
-          {/* Recurrence editor */}
-          <RecurrenceEditor
-            rrule={rrule}
-            startDate={new Date(startDate)}
-            onChange={setRrule}
+          {showRecurrence ? (
+            <RecurrenceEditor
+              rrule={rrule}
+              startDate={new Date(startDate)}
+              onChange={(newRrule) => {
+                setRrule(newRrule);
+                if (newRrule === null) {
+                  setShowRecurrence(false);
+                }
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowRecurrence(true)}
+              className="flex items-center gap-2.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Repeat className="h-3.5 w-3.5" />
+              <span>Herhaling toevoegen</span>
+            </button>
+          )}onChange={setRrule}
           />
 
           <div className="space-y-2">
