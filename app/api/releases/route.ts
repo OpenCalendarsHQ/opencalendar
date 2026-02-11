@@ -13,50 +13,52 @@ export async function GET() {
     headers.Authorization = `token ${token}`;
   }
 
+  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases`;
+  console.log("Fetching releases from:", url);
+  console.log("Using token:", token ? "Yes" : "No");
+
   try {
-    // Try "latest" tag first (used by the CI workflow)
-    let response = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/tags/latest`,
-      { headers, next: { revalidate: 300 } } // cache 5 min
-    );
+    // Get all releases and find the latest non-prerelease
+    const response = await fetch(url, { 
+      headers, 
+      cache: 'no-store' // Disable cache for immediate updates
+    });
+
+    console.log("GitHub API response:", response.status, response.statusText);
 
     if (!response.ok) {
-      // Fallback: get latest release by date
-      response = await fetch(
-        `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases`,
-        { headers, next: { revalidate: 300 } }
-      );
-
-      if (!response.ok) {
-        return NextResponse.json(null);
-      }
-
-      const releases = await response.json();
-      if (!releases.length) {
-        return NextResponse.json(null);
-      }
-
-      const rel = releases[0];
-      return NextResponse.json({
-        tag_name: rel.tag_name,
-        assets: rel.assets.map((a: { name: string; browser_download_url: string; size: number }) => ({
-          name: a.name,
-          browser_download_url: a.browser_download_url,
-          size: a.size,
-        })),
-      });
+      const errorBody = await response.text();
+      console.error("GitHub API error body:", errorBody);
+      return NextResponse.json(null);
     }
 
-    const rel = await response.json();
+    const releases = await response.json();
+    console.log("Total releases found:", releases.length);
+    
+    if (!releases.length) {
+      console.error("No releases found");
+      return NextResponse.json(null);
+    }
+
+    // Find first non-draft, non-prerelease release, or fallback to first release
+    const rel = releases.find((r: { draft: boolean; prerelease: boolean }) => !r.draft && !r.prerelease) || releases[0];
+    
+    console.log("Selected release:", rel.tag_name, "with", rel.assets?.length, "assets");
+    if (rel.assets?.length > 0) {
+      console.log("Asset names:", rel.assets.map((a: any) => a.name).join(", "));
+    }
+    
+    // Replace GitHub URLs with our proxy URLs for private repo
     return NextResponse.json({
       tag_name: rel.tag_name,
       assets: rel.assets.map((a: { name: string; browser_download_url: string; size: number }) => ({
         name: a.name,
-        browser_download_url: a.browser_download_url,
+        browser_download_url: `/api/releases/download/${rel.tag_name}/${a.name}`,
         size: a.size,
       })),
     });
-  } catch {
+  } catch (error) {
+    console.error("Failed to fetch releases:", error);
     return NextResponse.json(null);
   }
 }

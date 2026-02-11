@@ -51,6 +51,9 @@ export default function WelcomePage() {
   const t = useTranslations("Welcome");
   const [locale, setLocale] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [release, setRelease] = useState<Release | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [winFormat, setWinFormat] = useState<"msi" | "exe">("msi");
 
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -61,8 +64,6 @@ export default function WelcomePage() {
     }
     setMounted(true);
   }, []);
-  const [release, setRelease] = useState<Release | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchRelease() {
@@ -90,7 +91,9 @@ export default function WelcomePage() {
   const formatSize = (bytes: number) =>
     (bytes / (1024 * 1024)).toFixed(1) + " MB";
 
-  const winAsset = getAsset(".msi");
+  const winAsset = winFormat === "msi" 
+    ? (getAsset(".msi") || getAsset(".exe"))
+    : (getAsset(".exe") || getAsset(".msi"));
   const macAsset = getAsset(".dmg");
   const linuxAsset = getAsset(".AppImage");
 
@@ -233,13 +236,38 @@ export default function WelcomePage() {
                 {loading ? (
                   <div className="h-11 w-48 animate-pulse rounded-lg bg-zinc-800" />
                 ) : winAsset ? (
-                  <Link href={winAsset.browser_download_url}>
-                    <button className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900/60 px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-blue-500/50 hover:bg-zinc-800/80 hover:text-white">
-                      <WindowsIcon className="h-4 w-4" />
-                      {t("download.windowsLabel")}
-                      <span className="text-xs text-zinc-500">{formatSize(winAsset.size)}</span>
-                    </button>
-                  </Link>
+                  <div className="flex flex-col gap-2">
+                    <a href={winAsset.browser_download_url} target="_blank" rel="noopener noreferrer">
+                      <button className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900/60 px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-blue-500/50 hover:bg-zinc-800/80 hover:text-white">
+                        <WindowsIcon className="h-4 w-4" />
+                        {t("download.windowsLabel")}
+                        <span className="text-xs text-zinc-500">{formatSize(winAsset.size)}</span>
+                      </button>
+                    </a>
+                    <div className="flex items-center justify-center gap-2 text-xs">
+                      <button
+                        onClick={() => setWinFormat("msi")}
+                        className={`px-2 py-1 rounded transition-colors ${
+                          winFormat === "msi"
+                            ? "bg-blue-500/20 text-blue-300 border border-blue-500/40"
+                            : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        .msi
+                      </button>
+                      <span className="text-zinc-600">/</span>
+                      <button
+                        onClick={() => setWinFormat("exe")}
+                        className={`px-2 py-1 rounded transition-colors ${
+                          winFormat === "exe"
+                            ? "bg-blue-500/20 text-blue-300 border border-blue-500/40"
+                            : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        .exe
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <button disabled className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 px-5 py-2.5 text-sm text-zinc-600 cursor-not-allowed">
                     <WindowsIcon className="h-4 w-4" />
@@ -252,13 +280,13 @@ export default function WelcomePage() {
                 {loading ? (
                   <div className="h-11 w-48 animate-pulse rounded-lg bg-zinc-800" />
                 ) : macAsset ? (
-                  <Link href={macAsset.browser_download_url}>
+                  <a href={macAsset.browser_download_url} target="_blank" rel="noopener noreferrer">
                     <button className="inline-flex items-center gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-5 py-2.5 text-sm font-medium text-blue-300 transition-colors hover:border-blue-500/60 hover:bg-blue-500/20 hover:text-blue-200">
                       <AppleIcon className="h-4 w-4" />
                       {t("download.macLabel")}
                       <span className="text-xs text-blue-400/60">{formatSize(macAsset.size)}</span>
                     </button>
-                  </Link>
+                  </a>
                 ) : (
                   <button disabled className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 px-5 py-2.5 text-sm text-zinc-600 cursor-not-allowed">
                     <AppleIcon className="h-4 w-4" />
@@ -271,13 +299,13 @@ export default function WelcomePage() {
                 {loading ? (
                   <div className="h-11 w-48 animate-pulse rounded-lg bg-zinc-800" />
                 ) : linuxAsset ? (
-                  <Link href={linuxAsset.browser_download_url}>
+                  <a href={linuxAsset.browser_download_url} target="_blank" rel="noopener noreferrer">
                     <button className="inline-flex items-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900/60 px-5 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:border-orange-500/50 hover:bg-zinc-800/80 hover:text-white">
                       <LinuxIcon className="h-4 w-4" />
                       {t("download.linuxLabel")}
                       <span className="text-xs text-zinc-500">{formatSize(linuxAsset.size)}</span>
                     </button>
-                  </Link>
+                  </a>
                 ) : (
                   <button disabled className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/40 px-5 py-2.5 text-sm text-zinc-600 cursor-not-allowed">
                     <LinuxIcon className="h-4 w-4" />

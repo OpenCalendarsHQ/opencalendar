@@ -44,6 +44,7 @@ export function DesktopTab() {
   const t = useTranslations("Welcome");
   const [release, setRelease] = useState<Release | null>(null);
   const [loading, setLoading] = useState(true);
+  const [winFormat, setWinFormat] = useState<"msi" | "exe">("msi");
 
   useEffect(() => {
     async function fetchRelease() {
@@ -70,7 +71,9 @@ export function DesktopTab() {
   const formatSize = (bytes: number) =>
     (bytes / (1024 * 1024)).toFixed(1) + " MB";
 
-  const winAsset = getAsset(".msi");
+  const winAsset = winFormat === "msi" 
+    ? (getAsset(".msi") || getAsset(".exe"))
+    : (getAsset(".exe") || getAsset(".msi"));
   const macAsset = getAsset(".dmg");
   const linuxAsset = getAsset(".AppImage");
 
@@ -91,19 +94,44 @@ export function DesktopTab() {
           <>
             {/* Windows */}
             {winAsset ? (
-              <a
-                href={winAsset.browser_download_url}
-                className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 hover:bg-accent/50 transition-colors"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
-                  <WindowsIcon className="h-5 w-5 text-blue-500" />
+              <div className="space-y-2">
+                <a
+                  href={winAsset.browser_download_url}
+                  className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
+                    <WindowsIcon className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-foreground">{t("download.windowsLabel")}</div>
+                    <div className="text-xs text-muted-foreground">{formatSize(winAsset.size)}</div>
+                  </div>
+                  <Download className="h-4 w-4 text-muted-foreground" />
+                </a>
+                <div className="flex items-center justify-center gap-2 text-xs">
+                  <button
+                    onClick={() => setWinFormat("msi")}
+                    className={`px-2 py-1 rounded transition-colors ${
+                      winFormat === "msi"
+                        ? "bg-blue-500/20 text-blue-500 border border-blue-500/40"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    .msi
+                  </button>
+                  <span className="text-muted-foreground">/</span>
+                  <button
+                    onClick={() => setWinFormat("exe")}
+                    className={`px-2 py-1 rounded transition-colors ${
+                      winFormat === "exe"
+                        ? "bg-blue-500/20 text-blue-500 border border-blue-500/40"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    .exe
+                  </button>
                 </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-foreground">{t("download.windowsLabel")}</div>
-                  <div className="text-xs text-muted-foreground">{formatSize(winAsset.size)}</div>
-                </div>
-                <Download className="h-4 w-4 text-muted-foreground" />
-              </a>
+              </div>
             ) : (
               <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-4 opacity-50">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">

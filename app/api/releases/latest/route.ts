@@ -31,34 +31,26 @@ export async function GET() {
   };
 
   try {
-    // Try "latest" tag first (used by the CI workflow)
-    let response = await fetch(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/tags/latest`,
-      { headers, next: { revalidate: 300 } } // cache 5 min
+    // Get all releases and find the latest non-prerelease
+    const response = await fetch(
+      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases`,
+      { 
+        headers, 
+        cache: 'no-store' // Disable cache for immediate updates
+      }
     );
 
-    let release: any;
-
     if (!response.ok) {
-      // Fallback: get latest release by date
-      response = await fetch(
-        `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases`,
-        { headers, next: { revalidate: 300 } }
-      );
-
-      if (!response.ok) {
-        return NextResponse.json(null, { status: 404 });
-      }
-
-      const releases = await response.json();
-      if (!releases.length) {
-        return NextResponse.json(null, { status: 404 });
-      }
-
-      release = releases[0];
-    } else {
-      release = await response.json();
+      return NextResponse.json(null, { status: 404 });
     }
+
+    const releases = await response.json();
+    if (!releases.length) {
+      return NextResponse.json(null, { status: 404 });
+    }
+
+    // Find first non-draft, non-prerelease release, or fallback to first release
+    const release = releases.find((r: { draft: boolean; prerelease: boolean }) => !r.draft && !r.prerelease) || releases[0];
 
     // Transform to Tauri updater format
     const tauriResponse: TauriUpdateResponse = {
