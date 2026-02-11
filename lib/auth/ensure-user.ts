@@ -23,14 +23,14 @@ export async function ensureUserExists(sessionUser: {
     const needsUpdate =
       existing.image !== sessionUser.image ||
       existing.name !== (sessionUser.name || "Gebruiker") ||
-      existing.email !== (sessionUser.email || "");
+      existing.email !== (sessionUser.email || null);
 
     if (needsUpdate) {
       const [updated] = await db
         .update(user)
         .set({
           name: sessionUser.name || "Gebruiker",
-          email: sessionUser.email || "",
+          email: sessionUser.email || null,
           image: sessionUser.image || null,
           updatedAt: new Date(),
         })
@@ -48,7 +48,7 @@ export async function ensureUserExists(sessionUser: {
     .values({
       id: sessionUser.id,
       name: sessionUser.name || "Gebruiker",
-      email: sessionUser.email || "",
+      email: sessionUser.email || null,
       emailVerified: false,
       image: sessionUser.image || null,
     })

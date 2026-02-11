@@ -4,7 +4,16 @@
       "Bash(npm install @vercel/analytics)",
       "Bash(magick identify:*)",
       "Bash(python -c:*)",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(magick:*)",
+      "Bash(where:*)",
+      "Bash(node convert-bmp.cjs:*)",
+      "Bash(npm run tauri:*)",
+      "Bash(Select-String -Pattern \"\\(warning|Running makensis|Finished\\)\" -Context 0,1)",
+      "Bash(npm run db:generate:*)",
+      "Bash(npm run db:push:*)",
+      "Bash(npm run db:migrate:*)",
+      "Bash(test:*)"
     ]
   }
 }

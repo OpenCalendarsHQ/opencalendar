@@ -59,6 +59,23 @@ jobs:
         working-directory: opencalendar-desktop
         run: npm ci --prefer-offline --no-audit
 
+      - name: Get version from package.json
+        id: version
+        working-directory: opencalendar-desktop
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Update Tauri version
+        working-directory: opencalendar-desktop/src-tauri
+        shell: bash
+        run: |
+          sed -i 's/"version": ".*"/"version": "${{ steps.version.outputs.VERSION }}"/' tauri.conf.json
+          echo "Updated tauri.conf.json to version ${{ steps.version.outputs.VERSION }}"
+          grep '"version"' tauri.conf.json
+
       - name: Build Tauri app
         working-directory: opencalendar-desktop
         env:
@@ -68,8 +85,8 @@ jobs:
       - name: Release Build
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.run_number }}
-          name: "v0.2.${{ github.run_number }}"
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          name: "v${{ steps.version.outputs.VERSION }}"
           body: "Automated build from commit ${{ github.sha }}"
           draft: false
           prerelease: false

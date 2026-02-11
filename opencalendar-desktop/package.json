@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "icons": "node convert-icon.cjs"
+    "icons": "node convert-icon.cjs",
+    "nsis-bmp": "node convert-bmp.cjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
