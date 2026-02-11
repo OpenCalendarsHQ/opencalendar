@@ -116,7 +116,7 @@ export function Header({
               <Menu className="h-5 w-5" />
             </button>
             <div className="flex flex-col">
-              <span className="text-sm font-medium capitalize text-foreground">
+              <span className="font-pixel text-sm font-bold capitalize text-foreground">
                 {formatMonthYear(currentDate)}
               </span>
               <span className="text-[10px] capitalize text-muted-foreground">
@@ -222,7 +222,7 @@ export function Header({
       {/* Left: Date + Sync Status */}
       <div className="flex items-center gap-3">
         <div className="flex flex-col">
-          <span className="text-sm font-medium capitalize text-foreground">
+          <span className="font-pixel text-sm font-bold capitalize text-foreground">
             {formatMonthYear(currentDate)}
           </span>
           <span className="text-[10px] capitalize text-muted-foreground">

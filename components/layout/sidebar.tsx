@@ -144,7 +144,7 @@ export function Sidebar({
       <div className="flex items-center justify-between px-3 py-2">
         <div className="flex items-center gap-2">
           <Image src="/icon.svg" alt="OpenCalendar" width={20} height={20} className="opacity-90" />
-          <span className="font-pixel text-xs font-bold tracking-wider text-foreground">OpenCalendar</span>
+          <span className="font-pixel text-xs font-bold tracking-wider text-foreground uppercase">OPENCALENDAR</span>
         </div>
         <button onClick={onToggleCollapsed} className="touch-target rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
           <PanelLeftClose className={isMobile ? "h-5 w-5" : "h-3.5 w-3.5"} />

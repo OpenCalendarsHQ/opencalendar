@@ -96,7 +96,7 @@ export default function WelcomePage() {
       <header className="relative z-10 flex items-center justify-between px-6 py-6 md:px-12">
         <Link href="/" className="flex items-center gap-3">
           <Image src="/icon.svg" alt="OpenCalendar" width={40} height={40} />
-          <span className="font-pixel text-2xl font-bold text-white">OPENCALENDAR</span>
+          <span className="font-pixel text-2xl font-bold text-white uppercase tracking-tighter">OPENCALENDAR</span>
         </Link>
         <div className="flex items-center gap-3">
           <Link
@@ -253,6 +253,10 @@ export default function WelcomePage() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-zinc-900 px-6 py-6 md:px-12">
         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+          <div className="flex items-center gap-3">
+            <Image src="/icon.svg" alt="OpenCalendar" width={32} height={32} />
+            <span className="font-pixel text-lg font-bold text-white uppercase tracking-tighter">OPENCALENDAR</span>
+          </div>
           <p className="text-sm text-zinc-500">
             Made by{" "}
             <Link

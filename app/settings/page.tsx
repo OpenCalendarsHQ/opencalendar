@@ -19,8 +19,13 @@ import {
   CheckSquare,
   Calendar as CalendarIcon,
   Monitor,
+  Check,
+  Settings,
 } from "lucide-react";
 import { ColorPicker } from "@/components/ui/color-picker";
+import { createClient } from "@/lib/supabase/client";
+import { User } from "@supabase/supabase-js";
+import { useSettings } from "@/lib/settings-context";
 
 // Inline Apple SVG icon
 function AppleIcon({ className }: { className?: string }) {
@@ -408,7 +413,7 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            <div className="min-h-[120px]">
+            <div>
               {isLoading ? (
                 <div className="space-y-2">
                   {[1, 2].map((i) => (
@@ -559,60 +564,16 @@ export default function SettingsPage() {
         )}
 
         {/* Account tab */}
-        {activeTab === "account" && (
-          <div>
-            <Link href="/settings/account"
-              className="flex items-center justify-between rounded-lg border border-border px-4 py-3 hover:bg-muted">
-              <div>
-                <div className="text-sm font-medium text-foreground">Account & Beveiliging</div>
-                <div className="text-xs text-muted-foreground">Wachtwoord, 2FA en sessies</div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
-          </div>
-        )}
+        {activeTab === "account" && <AccountTab />}
 
         {/* Weergave tab */}
-        {activeTab === "appearance" && (
-          <div>
-            <Link href="/settings/appearance"
-              className="flex items-center justify-between rounded-lg border border-border px-4 py-3 hover:bg-muted">
-              <div>
-                <div className="text-sm font-medium text-foreground">Weergave</div>
-                <div className="text-xs text-muted-foreground">Startdag, tijdformaat, weeknummers</div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
-          </div>
-        )}
+        {activeTab === "appearance" && <AppearanceTab />}
 
         {/* Taal & regio tab */}
-        {activeTab === "region" && (
-          <div>
-            <Link href="/settings/region"
-              className="flex items-center justify-between rounded-lg border border-border px-4 py-3 hover:bg-muted">
-              <div>
-                <div className="text-sm font-medium text-foreground">Taal & regio</div>
-                <div className="text-xs text-muted-foreground">Tijdzone en datumnotatie</div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
-          </div>
-        )}
+        {activeTab === "region" && <RegionTab />}
 
         {/* Taken tab */}
-        {activeTab === "tasks" && (
-          <div>
-            <Link href="/settings/tasks"
-              className="flex items-center justify-between rounded-lg border border-border px-4 py-3 hover:bg-muted">
-              <div>
-                <div className="text-sm font-medium text-foreground">Taken integraties</div>
-                <div className="text-xs text-muted-foreground">Notion en GitHub verbinden</div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
-          </div>
-        )}
+        {activeTab === "tasks" && <TasksTab />}
       </div>
 
       {/* iCloud Modal */}
@@ -818,5 +779,984 @@ export default function SettingsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// ============================================
+// COMPONENT: Account Tab
+// ============================================
+function AccountTab() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      setLoading(false);
+    });
+  }, [supabase]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-lg border border-border bg-card p-6 space-y-6">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground mb-4">Account informatie</h2>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Email</label>
+              <p className="text-sm text-foreground mt-1">{user?.email}</p>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Account aangemaakt</label>
+              <p className="text-sm text-foreground mt-1">
+                {user?.created_at ? new Date(user.created_at).toLocaleDateString("nl-NL", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric"
+                }) : "-"}
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Laatst ingelogd</label>
+              <p className="text-sm text-foreground mt-1">
+                {user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString("nl-NL", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                }) : "-"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-6 border-t border-border">
+          <h2 className="text-sm font-semibold text-foreground mb-4">Authenticatie methode</h2>
+          <div className="flex items-center gap-3">
+            {user?.app_metadata?.provider === "google" ? (
+              <>
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                  <GoogleIcon className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Google</p>
+                  <p className="text-xs text-muted-foreground">Ingelogd via Google account</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-8 h-8 bg-neutral-100 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Email & Wachtwoord</p>
+                  <p className="text-xs text-muted-foreground">Standaard authenticatie</p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="pt-6 border-t border-border">
+          <p className="text-xs text-muted-foreground">
+            Meer account instellingen komen binnenkort beschikbaar, zoals wachtwoord wijzigen en account verwijderen.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// COMPONENT: Appearance Tab
+// ============================================
+function AppearanceTab() {
+  const { settings, updateSettings } = useSettings();
+
+  return (
+    <div className="space-y-6">
+      {/* Theme */}
+      <SettingSection title="Thema" description="Kies tussen licht, donker of automatisch op basis van systeem">
+        <div className="flex gap-2">
+          {([
+            { value: "light" as const, label: "Licht" },
+            { value: "dark" as const, label: "Donker" },
+            { value: "auto" as const, label: "Automatisch" },
+          ]).map((opt) => (
+            <OptionButton
+              key={opt.value}
+              label={opt.label}
+              selected={settings.theme === opt.value}
+              onClick={() => updateSettings({ theme: opt.value })}
+            />
+          ))}
+        </div>
+      </SettingSection>
+
+      {/* Color scheme */}
+      <SettingSection title="Kleurenschema" description="Kies een kleurthema voor de app">
+        <div className="flex gap-2">
+          {([
+            { value: "default" as const, label: "Standaard" },
+            { value: "blue" as const, label: "Blauw" },
+            { value: "purple" as const, label: "Paars" },
+            { value: "green" as const, label: "Groen" },
+            { value: "orange" as const, label: "Oranje" },
+          ]).map((opt) => (
+            <OptionButton
+              key={opt.value}
+              label={opt.label}
+              selected={settings.colorScheme === opt.value}
+              onClick={() => updateSettings({ colorScheme: opt.value })}
+            />
+          ))}
+        </div>
+      </SettingSection>
+
+      {/* Compact mode */}
+      <SettingSection title="Compacte modus" description="Dichtere UI voor meer informatie op het scherm">
+        <ToggleSwitch
+          checked={settings.compactMode}
+          onChange={(checked) => updateSettings({ compactMode: checked })}
+        />
+      </SettingSection>
+
+      {/* First day of week */}
+      <SettingSection title="Eerste dag van de week" description="Kies of de week begint op maandag of zondag">
+        <div className="flex gap-2">
+          <OptionButton
+            label="Maandag"
+            selected={settings.weekStartsOn === 1}
+            onClick={() => updateSettings({ weekStartsOn: 1 })}
+          />
+          <OptionButton
+            label="Zondag"
+            selected={settings.weekStartsOn === 0}
+            onClick={() => updateSettings({ weekStartsOn: 0 })}
+          />
+        </div>
+      </SettingSection>
+
+      {/* Time format */}
+      <SettingSection title="Tijdformaat" description="Kies 24-uurs of 12-uurs weergave">
+        <div className="flex gap-2">
+          <OptionButton
+            label="24 uur (14:00)"
+            selected={settings.timeFormat === "24h"}
+            onClick={() => updateSettings({ timeFormat: "24h" })}
+          />
+          <OptionButton
+            label="12 uur (2:00 PM)"
+            selected={settings.timeFormat === "12h"}
+            onClick={() => updateSettings({ timeFormat: "12h" })}
+          />
+        </div>
+      </SettingSection>
+
+      {/* Default view */}
+      <SettingSection title="Standaard weergave" description="De weergave die je ziet bij het openen van de app">
+        <div className="flex gap-2">
+          {([
+            { value: "day" as const, label: "Dag" },
+            { value: "week" as const, label: "Week" },
+            { value: "month" as const, label: "Maand" },
+          ]).map((opt) => (
+            <OptionButton
+              key={opt.value}
+              label={opt.label}
+              selected={settings.defaultView === opt.value}
+              onClick={() => updateSettings({ defaultView: opt.value })}
+            />
+          ))}
+        </div>
+      </SettingSection>
+
+      {/* Week numbers */}
+      <SettingSection title="Weeknummers" description="Toon weeknummers in de kalender">
+        <ToggleSwitch
+          checked={settings.showWeekNumbers}
+          onChange={(checked) => updateSettings({ showWeekNumbers: checked })}
+        />
+      </SettingSection>
+
+      {/* Default event duration */}
+      <SettingSection title="Standaard afspraakduur" description="Standaardduur voor nieuwe afspraken">
+        <div className="flex flex-wrap gap-2">
+          {([
+            { value: 30 as const, label: "30 min" },
+            { value: 60 as const, label: "1 uur" },
+            { value: 90 as const, label: "1,5 uur" },
+            { value: 120 as const, label: "2 uur" },
+          ]).map((opt) => (
+            <OptionButton
+              key={opt.value}
+              label={opt.label}
+              selected={settings.defaultEventDuration === opt.value}
+              onClick={() => updateSettings({ defaultEventDuration: opt.value })}
+            />
+          ))}
+        </div>
+      </SettingSection>
+
+      {/* Show declined events */}
+      <SettingSection title="Afgewezen afspraken" description="Toon afspraken die je hebt afgewezen">
+        <ToggleSwitch
+          checked={settings.showDeclinedEvents}
+          onChange={(checked) => updateSettings({ showDeclinedEvents: checked })}
+        />
+      </SettingSection>
+
+      {/* Working hours */}
+      <SettingSection title="Werkuren highlighten" description="Markeer werkuren in dag- en weekweergave">
+        <ToggleSwitch
+          checked={settings.showWorkingHours}
+          onChange={(checked) => updateSettings({ showWorkingHours: checked })}
+        />
+      </SettingSection>
+
+      {/* Working hours range */}
+      {settings.showWorkingHours && (
+        <SettingSection title="Werkuren tijden" description="Begin en einde van werkuren">
+          <div className="flex items-center gap-3">
+            <select
+              value={settings.workingHoursStart}
+              onChange={(e) => updateSettings({ workingHoursStart: parseInt(e.target.value) })}
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+            >
+              {Array.from({ length: 24 }, (_, i) => (
+                <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+              ))}
+            </select>
+            <span className="text-sm text-muted-foreground">tot</span>
+            <select
+              value={settings.workingHoursEnd}
+              onChange={(e) => updateSettings({ workingHoursEnd: parseInt(e.target.value) })}
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+            >
+              {Array.from({ length: 24 }, (_, i) => (
+                <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+              ))}
+            </select>
+          </div>
+        </SettingSection>
+      )}
+
+      {/* Day start/end hours */}
+      <SettingSection title="Begin/eind van de dag" description="Eerste en laatste uur in dagweergave">
+        <div className="flex items-center gap-3">
+          <select
+            value={settings.dayStartHour}
+            onChange={(e) => updateSettings({ dayStartHour: parseInt(e.target.value) })}
+            className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+          >
+            {Array.from({ length: 24 }, (_, i) => (
+              <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+            ))}
+          </select>
+          <span className="text-sm text-muted-foreground">tot</span>
+          <select
+            value={settings.dayEndHour}
+            onChange={(e) => updateSettings({ dayEndHour: parseInt(e.target.value) })}
+            className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+          >
+            {Array.from({ length: 24 }, (_, i) => (
+              <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
+            ))}
+          </select>
+        </div>
+      </SettingSection>
+
+      {/* Time slot interval */}
+      <SettingSection title="Tijdslot interval" description="Grootte van tijdslots in de weergave">
+        <div className="flex gap-2">
+          {([
+            { value: 15 as const, label: "15 min" },
+            { value: 30 as const, label: "30 min" },
+            { value: 60 as const, label: "60 min" },
+          ]).map((opt) => (
+            <OptionButton
+              key={opt.value}
+              label={opt.label}
+              selected={settings.timeSlotInterval === opt.value}
+              onClick={() => updateSettings({ timeSlotInterval: opt.value })}
+            />
+          ))}
+        </div>
+      </SettingSection>
+
+      {/* Show weekends */}
+      <SettingSection title="Weekenden tonen" description="Toon zaterdag en zondag in weekweergave">
+        <ToggleSwitch
+          checked={settings.showWeekends}
+          onChange={(checked) => updateSettings({ showWeekends: checked })}
+        />
+      </SettingSection>
+
+      {/* Event color source */}
+      <SettingSection title="Event kleuren" description="Gebruik kalender- of event-kleur">
+        <div className="flex gap-2">
+          <OptionButton
+            label="Van kalender"
+            selected={settings.eventColorSource === "calendar"}
+            onClick={() => updateSettings({ eventColorSource: "calendar" })}
+          />
+          <OptionButton
+            label="Van event zelf"
+            selected={settings.eventColorSource === "event"}
+            onClick={() => updateSettings({ eventColorSource: "event" })}
+          />
+        </div>
+      </SettingSection>
+
+      {/* Show mini calendar */}
+      <SettingSection title="Mini kalender" description="Toon mini maandkalender in sidebar">
+        <ToggleSwitch
+          checked={settings.showMiniCalendar}
+          onChange={(checked) => updateSettings({ showMiniCalendar: checked })}
+        />
+      </SettingSection>
+    </div>
+  );
+}
+
+// ============================================
+// COMPONENT: Region Tab
+// ============================================
+const COMMON_TIMEZONES = [
+  { value: "Europe/Amsterdam", label: "Amsterdam (CET)" },
+  { value: "Europe/London", label: "Londen (GMT)" },
+  { value: "Europe/Berlin", label: "Berlijn (CET)" },
+  { value: "Europe/Paris", label: "Parijs (CET)" },
+  { value: "Europe/Brussels", label: "Brussel (CET)" },
+  { value: "Europe/Madrid", label: "Madrid (CET)" },
+  { value: "Europe/Rome", label: "Rome (CET)" },
+  { value: "Europe/Zurich", label: "Zürich (CET)" },
+  { value: "Europe/Stockholm", label: "Stockholm (CET)" },
+  { value: "Europe/Istanbul", label: "Istanbul (TRT)" },
+  { value: "America/New_York", label: "New York (EST)" },
+  { value: "America/Chicago", label: "Chicago (CST)" },
+  { value: "America/Denver", label: "Denver (MST)" },
+  { value: "America/Los_Angeles", label: "Los Angeles (PST)" },
+  { value: "America/Toronto", label: "Toronto (EST)" },
+  { value: "America/Sao_Paulo", label: "São Paulo (BRT)" },
+  { value: "Asia/Tokyo", label: "Tokyo (JST)" },
+  { value: "Asia/Shanghai", label: "Shanghai (CST)" },
+  { value: "Asia/Singapore", label: "Singapore (SGT)" },
+  { value: "Asia/Dubai", label: "Dubai (GST)" },
+  { value: "Asia/Kolkata", label: "Mumbai (IST)" },
+  { value: "Australia/Sydney", label: "Sydney (AEST)" },
+  { value: "Pacific/Auckland", label: "Auckland (NZST)" },
+];
+
+function RegionTab() {
+  const { settings, updateSettings } = useSettings();
+  const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  return (
+    <div className="space-y-6">
+      {/* Language switcher */}
+      <div className="rounded-lg border border-border p-4">
+        <div className="mb-3">
+          <h3 className="text-sm font-medium text-foreground">Taal</h3>
+          <p className="text-xs text-muted-foreground">Kies de taal van de app</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => updateSettings({ language: "nl" })}
+            className={`flex items-center justify-between rounded-md border px-3 py-2 text-left text-xs ${
+              settings.language === "nl"
+                ? "border-foreground bg-foreground/5 font-medium text-foreground"
+                : "border-border text-muted-foreground hover:border-foreground/30"
+            }`}
+          >
+            <span>Nederlands</span>
+            {settings.language === "nl" && (
+              <div className="h-2 w-2 rounded-full bg-foreground" />
+            )}
+          </button>
+          <button
+            onClick={() => updateSettings({ language: "en" })}
+            className={`flex items-center justify-between rounded-md border px-3 py-2 text-left text-xs ${
+              settings.language === "en"
+                ? "border-foreground bg-foreground/5 font-medium text-foreground"
+                : "border-border text-muted-foreground hover:border-foreground/30"
+            }`}
+          >
+            <span>English</span>
+            {settings.language === "en" && (
+              <div className="h-2 w-2 rounded-full bg-foreground" />
+            )}
+          </button>
+        </div>
+        <p className="mt-3 text-[10px] text-muted-foreground italic">
+          * De pagina wordt herladen om de taal te wijzigen.
+        </p>
+      </div>
+
+      {/* Timezone */}
+      <div className="rounded-lg border border-border p-4">
+        <div className="mb-3">
+          <h3 className="text-sm font-medium text-foreground">Tijdzone</h3>
+          <p className="text-xs text-muted-foreground">
+            Je systeem detecteert: <span className="font-medium text-foreground">{detectedTimezone}</span>
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <button
+            onClick={() => updateSettings({ timezone: detectedTimezone })}
+            className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-xs ${
+              settings.timezone === detectedTimezone
+                ? "border-foreground bg-foreground/5 font-medium text-foreground"
+                : "border-border text-muted-foreground hover:border-foreground/30"
+            }`}
+          >
+            <span>Automatisch ({detectedTimezone})</span>
+            {settings.timezone === detectedTimezone && (
+              <div className="h-2 w-2 rounded-full bg-foreground" />
+            )}
+          </button>
+
+          <div className="max-h-[300px] space-y-1 overflow-y-auto rounded-md border border-border p-1">
+            {COMMON_TIMEZONES.map((tz) => (
+              <button
+                key={tz.value}
+                onClick={() => updateSettings({ timezone: tz.value })}
+                className={`flex w-full items-center justify-between rounded px-2.5 py-1.5 text-left text-xs ${
+                  settings.timezone === tz.value
+                    ? "bg-foreground/5 font-medium text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <span>{tz.label}</span>
+                {settings.timezone === tz.value && (
+                  <div className="h-2 w-2 shrink-0 rounded-full bg-foreground" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// COMPONENT: Tasks Tab
+// ============================================
+interface TaskProvider {
+  id: string;
+  provider: "notion" | "github" | "manual";
+  name: string;
+  lastSyncAt: string | null;
+  isActive: boolean;
+  providerData: any;
+}
+
+interface GitHubRepo {
+  fullName: string;
+  name: string;
+  description?: string;
+}
+
+interface NotionDatabase {
+  id: string;
+  title: string;
+}
+
+function NotionIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.336.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z" />
+    </svg>
+  );
+}
+
+function GitHubIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z" />
+    </svg>
+  );
+}
+
+function TasksTab() {
+  const [providers, setProviders] = useState<TaskProvider[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  // Configuration state
+  const [configuring, setConfiguring] = useState<TaskProvider | null>(null);
+  const [githubRepos, setGithubRepos] = useState<GitHubRepo[]>([]);
+  const [selectedRepos, setSelectedRepos] = useState<string[]>([]);
+  const [notionDatabases, setNotionDatabases] = useState<NotionDatabase[]>([]);
+  const [selectedDatabase, setSelectedDatabase] = useState<string>("");
+  const [configLoading, setConfigLoading] = useState(false);
+
+  useEffect(() => {
+    fetchProviders();
+  }, []);
+
+  async function fetchProviders() {
+    try {
+      const response = await fetch("/api/tasks/providers");
+      if (response.ok) {
+        const data = await response.json();
+        const filteredProviders = (data.providers || []).filter(
+          (p: TaskProvider) => p.provider !== "manual"
+        );
+        setProviders(filteredProviders);
+      }
+    } catch (error) {
+      console.error("Failed to fetch providers:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleConfigure(provider: TaskProvider) {
+    setConfiguring(provider);
+    setConfigLoading(true);
+
+    try {
+      if (provider.provider === "github") {
+        const response = await fetch("/api/tasks/github/repositories");
+        if (response.ok) {
+          const data = await response.json();
+          setGithubRepos(data.repositories || []);
+          setSelectedRepos(data.selected || []);
+        }
+      } else if (provider.provider === "notion") {
+        const response = await fetch("/api/tasks/notion/databases");
+        if (response.ok) {
+          const data = await response.json();
+          setNotionDatabases(data.databases || []);
+          setSelectedDatabase(data.selected || "");
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch configuration:", error);
+    } finally {
+      setConfigLoading(false);
+    }
+  }
+
+  async function handleSaveConfiguration() {
+    if (!configuring) return;
+
+    setConfigLoading(true);
+    try {
+      if (configuring.provider === "github") {
+        const response = await fetch("/api/tasks/github/repositories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ repositories: selectedRepos }),
+        });
+
+        if (response.ok) {
+          setConfiguring(null);
+          await fetchProviders();
+        }
+      } else if (configuring.provider === "notion") {
+        const response = await fetch("/api/tasks/notion/databases", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ databaseId: selectedDatabase }),
+        });
+
+        if (response.ok) {
+          setConfiguring(null);
+          await fetchProviders();
+        }
+      }
+    } catch (error) {
+      console.error("Failed to save configuration:", error);
+    } finally {
+      setConfigLoading(false);
+    }
+  }
+
+  function toggleRepo(repoFullName: string) {
+    setSelectedRepos((prev) =>
+      prev.includes(repoFullName)
+        ? prev.filter((r) => r !== repoFullName)
+        : [...prev, repoFullName]
+    );
+  }
+
+  async function handleSync(providerId: string) {
+    setSyncing(providerId);
+    try {
+      const provider = providers.find((p) => p.id === providerId);
+      if (!provider) return;
+
+      const endpoint =
+        provider.provider === "notion"
+          ? "/api/tasks/notion"
+          : "/api/tasks/github";
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ providerId }),
+      });
+
+      if (response.ok) {
+        await fetchProviders();
+      }
+    } catch (error) {
+      console.error("Failed to sync:", error);
+    } finally {
+      setSyncing(null);
+    }
+  }
+
+  async function handleDelete(providerId: string) {
+    try {
+      const response = await fetch(`/api/tasks/providers?id=${providerId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setProviders(providers.filter((p) => p.id !== providerId));
+        setDeleteConfirm(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete provider:", error);
+    }
+  }
+
+  function handleConnectNotion() {
+    window.location.href = "/api/tasks/notion?action=connect";
+  }
+
+  function handleConnectGitHub() {
+    window.location.href = "/api/tasks/github?action=connect";
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Connected Providers */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-foreground">Verbonden providers</h2>
+
+        {loading ? (
+          <div className="rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Laden...
+          </div>
+        ) : providers.length === 0 ? (
+          <div className="rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">
+            Geen providers verbonden
+          </div>
+        ) : (
+          providers.map((provider) => {
+            const Icon = provider.provider === "notion" ? NotionIcon : GitHubIcon;
+            const configuredCount = provider.provider === "github"
+              ? (provider.providerData?.repositories?.length || 0)
+              : provider.providerData?.databaseId ? 1 : 0;
+
+            return (
+              <div
+                key={provider.id}
+                className="rounded-lg border border-border bg-card p-4"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-6 w-6 text-foreground" />
+                    <div>
+                      <div className="font-medium text-foreground">
+                        {provider.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {provider.provider === "notion" ? "Notion" : "GitHub"}
+                        {configuredCount > 0 && (
+                          <span className="ml-2">
+                            • {configuredCount} {provider.provider === "github" ? "repo's" : "database"}
+                          </span>
+                        )}
+                        {provider.lastSyncAt && (
+                          <span className="ml-2">
+                            • Laatste sync:{" "}
+                            {new Date(provider.lastSyncAt).toLocaleString("nl-NL")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleConfigure(provider)}
+                      className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      title="Configureren"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </button>
+
+                    <button
+                      onClick={() => handleSync(provider.id)}
+                      disabled={syncing === provider.id}
+                      className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                      title="Synchroniseren"
+                    >
+                      <RefreshCw
+                        className={`h-4 w-4 ${
+                          syncing === provider.id ? "animate-spin" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {deleteConfirm === provider.id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleDelete(provider.id)}
+                          className="rounded-md bg-destructive px-3 py-1 text-xs text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Bevestigen
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(null)}
+                          className="rounded-md px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
+                        >
+                          Annuleren
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setDeleteConfirm(provider.id)}
+                        className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive"
+                        title="Verwijderen"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Add Provider */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-foreground">Provider toevoegen</h2>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            onClick={handleConnectNotion}
+            disabled={providers.some((p) => p.provider === "notion")}
+            className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-muted disabled:opacity-50 disabled:hover:bg-card"
+          >
+            <NotionIcon className="h-8 w-8 text-foreground" />
+            <div>
+              <div className="font-medium text-foreground">Notion</div>
+              <div className="text-xs text-muted-foreground">
+                Verbind je Notion workspace
+              </div>
+            </div>
+            <Plus className="ml-auto h-5 w-5 text-muted-foreground" />
+          </button>
+
+          <button
+            onClick={handleConnectGitHub}
+            disabled={providers.some((p) => p.provider === "github")}
+            className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-muted disabled:opacity-50 disabled:hover:bg-card"
+          >
+            <GitHubIcon className="h-8 w-8 text-foreground" />
+            <div>
+              <div className="font-medium text-foreground">GitHub</div>
+              <div className="text-xs text-muted-foreground">
+                Verbind je GitHub repositories
+              </div>
+            </div>
+            <Plus className="ml-auto h-5 w-5 text-muted-foreground" />
+          </button>
+        </div>
+      </div>
+
+      {/* Help Text */}
+      <div className="rounded-lg border border-border bg-muted/50 p-4">
+        <h3 className="mb-2 text-sm font-medium text-foreground">Hoe het werkt</h3>
+        <ul className="space-y-1 text-xs text-muted-foreground">
+          <li>• Verbind je Notion of GitHub account</li>
+          <li>• Klik op het tandwiel icoon om te configureren welke repos/databases gesynchroniseerd worden</li>
+          <li>• Taken worden automatisch gesynchroniseerd</li>
+          <li>• Sleep taken vanuit de sidebar naar je kalender</li>
+        </ul>
+      </div>
+
+      {/* Configuration Dialog */}
+      {configuring && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-lg">
+            <h2 className="mb-4 text-lg font-semibold">
+              {configuring.provider === "github" ? "GitHub Repositories" : "Notion Database"}
+            </h2>
+
+            {configLoading ? (
+              <div className="py-8 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Laden...
+              </div>
+            ) : configuring.provider === "github" ? (
+              <div className="max-h-96 space-y-2 overflow-y-auto">
+                {githubRepos.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    Geen repositories gevonden
+                  </div>
+                ) : (
+                  githubRepos.map((repo) => (
+                    <label
+                      key={repo.fullName}
+                      className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3 hover:bg-muted"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedRepos.includes(repo.fullName)}
+                        onChange={() => toggleRepo(repo.fullName)}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">{repo.fullName}</div>
+                        {repo.description && (
+                          <div className="text-xs text-muted-foreground">
+                            {repo.description}
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  ))
+                )}
+              </div>
+            ) : (
+              <div className="max-h-96 space-y-2 overflow-y-auto">
+                {notionDatabases.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    Geen databases gevonden
+                  </div>
+                ) : (
+                  notionDatabases.map((db) => (
+                    <label
+                      key={db.id}
+                      className="flex cursor-pointer items-center gap-3 rounded-md border border-border p-3 hover:bg-muted"
+                    >
+                      <input
+                        type="radio"
+                        name="database"
+                        checked={selectedDatabase === db.id}
+                        onChange={() => setSelectedDatabase(db.id)}
+                      />
+                      <div className="flex-1 text-sm font-medium">{db.title}</div>
+                    </label>
+                  ))
+                )}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                onClick={() => setConfiguring(null)}
+                className="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={handleSaveConfiguration}
+                disabled={configLoading || (configuring.provider === "github" && selectedRepos.length === 0) || (configuring.provider === "notion" && !selectedDatabase)}
+                className="rounded-md bg-foreground px-4 py-2 text-sm text-background hover:bg-foreground/90 disabled:opacity-50"
+              >
+                Opslaan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// HELPER COMPONENTS
+// ============================================
+function SettingSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-border p-4">
+      <div className="mb-3">
+        <h3 className="text-sm font-medium text-foreground">{title}</h3>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function OptionButton({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+        selected
+          ? "border-foreground bg-foreground text-background"
+          : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+      }`}
+    >
+      {selected && <Check className="h-3 w-3" />}
+      {label}
+    </button>
+  );
+}
+
+function ToggleSwitch({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <button
+      onClick={() => onChange(!checked)}
+      className={`relative h-5 w-9 rounded-full transition-colors ${
+        checked ? "bg-foreground" : "bg-border"
+      }`}
+    >
+      <div
+        className={`absolute top-0.5 h-4 w-4 rounded-full bg-background shadow-sm transition-transform ${
+          checked ? "translate-x-[18px]" : "translate-x-0.5"
+        }`}
+      />
+    </button>
   );
 }

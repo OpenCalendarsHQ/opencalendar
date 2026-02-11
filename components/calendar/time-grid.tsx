@@ -246,7 +246,7 @@ export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, o
         {HOURS.map((hour) => (
           <div key={hour} className="absolute left-0 right-0 flex" style={{ top: hour * HOUR_HEIGHT }}>
             <div className="w-[36px] shrink-0 pr-1 text-right md:w-[52px] md:pr-2">
-              <span className="relative -top-2 select-none text-[9px] text-muted-foreground md:text-[10px]">
+              <span className="relative -top-2 select-none font-pixel text-[9px] text-muted-foreground md:text-[10px]">
                 {hour > 0 ? getHourLabel(hour, use24h) : ""}
               </span>
             </div>

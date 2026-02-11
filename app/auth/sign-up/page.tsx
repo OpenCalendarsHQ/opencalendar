@@ -60,7 +60,7 @@ export default function SignUpPage() {
   return (
     <div className="w-full">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">
+        <h1 className="font-pixel text-3xl font-bold text-white mb-2">
           {t("signUpTitle")}
         </h1>
         <p className="text-zinc-400">
