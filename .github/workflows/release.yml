@@ -5,9 +5,12 @@ on:
     branches:
       - main
       - master
-      - 'claude/*'
+    paths:
+      - 'opencalendar-desktop/**'
+      - '.github/workflows/release.yml'
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
 
 jobs:
   build-tauri:
@@ -42,6 +45,12 @@ jobs:
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'x86_64-apple-darwin,aarch64-apple-darwin' || matrix.target }}
 
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: 'opencalendar-desktop/src-tauri -> target'
+          cache-on-failure: true
+
       - name: Install dependencies (Ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
@@ -50,13 +59,13 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: opencalendar-desktop
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit
 
       - name: Build Tauri app
         working-directory: opencalendar-desktop
         env:
           VITE_API_URL: https://opencalendars.app
-        run: npm run tauri build -- --target ${{ matrix.target }}
+        run: npm run tauri build -- --target ${{ matrix.target }} --bundles ${{ matrix.platform == 'windows-latest' && 'msi' || matrix.platform == 'ubuntu-22.04' && 'appimage' || 'dmg' }}
 
       - name: Release Build
         uses: softprops/action-gh-release@v2
