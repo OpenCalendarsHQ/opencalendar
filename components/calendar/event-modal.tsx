@@ -275,8 +275,7 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
               <Repeat className="h-3.5 w-3.5" />
               <span>Herhaling toevoegen</span>
             </button>
-          )}onChange={setRrule}
-          />
+          )}
 
           <div className="space-y-2">
             <div className="flex items-center gap-2.5">
