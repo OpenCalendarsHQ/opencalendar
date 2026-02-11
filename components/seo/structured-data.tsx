@@ -11,7 +11,7 @@ export function StructuredData() {
     logo: "https://opencalendars.app/icon-512.png",
     description: "OpenCalendars brengt al je Google Calendar en iCloud events samen in één overzichtelijke kalender.",
     sameAs: [
-      "https://github.com/ArjandenHartog/opencalendar",
+      "https://github.com/OpenCalendarsHQ/opencalendar",
     ],
   };
 

@@ -218,7 +218,7 @@ export default function PrivacyPage() {
                 <p className="mt-1 text-sm text-zinc-400">
                   Or open an issue on our{" "}
                   <Link
-                    href="https://github.com/ArjandenHartog/opencalendar"
+                    href="https://github.com/OpenCalendarsHQ/opencalendar"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-400 hover:text-blue-300"

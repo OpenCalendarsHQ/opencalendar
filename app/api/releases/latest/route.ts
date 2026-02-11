@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const REPO_OWNER = "ArjandenHartog";
+const REPO_OWNER = "OpenCalendarsHQ";
 const REPO_NAME = "opencalendar";
 
 interface TauriPlatform {

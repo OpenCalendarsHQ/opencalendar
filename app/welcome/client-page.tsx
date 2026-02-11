@@ -123,7 +123,7 @@ export default function WelcomePage() {
         </Link>
         <div className="flex items-center gap-3">
           <Link
-            href="https://github.com/ArjandenHartog/opencalendar"
+            href="https://github.com/OpenCalendarsHQ/opencalendar"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-700 hover:bg-zinc-900/70 hover:text-white"
@@ -332,7 +332,7 @@ export default function WelcomePage() {
               </Link>
             </div>
             <Link
-              href="https://github.com/ArjandenHartog/opencalendar"
+              href="https://github.com/OpenCalendarsHQ/opencalendar"
               target="_blank"
               rel="noopener noreferrer"
               className="text-zinc-500 transition-colors hover:text-zinc-400"
