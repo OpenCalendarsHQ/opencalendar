@@ -84,8 +84,8 @@ export async function GET() {
         };
       }
       
-      // macOS universal - Look for .dmg.tar.gz.sig files
-      else if (name.includes("universal") && name.endsWith(".dmg.tar.gz.sig")) {
+      // macOS universal - Look for .app.tar.gz.sig files
+      else if (name.includes("universal") && name.endsWith(".app.tar.gz.sig")) {
         const downloadUrl = asset.browser_download_url.replace(".sig", "");
         const sigResponse = await fetch(asset.browser_download_url, { headers });
         const signature = await sigResponse.text();
