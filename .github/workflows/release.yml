@@ -68,7 +68,13 @@ jobs:
           prerelease: true
           files: |
             opencalendar-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
+            opencalendar-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi.zip
+            opencalendar-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi.zip.sig
             opencalendar-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            opencalendar-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg.tar.gz
+            opencalendar-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg.tar.gz.sig
             opencalendar-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
+            opencalendar-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage.tar.gz
+            opencalendar-desktop/src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage.tar.gz.sig
           token: ${{ secrets.RELEASE_TOKEN }}
 

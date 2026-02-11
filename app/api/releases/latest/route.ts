@@ -72,8 +72,8 @@ export async function GET() {
     for (const asset of release.assets || []) {
       const name = asset.name.toLowerCase();
       
-      // Windows x64
-      if (name.includes("windows") && name.includes("x64") && name.endsWith(".sig")) {
+      // Windows x64 - Look for .msi.zip.sig files
+      if (name.endsWith(".msi.zip.sig")) {
         const downloadUrl = asset.browser_download_url.replace(".sig", "");
         const sigResponse = await fetch(asset.browser_download_url, { headers });
         const signature = await sigResponse.text();
@@ -84,32 +84,25 @@ export async function GET() {
         };
       }
       
-      // macOS x64
-      else if (name.includes("macos") && name.includes("x64") && name.endsWith(".sig")) {
+      // macOS universal - Look for .dmg.tar.gz.sig files
+      else if (name.includes("universal") && name.endsWith(".dmg.tar.gz.sig")) {
         const downloadUrl = asset.browser_download_url.replace(".sig", "");
         const sigResponse = await fetch(asset.browser_download_url, { headers });
         const signature = await sigResponse.text();
         
+        // Universal builds work for both x86_64 and aarch64
         tauriResponse.platforms["darwin-x86_64"] = {
           signature: signature.trim(),
           url: downloadUrl,
         };
-      }
-      
-      // macOS ARM (Apple Silicon)
-      else if (name.includes("macos") && name.includes("aarch64") && name.endsWith(".sig")) {
-        const downloadUrl = asset.browser_download_url.replace(".sig", "");
-        const sigResponse = await fetch(asset.browser_download_url, { headers });
-        const signature = await sigResponse.text();
-        
         tauriResponse.platforms["darwin-aarch64"] = {
           signature: signature.trim(),
           url: downloadUrl,
         };
       }
       
-      // Linux x64
-      else if (name.includes("linux") && name.includes("x86_64") && name.endsWith(".sig")) {
+      // Linux x64 - Look for .AppImage.tar.gz.sig files
+      else if (name.includes("amd64") && name.endsWith(".appimage.tar.gz.sig")) {
         const downloadUrl = asset.browser_download_url.replace(".sig", "");
         const sigResponse = await fetch(asset.browser_download_url, { headers });
         const signature = await sigResponse.text();
