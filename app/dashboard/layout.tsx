@@ -98,18 +98,22 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         .map(async (group) => {
           let endpoint = "/api/sync/icloud";
           if (group.provider === "google") {
-            endpoint = "/api/sync/google";
+            endpoint = `/api/sync/google?accountId=${group.id}`;
           } else if (group.provider === "microsoft") {
             endpoint = "/api/sync/microsoft/callback";
           }
           try {
-            await fetch(endpoint, {
+            const res = await fetch(endpoint, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ action: "sync", accountId: group.id }),
             });
+            if (!res.ok) {
+              throw new Error(`Sync failed for ${group.provider}: ${res.statusText}`);
+            }
           } catch (error) {
             console.error(`Failed to sync ${group.provider}:`, error);
+            throw error;
           }
         });
 
@@ -117,7 +121,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
       // Refresh both calendars list AND events after sync
       await refreshCalendars();
-      refreshEvents();
+      await refreshEvents();
     } catch (error) {
       console.error("Sync failed:", error);
       throw error;

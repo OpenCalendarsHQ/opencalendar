@@ -124,8 +124,18 @@ export function Header({
             </div>
           </div>
 
-          {/* Right: Create + Search */}
+          {/* Right: Sync + Create + Search */}
           <div className="flex items-center gap-0.5">
+            {onSync && (
+              <button
+                onClick={handleManualSync}
+                disabled={isSyncing}
+                className="touch-target rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                aria-label={isSyncing ? "Synchroniseren..." : "Synchroniseren"}
+              >
+                <RefreshCw className={`h-5 w-5 ${isSyncing ? "animate-spin" : ""}`} />
+              </button>
+            )}
             <button
               onClick={onCreateEvent}
               className="touch-target rounded-md bg-accent p-2 text-accent-foreground hover:bg-accent-hover"

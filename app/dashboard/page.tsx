@@ -261,7 +261,9 @@ function DashboardContent() {
           const batch = nonLocalGroups.slice(i, i + 3);
           const syncPromises = batch.map(group => {
             const endpoint =
-              group.provider === "google" ? "/api/sync/google" : "/api/sync/icloud";
+              group.provider === "google"
+                ? `/api/sync/google?accountId=${group.id}`
+                : "/api/sync/icloud";
             return fetch(endpoint, {
               method: "POST",
               headers: { "Content-Type": "application/json" },

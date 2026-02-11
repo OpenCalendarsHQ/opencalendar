@@ -256,16 +256,22 @@ class ApiClient {
   }
 
   // Sync endpoints
-  async syncGoogle(): Promise<{ success: boolean }> {
-    return this.request("/api/sync/google", { method: "POST" });
+  async syncGoogle(accountId: string): Promise<{ success: boolean }> {
+    return this.request(`/api/sync/google?accountId=${accountId}`, { method: "POST" });
   }
 
-  async syncICloud(): Promise<{ success: boolean }> {
-    return this.request("/api/sync/icloud", { method: "POST" });
+  async syncICloud(accountId: string): Promise<{ success: boolean }> {
+    return this.request("/api/sync/icloud", {
+      method: "POST",
+      body: JSON.stringify({ action: "sync", accountId }),
+    });
   }
 
-  async syncMicrosoft(): Promise<{ success: boolean }> {
-    return this.request("/api/sync/microsoft", { method: "POST" });
+  async syncMicrosoft(accountId: string): Promise<{ success: boolean }> {
+    return this.request("/api/sync/microsoft", {
+      method: "POST",
+      body: JSON.stringify({ action: "sync", accountId }),
+    });
   }
 }
 

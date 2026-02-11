@@ -345,7 +345,7 @@ function SettingsContent() {
     try {
       let endpoint = "/api/sync/icloud";
       if (provider === "google") {
-        endpoint = "/api/sync/google";
+        endpoint = `/api/sync/google?accountId=${accountId}`;
       } else if (provider === "microsoft") {
         endpoint = "/api/sync/microsoft/callback";
       } else if (provider === "caldav") {
