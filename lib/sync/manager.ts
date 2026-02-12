@@ -2,15 +2,21 @@ import { db } from "@/lib/db";
 import { calendarAccounts, calendars } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { syncGoogleCalendars, syncGoogleEvents } from "./google";
-import {
-  syncICloudCalendars,
-  syncICloudEvents,
-} from "./icloud";
-import {
-  syncCalDAVCalendars,
-  syncCalDAVEvents,
-} from "./caldav";
+import { syncICloudCalendars, syncICloudEvents } from "./icloud";
+import { syncCalDAVCalendars, syncCalDAVEvents } from "./caldav";
+import { syncMicrosoftCalendars, syncMicrosoftEvents } from "./microsoft";
 import { withSyncLock } from "./locking";
+
+type SyncProvider = "google" | "icloud" | "caldav" | "microsoft";
+const SYNC_REGISTRY: Record<
+  SyncProvider,
+  { syncCalendars: (accountId: string) => Promise<void>; syncEvents: (accountId: string, calendarId: string) => Promise<void> }
+> = {
+  google: { syncCalendars: syncGoogleCalendars, syncEvents: syncGoogleEvents },
+  icloud: { syncCalendars: syncICloudCalendars, syncEvents: syncICloudEvents },
+  caldav: { syncCalendars: syncCalDAVCalendars, syncEvents: syncCalDAVEvents },
+  microsoft: { syncCalendars: syncMicrosoftCalendars, syncEvents: syncMicrosoftEvents },
+};
 
 export interface SyncResult {
   accountId: string;
@@ -56,19 +62,15 @@ export async function syncAccount(accountId: string): Promise<SyncResult> {
       return result;
     }
 
-    // Acquire lock for calendar sync
+    const providerSync = SYNC_REGISTRY[account.provider as SyncProvider];
+    if (!providerSync) {
+      return result;
+    }
     const calendarSyncResult = await withSyncLock(
       accountId,
       "calendars",
       async () => {
-        // Sync calendars
-        if (account.provider === "google") {
-          await syncGoogleCalendars(accountId);
-        } else if (account.provider === "icloud") {
-          await syncICloudCalendars(accountId);
-        } else if (account.provider === "caldav") {
-          await syncCalDAVCalendars(accountId);
-        }
+        if (providerSync) await providerSync.syncCalendars(accountId);
         return true;
       }
     );
@@ -95,13 +97,7 @@ export async function syncAccount(accountId: string): Promise<SyncResult> {
           accountId,
           "events",
           async () => {
-            if (account.provider === "google") {
-              await syncGoogleEvents(accountId, cal.id);
-            } else if (account.provider === "icloud") {
-              await syncICloudEvents(accountId, cal.id);
-            } else if (account.provider === "caldav") {
-              await syncCalDAVEvents(accountId, cal.id);
-            }
+            if (providerSync) await providerSync.syncEvents(accountId, cal.id);
             return true;
           },
           cal.id // Pass calendarId for per-calendar locking

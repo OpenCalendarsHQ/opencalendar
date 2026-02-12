@@ -5,38 +5,18 @@ import { verifyRequest } from "@/lib/auth/verify-request";
 import { ensureUserExists } from "@/lib/auth/ensure-user";
 import { eq, and, gte, lte, or, isNull, desc } from "drizzle-orm";
 import { z } from "zod";
-import { createICloudEvent, updateICloudEvent, deleteICloudEvent } from "@/lib/sync/icloud";
-import { createGoogleEvent, updateGoogleEvent, deleteGoogleEvent } from "@/lib/sync/google";
+import {
+  getCalendarProviderInfo,
+  shouldSyncToProvider,
+  createAndStoreEventOnProvider,
+  updateEventOnProvider,
+  deleteEventOnProvider,
+  buildEventSyncData,
+  type EventSyncData,
+} from "@/lib/sync/event-providers";
 import { rateLimit, rateLimitConfigs } from "@/lib/rate-limit";
 import { parseRRule } from "@/lib/utils/rrule";
 
-// Type for event sync data to avoid using 'any'
-interface EventSyncData {
-  title?: string;
-  description?: string;
-  startTime?: Date;
-  endTime?: Date;
-  isAllDay?: boolean;
-  location?: string;
-}
-
-/**
- * Get the provider and account info for a calendar.
- */
-async function getCalendarProviderInfo(calendarId: string) {
-  const [result] = await db
-    .select({
-      calendarId: calendars.id,
-      accountId: calendarAccounts.id,
-      provider: calendarAccounts.provider,
-      isReadOnly: calendars.isReadOnly,
-    })
-    .from(calendars)
-    .innerJoin(calendarAccounts, eq(calendars.accountId, calendarAccounts.id))
-    .where(eq(calendars.id, calendarId));
-
-  return result || null;
-}
 
 const eventSchema = z.object({
   calendarId: z.string().optional(),
@@ -315,31 +295,22 @@ export async function POST(request: NextRequest) {
 
     // Sync to external provider in background - return immediately so user sees event in grid
     const providerInfo = await getCalendarProviderInfo(targetCalendarId);
-    if (providerInfo && !providerInfo.isReadOnly) {
-      const syncData = {
+    if (shouldSyncToProvider(providerInfo)) {
+      const syncData = buildEventSyncData({
         title: validated.title,
         startTime: new Date(validated.startTime),
         endTime: new Date(validated.endTime),
         isAllDay: validated.isAllDay,
         location: validated.location,
         description: validated.description,
-      };
+      });
+      const { provider, accountId } = providerInfo;
       const eventId = newEvent.id;
-      const accountId = providerInfo.accountId;
       const calendarId = targetCalendarId!;
-      const provider = providerInfo.provider;
 
       after(async () => {
         try {
-          if (provider === "icloud") {
-            const externalUid = await createICloudEvent(accountId, calendarId, syncData);
-            await db.update(events).set({ icsUid: externalUid }).where(eq(events.id, eventId));
-          } else if (provider === "google") {
-            const externalId = await createGoogleEvent(accountId, calendarId, syncData);
-            if (externalId) {
-              await db.update(events).set({ externalId }).where(eq(events.id, eventId));
-            }
-          }
+          await createAndStoreEventOnProvider(provider, accountId, calendarId, eventId, syncData);
         } catch (syncError) {
           console.error(`Failed to sync new event to ${provider}:`, syncError);
           // Event is saved locally, sync will catch up later
@@ -464,44 +435,30 @@ export async function PUT(request: NextRequest) {
 
     // Sync to external provider in background - return immediately so user sees update in grid
     if (calendarChanged) {
-      const oldExternalId = existingEvent.externalId;
       const oldCalendarId = existingEvent.calendarId;
-      const oldProviderInfo = oldExternalId && oldCalendarId
-        ? await getCalendarProviderInfo(oldCalendarId)
-        : null;
+      const oldProviderInfo =
+        existingEvent.externalId && oldCalendarId
+          ? await getCalendarProviderInfo(oldCalendarId)
+          : null;
       const newProviderInfo = await getCalendarProviderInfo(data.calendarId);
-      const createSyncData = {
-        title: updated.title,
-        startTime: updated.startTime,
-        endTime: updated.endTime,
-        isAllDay: updated.isAllDay,
-        location: updated.location || undefined,
-        description: updated.description || undefined,
-      };
+      const createSyncData = buildEventSyncData(updated);
 
       after(async () => {
         try {
-          if (oldProviderInfo && !oldProviderInfo.isReadOnly) {
+          if (shouldSyncToProvider(oldProviderInfo)) {
             console.log(`[Event Move] Deleting event ${id} from old ${oldProviderInfo.provider} calendar ${oldCalendarId}`);
-            if (oldProviderInfo.provider === "icloud") {
-              await deleteICloudEvent(oldProviderInfo.accountId, id);
-            } else if (oldProviderInfo.provider === "google") {
-              await deleteGoogleEvent(oldProviderInfo.accountId, oldCalendarId, id);
-            }
+            await deleteEventOnProvider(oldProviderInfo.provider, oldProviderInfo.accountId, oldCalendarId, id);
             console.log(`[Event Move] Successfully deleted from old calendar`);
           }
-
-          if (newProviderInfo && !newProviderInfo.isReadOnly) {
+          if (shouldSyncToProvider(newProviderInfo)) {
             console.log(`[Event Move] Creating event in new ${newProviderInfo.provider} calendar ${data.calendarId}`);
-            if (newProviderInfo.provider === "icloud") {
-              const externalUid = await createICloudEvent(newProviderInfo.accountId, data.calendarId, createSyncData);
-              await db.update(events).set({ icsUid: externalUid }).where(eq(events.id, id));
-            } else if (newProviderInfo.provider === "google") {
-              const externalId = await createGoogleEvent(newProviderInfo.accountId, data.calendarId, createSyncData);
-              if (externalId) {
-                await db.update(events).set({ externalId }).where(eq(events.id, id));
-              }
-            }
+            await createAndStoreEventOnProvider(
+              newProviderInfo.provider,
+              newProviderInfo.accountId,
+              data.calendarId,
+              id,
+              createSyncData
+            );
             console.log(`[Event Move] Successfully created in new calendar`);
           }
         } catch (syncError) {
@@ -510,8 +467,8 @@ export async function PUT(request: NextRequest) {
       });
     } else if (updated.calendarId) {
       const providerInfo = await getCalendarProviderInfo(updated.calendarId);
-      if (providerInfo && !providerInfo.isReadOnly) {
-        const syncData: EventSyncData = {};
+      if (shouldSyncToProvider(providerInfo)) {
+        const syncData: Partial<EventSyncData> = {};
         if (data.title !== undefined) syncData.title = data.title;
         if (data.description !== undefined) syncData.description = data.description;
         if (data.startTime !== undefined) syncData.startTime = new Date(data.startTime);
@@ -520,36 +477,16 @@ export async function PUT(request: NextRequest) {
         if (data.location !== undefined) syncData.location = data.location;
 
         const hasExternalId = !!updated.externalId;
-        const createData = {
-          title: updated.title,
-          startTime: updated.startTime,
-          endTime: updated.endTime,
-          isAllDay: updated.isAllDay,
-          location: updated.location || undefined,
-          description: updated.description || undefined,
-        };
-        const accountId = providerInfo.accountId;
+        const createData = buildEventSyncData(updated);
+        const { provider, accountId } = providerInfo;
         const calendarId = updated.calendarId;
-        const provider = providerInfo.provider;
 
         after(async () => {
           try {
             if (!hasExternalId) {
-              if (provider === "icloud") {
-                const externalUid = await createICloudEvent(accountId, calendarId, createData);
-                await db.update(events).set({ icsUid: externalUid }).where(eq(events.id, id));
-              } else if (provider === "google") {
-                const externalId = await createGoogleEvent(accountId, calendarId, createData);
-                if (externalId) {
-                  await db.update(events).set({ externalId }).where(eq(events.id, id));
-                }
-              }
+              await createAndStoreEventOnProvider(provider, accountId, calendarId, id, createData);
             } else {
-              if (provider === "icloud") {
-                await updateICloudEvent(accountId, calendarId, id, syncData);
-              } else if (provider === "google") {
-                await updateGoogleEvent(accountId, calendarId, id, syncData);
-              }
+              await updateEventOnProvider(provider, accountId, calendarId, id, syncData);
             }
           } catch (syncError) {
             console.error(`Failed to sync event update to ${provider}:`, syncError);
@@ -593,13 +530,14 @@ export async function DELETE(request: NextRequest) {
     // Sync deletion to external provider BEFORE local delete
     if (eventToDelete.calendarId) {
       const providerInfo = await getCalendarProviderInfo(eventToDelete.calendarId);
-      if (providerInfo && !providerInfo.isReadOnly) {
+      if (shouldSyncToProvider(providerInfo)) {
         try {
-          if (providerInfo.provider === "icloud") {
-            await deleteICloudEvent(providerInfo.accountId, id);
-          } else if (providerInfo.provider === "google") {
-            await deleteGoogleEvent(providerInfo.accountId, eventToDelete.calendarId, id);
-          }
+          await deleteEventOnProvider(
+            providerInfo.provider,
+            providerInfo.accountId,
+            eventToDelete.calendarId,
+            id
+          );
         } catch (syncError) {
           console.error(`Failed to sync event deletion to ${providerInfo.provider}:`, syncError);
           // Continue with local delete even if sync fails

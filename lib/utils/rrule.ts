@@ -173,6 +173,30 @@ export function buildRRule(rule: ParsedRRule): string {
   return parts.join(";");
 }
 
+/**
+ * Parse UNTIL date from RRULE string (e.g. "FREQ=WEEKLY;UNTIL=20230714" or "UNTIL=20230714T235959Z").
+ * Used by CalDAV/iCloud sync for recurrence handling.
+ */
+export function parseRRuleUntilFromString(rrule: string): Date | null {
+  if (!rrule.includes("UNTIL=")) return null;
+  try {
+    const untilStr = rrule.split("UNTIL=")[1].split(";")[0].split(",")[0];
+    const clean = untilStr.replace("Z", "");
+    if (clean.length === 8) {
+      return new Date(
+        parseInt(clean.substring(0, 4)),
+        parseInt(clean.substring(4, 6)) - 1,
+        parseInt(clean.substring(6, 8))
+      );
+    }
+    return new Date(
+      untilStr.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?/, "$1-$2-$3T$4:$5:$6Z")
+    );
+  } catch {
+    return null;
+  }
+}
+
 // --- Internal helpers ---
 
 function parseRRuleDate(value: string): Date {
