@@ -200,6 +200,29 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         console.error("Failed to cache settings", e);
       }
 
+      // If theme changed, apply immediately via localStorage (fallback for ThemeProvider)
+      if (partial.theme) {
+        try {
+          localStorage.setItem("theme", partial.theme);
+          // Apply theme immediately to html element for instant feedback
+          const root = document.documentElement;
+          if (partial.theme === "light") {
+            root.classList.remove("dark");
+            root.classList.add("light");
+          } else if (partial.theme === "dark") {
+            root.classList.remove("light");
+            root.classList.add("dark");
+          } else {
+            // Auto mode
+            const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+            root.classList.remove("light", "dark");
+            root.classList.add(isDark ? "dark" : "light");
+          }
+        } catch (e) {
+          console.error("Failed to apply theme immediately", e);
+        }
+      }
+
       // Debounce database save (150ms for faster feedback)
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);

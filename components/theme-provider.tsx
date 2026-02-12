@@ -15,19 +15,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     const root = document.documentElement;
 
-    // Remove existing theme classes
-    root.classList.remove("light", "dark");
-
+    // Apply theme immediately
     if (settings.theme === "light") {
+      root.classList.remove("dark");
       root.classList.add("light");
       localStorage.setItem("theme", "light");
     } else if (settings.theme === "dark") {
+      root.classList.remove("light");
       root.classList.add("dark");
       localStorage.setItem("theme", "dark");
     } else {
       // Auto mode - detect system preference
       localStorage.setItem("theme", "auto");
       const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      root.classList.remove("light", "dark");
       root.classList.add(isDark ? "dark" : "light");
 
       // Listen for system theme changes

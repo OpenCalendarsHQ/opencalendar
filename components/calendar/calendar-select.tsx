@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Calendar, Cloud, Folder } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface CalendarSelectOption {
@@ -24,12 +24,12 @@ interface CalendarSelectProps {
   groups: CalendarSelectGroup[];
 }
 
-const providerIcons: Record<string, string> = {
-  local: "📅",
-  google: "🔵",
-  icloud: "☁️",
-  microsoft: "🟦",
-  caldav: "📆",
+const providerIcons: Record<string, React.ReactNode> = {
+  local: <Calendar className="h-4 w-4" />,
+  google: <Cloud className="h-4 w-4 text-blue-500" />,
+  icloud: <Cloud className="h-4 w-4 text-sky-400" />,
+  microsoft: <Cloud className="h-4 w-4 text-blue-600" />,
+  caldav: <Folder className="h-4 w-4" />,
 };
 
 const providerLabels: Record<string, string> = {
@@ -59,11 +59,11 @@ export function CalendarSelect({ value, onValueChange, groups }: CalendarSelectP
           "disabled:cursor-not-allowed disabled:opacity-50"
         )}
       >
-        <div className="flex items-center gap-2 overflow-hidden">
+<div className="flex items-center gap-2 overflow-hidden">
           {selectedCalendar && (
             <>
-              <span className="text-base" aria-hidden="true">
-                {providerIcons[selectedCalendar.provider] || "📅"}
+              <span className="text-muted-foreground" aria-hidden="true">
+                {providerIcons[selectedCalendar.provider] || providerIcons.local}
               </span>
               <span className="truncate">{selectedCalendar.name}</span>
               <span className="text-xs text-muted-foreground">
@@ -95,13 +95,13 @@ export function CalendarSelect({ value, onValueChange, groups }: CalendarSelectP
 
               return (
                 <SelectPrimitive.Group key={group.id}>
-                  <SelectPrimitive.Label
+<SelectPrimitive.Label
                     className={cn(
                       "flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-muted-foreground"
                     )}
                   >
-                    <span className="text-sm" aria-hidden="true">
-                      {providerIcons[group.provider] || "📅"}
+                    <span className="text-muted-foreground">
+                      {providerIcons[group.provider] || providerIcons.local}
                     </span>
                     {providerLabels[group.provider] || group.provider}
                   </SelectPrimitive.Label>
