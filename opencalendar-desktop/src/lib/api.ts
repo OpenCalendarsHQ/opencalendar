@@ -237,22 +237,38 @@ class ApiClient {
   }
 
   // Task endpoints
-  async getTasks(): Promise<{ tasks: any[] }> {
-    return this.request("/api/tasks");
+  async getTasks(includeCompleted = false): Promise<{ tasks: any[] }> {
+    return this.request(`/api/tasks?includeCompleted=${includeCompleted}`);
   }
 
-  async createTask(data: { action: string; title: string }): Promise<any> {
+  async createTask(data: { action: string; title: string; description?: string }): Promise<any> {
     return this.request("/api/tasks", {
       method: "POST",
       body: JSON.stringify(data),
     });
   }
 
-  async deleteTask(taskId: string): Promise<void> {
-    await this.request("/api/tasks", {
-      method: "DELETE",
-      body: JSON.stringify({ taskId }),
+  async updateTask(data: {
+    id: string;
+    title?: string;
+    description?: string;
+    status?: string;
+    completed?: boolean;
+  }): Promise<any> {
+    return this.request("/api/tasks", {
+      method: "PUT",
+      body: JSON.stringify(data),
     });
+  }
+
+  async deleteTask(taskId: string, action: "delete" | "unschedule" = "delete"): Promise<void> {
+    await this.request(`/api/tasks?id=${taskId}&action=${action}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getNotionStatusOptions(providerId: string): Promise<{ options: string[] }> {
+    return this.request(`/api/tasks/notion/status-options?providerId=${providerId}`);
   }
 
   // Sync endpoints

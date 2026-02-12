@@ -1,14 +1,17 @@
 "use client";
 
+import { useContext } from "react";
 import { Toaster } from "sonner";
-import { useSettings } from "@/lib/settings-context";
+import { SettingsContext } from "@/lib/settings-context";
 
 export function ToastProvider() {
-  const { settings } = useSettings();
+  // Use context directly to avoid throwing when SettingsProvider is not available (e.g. on /welcome)
+  const context = useContext(SettingsContext);
+  const theme = context?.settings?.theme === "auto" ? "system" : (context?.settings?.theme ?? "system");
 
   return (
     <Toaster
-      theme={settings.theme === "auto" ? "system" : settings.theme}
+      theme={theme}
       position="bottom-right"
       toastOptions={{
         style: {

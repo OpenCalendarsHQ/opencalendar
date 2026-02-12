@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef, useMemo, Suspense } from "rea
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { CalendarView, type CalendarViewRef } from "@/components/calendar/calendar-view";
-import { WeekViewSkeleton } from "@/components/calendar/week-view-skeleton";
 import { useCalendar } from "@/lib/calendar-context";
 import { useSettings } from "@/lib/settings-context";
 import { useTodos } from "@/hooks/use-todos";
@@ -466,26 +465,18 @@ function DashboardContent() {
         </div>
       )}
 
-      {loading && events.length === 0 && viewType === "week" ? (
-        <WeekViewSkeleton
-          currentDate={currentDate}
-          weekStartsOn={settings.weekStartsOn}
-          showWeekNumbers={settings.showWeekNumbers}
-        />
-      ) : (
-        <CalendarView
-          ref={calendarRef}
-          currentDate={currentDate}
-          viewType={viewType}
-          events={events}
-          rawEvents={rawEvents}
-          todos={todos}
-          onEventsChange={() => fetchEvents()}
-          onDateChange={setCurrentDate}
-          onViewTypeChange={setViewType}
-          onToggleTodo={toggleTodo}
-        />
-      )}
+      <CalendarView
+        ref={calendarRef}
+        currentDate={currentDate}
+        viewType={viewType}
+        events={events}
+        rawEvents={rawEvents}
+        todos={todos}
+        onEventsChange={() => fetchEvents()}
+        onDateChange={setCurrentDate}
+        onViewTypeChange={setViewType}
+        onToggleTodo={toggleTodo}
+      />
     </>
   );
 }
