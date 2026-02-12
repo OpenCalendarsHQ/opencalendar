@@ -41,7 +41,6 @@ export const events = pgTable("events", {
   color: text("color"), // Override color (null = use calendar color)
   url: text("url"), // Conference/meeting URL
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-  version: integer("version").notNull().default(1), // Version for optimistic locking
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({

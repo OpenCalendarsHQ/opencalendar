@@ -57,6 +57,10 @@ export function OnboardingModal() {
     setHasGoogle(hasGoogleAccount);
   }, [hasGoogleAccount]);
 
+  useEffect(() => {
+    if (isOpen) setStep(1);
+  }, [isOpen]);
+
   const handleConnectGoogle = useCallback(() => {
     setIsConnecting(true);
     document.cookie = `${OAUTH_RETURN_COOKIE}=${OAUTH_RETURN_PATH}; path=/; max-age=600; SameSite=Lax`;
