@@ -11,15 +11,19 @@ interface Task {
 interface DragContextType {
   draggingTask: Task | null;
   setDraggingTask: (task: Task | null) => void;
+  /** Event duration in minutes when dragging an event (for drop preview height) */
+  draggingEventDuration: number | null;
+  setDraggingEventDuration: (minutes: number | null) => void;
 }
 
 const DragContext = createContext<DragContextType | undefined>(undefined);
 
 export function DragProvider({ children }: { children: ReactNode }) {
   const [draggingTask, setDraggingTask] = useState<Task | null>(null);
+  const [draggingEventDuration, setDraggingEventDuration] = useState<number | null>(null);
 
   return (
-    <DragContext.Provider value={{ draggingTask, setDraggingTask }}>
+    <DragContext.Provider value={{ draggingTask, setDraggingTask, draggingEventDuration, setDraggingEventDuration }}>
       {children}
     </DragContext.Provider>
   );

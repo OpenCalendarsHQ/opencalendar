@@ -40,10 +40,15 @@ function SignInForm() {
     setLoading(true);
     setError(null);
 
+    const nextUrl = redirectTo === "/" ? "/dashboard" : redirectTo;
+    const nextWithOnboarding =
+      nextUrl.includes("?") ? `${nextUrl}&onboarding=1` : `${nextUrl}?onboarding=1`;
+    const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextWithOnboarding)}`;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+        redirectTo: callbackUrl,
       },
     });
 

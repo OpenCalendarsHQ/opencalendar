@@ -125,9 +125,14 @@ export async function GET(request: NextRequest) {
         console.error("Initial Google sync failed:", syncError);
       }
 
-      return NextResponse.redirect(
-        new URL("/settings?connected=google", request.url)
-      );
+      // Check for popup/onboarding return - cookie set when opening OAuth in popup
+      const returnTo = request.cookies.get("opencalendar_oauth_return")?.value;
+      const redirectUrl = returnTo
+        ? new URL(returnTo, request.url)
+        : new URL("/settings?connected=google", request.url);
+      const response = NextResponse.redirect(redirectUrl);
+      response.cookies.delete("opencalendar_oauth_return");
+      return response;
     } catch (error) {
       console.error("Google OAuth callback error:", error);
       return NextResponse.redirect(

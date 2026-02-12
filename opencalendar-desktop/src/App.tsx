@@ -15,7 +15,7 @@ import { YearView } from "./components/calendar/year-view";
 import { EventDetailModal } from "./components/calendar/event-detail-modal";
 import { EventEditModal } from "./components/calendar/event-edit-modal";
 import { SettingsModal } from "./components/settings/SettingsModal";
-import { TaskList } from "./components/tasks/task-list";
+import { TaskBoard } from "./components/tasks/task-board";
 import { TodayView } from "./components/views/today-view";
 import { useRecurringEvents } from "./hooks/use-recurring-events";
 import { Settings } from "lucide-react";
@@ -508,7 +508,7 @@ function CalendarApp(props: { user: any; logout: () => void }) {
             </>
           )}
 
-          {mainView === "tasks" && <TaskList />}
+          {mainView === "tasks" && <TaskBoard />}
         </div>
 
         {/* Floating action button for creating events */}

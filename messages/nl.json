@@ -144,5 +144,24 @@
       "macLabel": "macOS (.dmg)",
       "linuxLabel": "Linux (.AppImage)"
     }
+  },
+  "Onboarding": {
+    "welcomeTitle": "Welkom bij OpenCalendars",
+    "welcomeDesc": "Met OpenCalendars heb je al je kalenders op één plek. Koppel je Google Calendar en beleef je agenda op een nieuwe manier.",
+    "getStarted": "Aan de slag",
+    "skip": "Overslaan",
+    "connectTitle": "Koppel je agenda",
+    "connectDesc": "Sluit je Google Calendar aan via OpenCalendars om al je afspraken in één overzicht te zien.",
+    "connectGoogle": "Koppel Google Calendar",
+    "connecting": "Bezig met koppelen...",
+    "connectedGoogle": "Google Calendar gekoppeld",
+    "continue": "Verder",
+    "doneTitle": "Je bent klaar!",
+    "doneDesc": "Je kalender is gekoppeld. Begin met het plannen van je dagen.",
+    "goToCalendar": "Naar kalender",
+    "restartHint": "Onboarding opnieuw starten",
+    "restartTitle": "Onboarding opnieuw bekijken",
+    "restartDesc": "Bekijk de introductie en agenda-koppeling opnieuw.",
+    "restartButton": "Onboarding herstarten"
   }
 }

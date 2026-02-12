@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { MobileNav } from "@/components/layout/mobile-nav";
@@ -14,9 +14,13 @@ import type { CalendarGroup } from "@/lib/types";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { DragProvider } from "@/lib/drag-context";
 import { SettingsProvider } from "@/lib/settings-context";
+import { OnboardingProvider, useOnboarding } from "@/lib/onboarding-context";
+import { OnboardingModal } from "@/components/onboarding/onboarding-modal";
 
 function DashboardInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { startOnboarding } = useOnboarding();
   const { 
     currentDate, viewType, setViewType, navigateBack, navigateForward, 
     navigateToday, createEvent, toggleCommandMenu, openEvent, refreshEvents,
@@ -191,6 +195,14 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
     }
   }, [calendarGroups, refreshCalendars, refreshEvents]);
 
+  // Show onboarding when ?onboarding=1 in URL (e.g. after Google login)
+  useEffect(() => {
+    if (searchParams.get("onboarding") === "1") {
+      startOnboarding();
+      window.history.replaceState(null, "", "/dashboard");
+    }
+  }, [searchParams, startOnboarding]);
+
   // Track changes and close mobile sidebar
   const prevDateRef = useRef(currentDate);
   const prevViewRef = useRef(viewType);
@@ -288,6 +300,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         onNavigateToFocus={() => router.push("/dashboard/today")}
         onEventClick={openEvent}
       />
+      <OnboardingModal />
     </div>
   );
 }
@@ -297,9 +310,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <ErrorBoundary>
       <SettingsProvider>
         <CalendarProvider>
-          <DragProvider>
-            <DashboardInner>{children}</DashboardInner>
-          </DragProvider>
+          <OnboardingProvider>
+            <DragProvider>
+              <DashboardInner>{children}</DashboardInner>
+            </DragProvider>
+          </OnboardingProvider>
         </CalendarProvider>
       </SettingsProvider>
     </ErrorBoundary>

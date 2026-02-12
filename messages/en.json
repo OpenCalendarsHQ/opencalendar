@@ -144,5 +144,24 @@
       "macLabel": "macOS (.dmg)",
       "linuxLabel": "Linux (.AppImage)"
     }
+  },
+  "Onboarding": {
+    "welcomeTitle": "Welcome to OpenCalendars",
+    "welcomeDesc": "With OpenCalendars, all your calendars in one place. Connect your Google Calendar and experience your agenda in a new way.",
+    "getStarted": "Get started",
+    "skip": "Skip",
+    "connectTitle": "Connect your calendar",
+    "connectDesc": "Link your Google Calendar through OpenCalendars to see all your appointments in one overview.",
+    "connectGoogle": "Connect Google Calendar",
+    "connecting": "Connecting...",
+    "connectedGoogle": "Google Calendar connected",
+    "continue": "Continue",
+    "doneTitle": "You're all set!",
+    "doneDesc": "Your calendar is connected. Start planning your days.",
+    "goToCalendar": "Go to calendar",
+    "restartHint": "Restart onboarding",
+    "restartTitle": "Review onboarding again",
+    "restartDesc": "Review the introduction and calendar connection guide.",
+    "restartButton": "Restart onboarding"
   }
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback, memo } from "react";
 import { HOURS, getHourLabel, isToday, getTimePosition } from "@/lib/utils/date";
 import { useSettings } from "@/lib/settings-context";
 import { useDrag } from "@/lib/drag-context";
+import { EVENT_DRAG_TYPE, parseEventFromDragData, type SerializedEvent } from "@/lib/utils/event-drag";
 
 const HOUR_HEIGHT = 60;
 const SNAP_MINUTES = 15;
@@ -20,6 +21,7 @@ interface TimeGridProps {
   dates: Date[];
   onDragCreate?: (date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => void;
   onTaskDrop?: (task: any, date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => void;
+  onEventDrop?: (event: SerializedEvent, date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => void;
 }
 
 function snapToGrid(minutes: number): number {
@@ -34,9 +36,9 @@ function positionToMinutes(y: number): number {
   return (y / HOUR_HEIGHT) * 60;
 }
 
-export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, onDragCreate, onTaskDrop }: TimeGridProps) {
+export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, onDragCreate, onTaskDrop, onEventDrop }: TimeGridProps) {
   const { settings } = useSettings();
-  const { draggingTask } = useDrag();
+  const { draggingTask, draggingEventDuration } = useDrag();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [currentTimeTop, setCurrentTimeTop] = useState<number>(0);
   const hasTodayColumn = dates.some((d) => isToday(d));
@@ -160,9 +162,10 @@ export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, o
     };
   }, [drag, dates, onDragCreate]);
 
-  // Task drop handlers
-  const handleTaskDragOver = useCallback((e: React.DragEvent) => {
-    if (!onTaskDrop) return;
+  // Task and event drop handlers
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (!onTaskDrop && !onEventDrop) return;
+    if (!draggingTask && !e.dataTransfer.types.includes(EVENT_DRAG_TYPE)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
 
@@ -170,39 +173,62 @@ export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, o
     if (result) {
       setTaskDragOver(result);
     }
-  }, [getColumnAndMinutes, onTaskDrop]);
+  }, [getColumnAndMinutes, onTaskDrop, onEventDrop, draggingTask]);
 
-  const handleTaskDragLeave = useCallback(() => {
+  const handleDragLeave = useCallback(() => {
     setTaskDragOver(null);
   }, []);
 
-  const handleTaskDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setTaskDragOver(null);
-
-    if (!onTaskDrop || !draggingTask) {
-      console.error("No task drop handler or no dragging task");
-      return;
-    }
 
     const result = getColumnAndMinutes(e as any);
     if (!result) return;
 
-    try {
-      const date = dates[result.columnIndex];
-      const startMinutes = result.minutes;
-      const endMinutes = startMinutes + 60; // Default 1 hour
+    const date = dates[result.columnIndex];
+    const startMinutes = result.minutes;
+    const startHour = Math.floor(startMinutes / 60);
+    const startMin = startMinutes % 60;
 
-      const startHour = Math.floor(startMinutes / 60);
-      const startMin = startMinutes % 60;
-      const endHour = Math.floor(endMinutes / 60);
-      const endMin = endMinutes % 60;
-
-      onTaskDrop(draggingTask, date, startHour, startMin, endHour, endMin);
-    } catch (error) {
-      console.error("Failed to handle task drop:", error);
+    // Event drop
+    if (e.dataTransfer.types.includes(EVENT_DRAG_TYPE) && onEventDrop) {
+      const data = e.dataTransfer.getData(EVENT_DRAG_TYPE);
+      const event = parseEventFromDragData(data);
+      if (event) {
+        let endHour: number;
+        let endMin: number;
+        if (event.isAllDay) {
+          const endMinutes = Math.min(startMinutes + 60, 24 * 60);
+          endHour = Math.floor(endMinutes / 60);
+          endMin = endMinutes % 60;
+        } else {
+          const origStart = new Date(event.startTime).getTime();
+          const origEnd = new Date(event.endTime).getTime();
+          const durationMs = origEnd - origStart;
+          const newStart = new Date(date);
+          newStart.setHours(startHour, startMin, 0, 0);
+          const newEnd = new Date(newStart.getTime() + durationMs);
+          endHour = newEnd.getHours();
+          endMin = newEnd.getMinutes();
+        }
+        onEventDrop(event, date, startHour, startMin, endHour, endMin);
+      }
+      return;
     }
-  }, [getColumnAndMinutes, dates, onTaskDrop, draggingTask]);
+
+    // Task drop
+    if (onTaskDrop && draggingTask) {
+      try {
+        const endMinutes = startMinutes + 60;
+        const endHour = Math.floor(endMinutes / 60);
+        const endMin = endMinutes % 60;
+        onTaskDrop(draggingTask, date, startHour, startMin, endHour, endMin);
+      } catch (error) {
+        console.error("Failed to handle task drop:", error);
+      }
+    }
+  }, [getColumnAndMinutes, dates, onTaskDrop, onEventDrop, draggingTask]);
 
   // Calculate drag preview position
   const dragPreview = drag && isDraggingRef.current ? (() => {
@@ -266,9 +292,9 @@ export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, o
           data-grid-area
           className="absolute inset-0 ml-[36px] flex md:ml-[52px]"
           onMouseDown={handleMouseDown}
-          onDragOver={handleTaskDragOver}
-          onDragLeave={handleTaskDragLeave}
-          onDrop={handleTaskDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
           style={{ cursor: onDragCreate ? "crosshair" : undefined }}
         >
           {children}
@@ -293,13 +319,13 @@ export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, o
             </div>
           )}
 
-          {/* Task drop indicator */}
+          {/* Task/event drop indicator */}
           {taskDragOver && (
             <div
               className="pointer-events-none absolute z-30"
               style={{
                 top: `${minutesToPosition(taskDragOver.minutes)}px`,
-                height: `${minutesToPosition(60)}px`,
+                height: `${minutesToPosition(draggingEventDuration ?? 60)}px`,
                 left: `${(taskDragOver.columnIndex / columnCount) * 100}%`,
                 width: `calc(${(1 / columnCount) * 100}% - 8px)`,
                 marginLeft: "4px",
@@ -307,7 +333,7 @@ export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, o
             >
               <div className="flex h-full w-full items-center justify-center rounded-[4px] border-2 border-dashed border-accent/80 bg-accent/10 px-2 py-1">
                 <span className="select-none text-[11px] font-medium text-foreground/80">
-                  Taak hier plaatsen
+                  Hier plaatsen
                 </span>
               </div>
             </div>

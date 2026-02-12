@@ -13,6 +13,7 @@ import { useCalendar } from "@/lib/calendar-context";
 import { useSettings } from "@/lib/settings-context";
 import type { CalendarEvent, CalendarViewType, Todo } from "@/lib/types";
 import { setHours, setMinutes } from "@/lib/utils/date";
+import type { SerializedEvent } from "@/lib/utils/event-drag";
 
 interface CalendarViewProps {
   currentDate: Date;
@@ -135,6 +136,201 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
       console.error("Error scheduling task:", error);
     }
   }, [onEventsChange, settings.defaultCalendarId]);
+
+  // Handle event drop (drag-to-reschedule) from week/day view
+  const handleEventDrop = useCallback(async (
+    event: SerializedEvent,
+    date: Date,
+    startHour: number,
+    startMinute: number,
+    endHour: number,
+    endMinute: number
+  ) => {
+    const startTime = setMinutes(setHours(new Date(date), startHour), startMinute);
+    const endTime = setMinutes(setHours(new Date(date), endHour), endMinute);
+    startTime.setSeconds(0, 0);
+    endTime.setSeconds(0, 0);
+
+    const { toast } = await import("sonner");
+
+    // Recurring event: add exception and create new event with new time
+    if (event.rrule || event.originalId) {
+      const originalId = event.originalId || event.id;
+      try {
+        const exRes = await fetch("/api/events/exception", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventId: originalId,
+            exceptionDate: event.startTime,
+          }),
+        });
+        if (!exRes.ok) {
+          const err = await exRes.json().catch(() => ({ error: "Onbekende fout" }));
+          toast.error("Kon uitzondering niet toevoegen: " + (err.error || "Onbekende fout"));
+          return;
+        }
+
+        const createRes = await fetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            calendarId: event.calendarId,
+            title: event.title || "(Geen titel)",
+            description: event.description,
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            isAllDay: false,
+            location: event.location,
+            color: event.color,
+          }),
+        });
+
+        if (createRes.ok) {
+          onEventsChange();
+          toast.success("Event verplaatst");
+        } else {
+          const err = await createRes.json().catch(() => ({ error: "Onbekende fout" }));
+          toast.error("Kon event niet verplaatsen: " + (err.error || "Onbekende fout"));
+        }
+      } catch (error) {
+        toast.error("Netwerkfout bij verplaatsen event");
+        console.error("Event drop error:", error);
+      }
+      return;
+    }
+
+    // Regular event: update via PUT
+    onEventsChange();
+    try {
+      const res = await fetch("/api/events", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: event.id,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          isAllDay: false,
+        }),
+      });
+      if (res.ok) {
+        onEventsChange();
+        toast.success("Event verplaatst");
+      } else {
+        const err = await res.json().catch(() => ({ error: "Onbekende fout" }));
+        toast.error("Event kon niet worden verplaatst: " + (err.error || "Onbekende fout"));
+        onEventsChange();
+      }
+    } catch (error) {
+      toast.error("Netwerkfout bij verplaatsen event");
+      onEventsChange();
+    }
+  }, [onEventsChange]);
+
+  // Handle event drop on month view (drop on day cell)
+  const handleEventDropToDay = useCallback(async (event: SerializedEvent, date: Date) => {
+    let startHour: number;
+    let startMin: number;
+    let endHour: number;
+    let endMin: number;
+    const isAllDay = event.isAllDay;
+
+    if (isAllDay) {
+      startHour = 0;
+      startMin = 0;
+      endHour = 23;
+      endMin = 59;
+    } else {
+      const start = new Date(event.startTime);
+      const end = new Date(event.endTime);
+      startHour = start.getHours();
+      startMin = start.getMinutes();
+      endHour = end.getHours();
+      endMin = end.getMinutes();
+    }
+
+    const startTime = setMinutes(setHours(new Date(date), startHour), startMin);
+    const endTime = setMinutes(setHours(new Date(date), endHour), endMin);
+    startTime.setSeconds(0, 0);
+    endTime.setSeconds(0, 0);
+    if (isAllDay) {
+      startTime.setHours(0, 0, 0, 0);
+      endTime.setHours(23, 59, 0, 0);
+    }
+
+    const { toast } = await import("sonner");
+
+    if (event.rrule || event.originalId) {
+      const originalId = event.originalId || event.id;
+      try {
+        const exRes = await fetch("/api/events/exception", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventId: originalId,
+            exceptionDate: event.startTime,
+          }),
+        });
+        if (!exRes.ok) {
+          const err = await exRes.json().catch(() => ({ error: "Onbekende fout" }));
+          toast.error("Kon uitzondering niet toevoegen: " + (err.error || "Onbekende fout"));
+          return;
+        }
+
+        const createRes = await fetch("/api/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            calendarId: event.calendarId,
+            title: event.title || "(Geen titel)",
+            description: event.description,
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            isAllDay,
+            location: event.location,
+            color: event.color,
+          }),
+        });
+
+        if (createRes.ok) {
+          onEventsChange();
+          toast.success("Event verplaatst");
+        } else {
+          const err = await createRes.json().catch(() => ({ error: "Onbekende fout" }));
+          toast.error("Kon event niet verplaatsen: " + (err.error || "Onbekende fout"));
+        }
+      } catch (error) {
+        toast.error("Netwerkfout bij verplaatsen event");
+        console.error("Event drop error:", error);
+      }
+      return;
+    }
+
+    onEventsChange();
+    try {
+      const res = await fetch("/api/events", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: event.id,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          isAllDay,
+        }),
+      });
+      if (res.ok) {
+        onEventsChange();
+        toast.success("Event verplaatst");
+      } else {
+        const err = await res.json().catch(() => ({ error: "Onbekende fout" }));
+        toast.error("Event kon niet worden verplaatst: " + (err.error || "Onbekende fout"));
+        onEventsChange();
+      }
+    } catch (error) {
+      toast.error("Netwerkfout bij verplaatsen event");
+      onEventsChange();
+    }
+  }, [onEventsChange]);
 
   const handleDayClick = useCallback((date: Date) => {
     onDateChange(date);
@@ -512,6 +708,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
           onTimeSlotClick={handleTimeSlotClick}
           onDragCreate={handleDragCreate}
           onTaskDrop={handleTaskDrop}
+          onEventDrop={handleEventDrop}
         />
       )}
       {viewType === "day" && (
@@ -524,6 +721,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
           onToggleTodo={onToggleTodo}
           onDragCreate={handleDragCreate}
           onTaskDrop={handleTaskDrop}
+          onEventDrop={handleEventDrop}
         />
       )}
       {viewType === "month" && (
@@ -533,6 +731,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
           todos={todos}
           onEventClick={handleEventClick}
           onDayClick={handleDayClick}
+          onEventDrop={handleEventDropToDay}
         />
       )}
       {viewType === "year" && (

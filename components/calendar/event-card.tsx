@@ -1,12 +1,14 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import { formatTime } from "@/lib/utils/date";
 import { useSettings } from "@/lib/settings-context";
 import { MapPin } from "lucide-react";
 import type { CalendarEvent } from "@/lib/types";
 import type { LayoutEvent } from "@/lib/utils/event-layout";
 import { EventHoverCard } from "./event-hover-card";
+import { eventToDragData, EVENT_DRAG_TYPE } from "@/lib/utils/event-drag";
+import { useDrag } from "@/lib/drag-context";
 
 interface EventCardProps {
   event: LayoutEvent;
@@ -16,6 +18,7 @@ interface EventCardProps {
 
 export const EventCard = memo(function EventCard({ event, style, onClick }: EventCardProps) {
   const { settings } = useSettings();
+  const { setDraggingEventDuration } = useDrag();
   const use24h = settings.timeFormat === "24h";
   const duration =
     (event.endTime.getTime() - event.startTime.getTime()) / (1000 * 60);
@@ -77,16 +80,32 @@ export const EventCard = memo(function EventCard({ event, style, onClick }: Even
     right: "items-end text-right",
   }[settings.eventTextAlignment || "left"];
 
+  const handleDragStart = useCallback((e: React.DragEvent) => {
+    e.stopPropagation();
+    e.dataTransfer.setData(EVENT_DRAG_TYPE, eventToDragData(event));
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setDragImage(e.currentTarget, 0, 0);
+    const durationMs = event.endTime.getTime() - event.startTime.getTime();
+    setDraggingEventDuration(Math.round(durationMs / (1000 * 60)));
+  }, [event, setDraggingEventDuration]);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggingEventDuration(null);
+  }, [setDraggingEventDuration]);
+
   return (
     <EventHoverCard event={event}>
       <button
         data-event
+        draggable
         onMouseDown={(e) => e.stopPropagation()}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         onClick={(e) => {
           e.stopPropagation();
           onClick(event);
         }}
-        className={`absolute z-10 flex cursor-pointer flex-col justify-start overflow-hidden transition-colors hover:z-20 ${alignmentClass} ${paddingClass} ${fontSizeClass} ${shadowClass}`}
+        className={`absolute z-10 flex cursor-grab active:cursor-grabbing flex-col justify-start overflow-hidden transition-colors hover:z-20 ${alignmentClass} ${paddingClass} ${fontSizeClass} ${shadowClass}`}
         style={{
           ...style,
           left: `${left}%`,
@@ -158,16 +177,24 @@ export const MultiDayEventCard = memo(function MultiDayEventCard({ event, span, 
   const widthPercent = (span / totalCols) * 100;
   const leftPercent = (startCol / totalCols) * 100;
 
+  const handleDragStart = useCallback((e: React.DragEvent) => {
+    e.stopPropagation();
+    e.dataTransfer.setData(EVENT_DRAG_TYPE, eventToDragData(event));
+    e.dataTransfer.effectAllowed = "move";
+  }, [event]);
+
   return (
     <EventHoverCard event={event}>
       <button
         data-event
+        draggable
         onMouseDown={(e) => e.stopPropagation()}
+        onDragStart={handleDragStart}
         onClick={(e) => {
           e.stopPropagation();
           onClick(event);
         }}
-        className="absolute z-10 flex items-center gap-1 truncate rounded-[4px] border border-border/50 bg-card px-2 py-0.5 text-left text-[10px] font-medium text-foreground hover:bg-card-hover"
+        className="absolute z-10 flex cursor-grab active:cursor-grabbing items-center gap-1 truncate rounded-[4px] border border-border/50 bg-card px-2 py-0.5 text-left text-[10px] font-medium text-foreground hover:bg-card-hover"
         style={{
           left: `${leftPercent}%`,
           width: `calc(${widthPercent}% - 4px)`,
@@ -187,16 +214,24 @@ interface AllDayEventCardProps {
 }
 
 export const AllDayEventCard = memo(function AllDayEventCard({ event, onClick }: AllDayEventCardProps) {
+  const handleDragStart = useCallback((e: React.DragEvent) => {
+    e.stopPropagation();
+    e.dataTransfer.setData(EVENT_DRAG_TYPE, eventToDragData(event));
+    e.dataTransfer.effectAllowed = "move";
+  }, [event]);
+
   return (
     <EventHoverCard event={event}>
       <button
         data-event
+        draggable
         onMouseDown={(e) => e.stopPropagation()}
+        onDragStart={handleDragStart}
         onClick={(e) => {
           e.stopPropagation();
           onClick(event);
         }}
-        className="flex w-full items-center gap-1.5 truncate rounded-[4px] border border-border/50 bg-card px-2 py-0.5 text-left text-[10px] font-medium text-foreground hover:bg-card-hover"
+        className="flex w-full cursor-grab active:cursor-grabbing items-center gap-1.5 truncate rounded-[4px] border border-border/50 bg-card px-2 py-0.5 text-left text-[10px] font-medium text-foreground hover:bg-card-hover"
       >
         <div className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: event.color || "#737373" }} />
         {event.title}

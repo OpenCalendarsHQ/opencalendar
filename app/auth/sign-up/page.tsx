@@ -44,10 +44,12 @@ export default function SignUpPage() {
     setLoading(true);
     setError(null);
 
+    const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/dashboard?onboarding=1")}`;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: callbackUrl,
       },
     });
 

@@ -16,6 +16,7 @@ import {
   toDateKey,
 } from "@/lib/utils/multi-day";
 import type { CalendarEvent, Todo } from "@/lib/types";
+import type { SerializedEvent } from "@/lib/utils/event-drag";
 
 interface WeekViewProps {
   currentDate: Date;
@@ -25,6 +26,7 @@ interface WeekViewProps {
   onTimeSlotClick: (date: Date, hour: number) => void;
   onDragCreate?: (date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => void;
   onTaskDrop?: (task: any, date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => void;
+  onEventDrop?: (event: SerializedEvent, date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => void;
 }
 
 const DayColumn = memo(function DayColumn({
@@ -59,7 +61,8 @@ export const WeekView = memo(function WeekView({
   todos, 
   onEventClick, 
   onDragCreate, 
-  onTaskDrop 
+  onTaskDrop,
+  onEventDrop,
 }: WeekViewProps) {
   const { settings } = useSettings();
   const [mounted, setMounted] = useState(false);
@@ -220,7 +223,7 @@ export const WeekView = memo(function WeekView({
         )}
       </div>
 
-      <TimeGrid columnCount={7} dates={weekDays} onDragCreate={handleDragCreate} onTaskDrop={onTaskDrop}>
+      <TimeGrid columnCount={7} dates={weekDays} onDragCreate={handleDragCreate} onTaskDrop={onTaskDrop} onEventDrop={onEventDrop}>
         {weekDays.map((day) => {
           const dayKey = toDateKey(day);
           const layoutEvents = layoutByDay.get(dayKey) || [];

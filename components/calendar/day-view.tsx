@@ -7,6 +7,7 @@ import { EventCard, AllDayEventCard } from "./event-card";
 import { computeEventLayout } from "@/lib/utils/event-layout";
 import { splitMultiDayTimedEvents, isEventOnDay } from "@/lib/utils/multi-day";
 import type { CalendarEvent, Todo } from "@/lib/types";
+import type { SerializedEvent } from "@/lib/utils/event-drag";
 
 interface DayViewProps {
   currentDate: Date;
@@ -17,9 +18,10 @@ interface DayViewProps {
   onToggleTodo: (id: string) => void;
   onDragCreate?: (date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => void;
   onTaskDrop?: (task: any, date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => void;
+  onEventDrop?: (event: SerializedEvent, date: Date, startHour: number, startMinute: number, endHour: number, endMinute: number) => void;
 }
 
-export const DayView = memo(function DayView({ currentDate, events, todos, onEventClick, onTimeSlotClick, onToggleTodo, onDragCreate, onTaskDrop }: DayViewProps) {
+export const DayView = memo(function DayView({ currentDate, events, todos, onEventClick, onTimeSlotClick, onToggleTodo, onDragCreate, onTaskDrop, onEventDrop }: DayViewProps) {
   // Timed events for this day (including clipped multi-day timed events)
   const dayEvents = useMemo(
     () => splitMultiDayTimedEvents(events, currentDate),
@@ -75,7 +77,7 @@ export const DayView = memo(function DayView({ currentDate, events, todos, onEve
         </div>
       </div>
 
-      <TimeGrid columnCount={1} dates={[currentDate]} onDragCreate={handleDragCreate} onTaskDrop={onTaskDrop}>
+      <TimeGrid columnCount={1} dates={[currentDate]} onDragCreate={handleDragCreate} onTaskDrop={onTaskDrop} onEventDrop={onEventDrop}>
         <div className="relative flex-1">
           {layoutEvents.map((event) => {
             const top = getTimePosition(event.startTime, HOUR_HEIGHT);

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
-import { Loader2 } from "lucide-react";
+import { Loader2, RotateCcw } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -17,6 +19,8 @@ function GoogleIcon({ className }: { className?: string }) {
 }
 
 export function AccountTab() {
+  const t = useTranslations("Onboarding");
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
@@ -98,6 +102,20 @@ export function AccountTab() {
               </>
             )}
           </div>
+        </div>
+
+        <div className="pt-6 border-t border-border">
+          <h2 className="text-sm font-semibold text-foreground mb-4">{t("restartTitle")}</h2>
+          <p className="text-xs text-muted-foreground mb-3">
+            {t("restartDesc")}
+          </p>
+          <button
+            onClick={() => router.push("/dashboard?onboarding=1")}
+            className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+          >
+            <RotateCcw className="h-4 w-4" />
+            {t("restartButton")}
+          </button>
         </div>
 
         <div className="pt-6 border-t border-border">
