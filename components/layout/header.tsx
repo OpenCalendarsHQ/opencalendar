@@ -247,7 +247,7 @@ export function Header({
             title={lastSyncTime ? `Laatst gesynchroniseerd: ${lastSyncTime.toLocaleTimeString()}` : t("sync")}
           >
             <RefreshCw className={`h-3 w-3 ${isSyncing ? "animate-spin" : ""}`} />
-            <span>{isSyncing ? "..." : t("sync")}</span>
+            <span className="w-10 text-center">{isSyncing ? "..." : t("sync")}</span>
           </button>
         )}
       </div>

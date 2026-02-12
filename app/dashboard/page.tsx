@@ -438,6 +438,15 @@ function DashboardContent() {
     registerRefreshEvents(() => fetchEvents());
   }, [registerCreateEvent, registerOpenEvent, registerRefreshEvents, fetchEvents]);
 
+  // Open event modal when eventId in URL (bijv. van Source-link bij geplande taak)
+  useEffect(() => {
+    const eventId = searchParams.get("eventId");
+    if (eventId && calendarRef.current && !loading) {
+      calendarRef.current.openEventModal(eventId);
+      router.replace("/dashboard", { scroll: false });
+    }
+  }, [searchParams, loading, router]);
+
   return (
     <>
       {error && (
@@ -460,7 +469,7 @@ function DashboardContent() {
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex items-center gap-2 rounded-full border border-border bg-popover/95 backdrop-blur-sm px-4 py-2 shadow-lg">
             <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-            <span className="text-xs font-medium text-foreground">{t("syncing")}</span>
+            <span className="text-xs font-medium text-foreground min-w-[100px] text-center">{t("syncing")}</span>
           </div>
         </div>
       )}

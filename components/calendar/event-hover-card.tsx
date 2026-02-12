@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import * as HoverCardPrimitive from "@radix-ui/react-hover-card";
 import { formatTime, format, locale } from "@/lib/utils/date";
 import { useSettings } from "@/lib/settings-context";
@@ -15,6 +16,7 @@ interface EventHoverCardProps {
 export function EventHoverCard({ event, children }: EventHoverCardProps) {
   const { settings } = useSettings();
   const use24h = settings.timeFormat === "24h";
+  const [open, setOpen] = React.useState(false);
 
   // Format duration
   const durationMs = event.endTime.getTime() - event.startTime.getTime();
@@ -29,10 +31,17 @@ export function EventHoverCard({ event, children }: EventHoverCardProps) {
     durationText = `${durationMinutes}m`;
   }
 
+  // Sluit de popup bij drag start zodat die niet blijft hangen
+  const child = React.Children.only(children) as React.ReactElement<{ onDragStart?: (e: React.DragEvent) => void }>;
+  const mergedOnDragStart = (e: React.DragEvent) => {
+    setOpen(false);
+    child.props.onDragStart?.(e);
+  };
+
   return (
-    <HoverCardPrimitive.Root openDelay={300} closeDelay={100}>
+    <HoverCardPrimitive.Root open={open} onOpenChange={setOpen} openDelay={300} closeDelay={100}>
       <HoverCardPrimitive.Trigger asChild>
-        {children}
+        {React.cloneElement(child, { onDragStart: mergedOnDragStart })}
       </HoverCardPrimitive.Trigger>
 
       <HoverCardPrimitive.Portal>

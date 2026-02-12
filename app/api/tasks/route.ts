@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
         .values({
           calendarId: targetCalendarId,
           title: task.tasks.title,
-          description: `${task.tasks.description || ""}\n\nSource: ${task.tasks.externalUrl}`,
+          description: task.tasks.description || "",
           startTime: new Date(eventData.startTime),
           endTime: new Date(eventData.endTime),
           isAllDay: eventData.isAllDay || false,
@@ -155,16 +155,28 @@ export async function POST(request: NextRequest) {
         })
         .returning();
 
-      // Link task to event
+      // Source URL: externe taak (Notion/GitHub) of OpenCalendar-URL voor handmatige taken
+      const baseUrl = new URL(request.url).origin;
+      const sourceUrl = task.tasks.externalUrl ?? `${baseUrl}/dashboard?eventId=${event.id}`;
+      const descriptionWithSource = `${task.tasks.description || ""}\n\nSource: ${sourceUrl}`;
+
+      // Update event description met source URL
+      await db
+        .update(events)
+        .set({ description: descriptionWithSource })
+        .where(eq(events.id, event.id));
+
+      // Link task to event + update externalUrl voor handmatige taken
       await db
         .update(tasks)
         .set({
           scheduledEventId: event.id,
           scheduledAt: new Date(),
+          ...(task.tasks.externalUrl ? {} : { externalUrl: sourceUrl }),
         })
         .where(eq(tasks.id, taskId));
 
-      return NextResponse.json({ success: true, event });
+      return NextResponse.json({ success: true, event: { ...event, description: descriptionWithSource } });
     }
 
     if (action === "create") {
