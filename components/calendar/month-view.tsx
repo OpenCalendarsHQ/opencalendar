@@ -5,6 +5,7 @@ import { getMonthDays, formatWeekDay, formatDayNumber, isToday, isSameMonth, get
 import { useSettings } from "@/lib/settings-context";
 import { isEventOnDay, toDateKey } from "@/lib/utils/multi-day";
 import type { CalendarEvent, Todo } from "@/lib/types";
+import type { SerializedEvent } from "@/lib/utils/event-drag";
 
 interface MonthViewProps {
   currentDate: Date;
@@ -12,9 +13,10 @@ interface MonthViewProps {
   todos: Todo[];
   onEventClick: (event: CalendarEvent) => void;
   onDayClick: (date: Date) => void;
+  onEventDrop?: (event: SerializedEvent, date: Date) => void | Promise<void>;
 }
 
-export const MonthView = memo(function MonthView({ currentDate, events, todos, onEventClick, onDayClick }: MonthViewProps) {
+export const MonthView = memo(function MonthView({ currentDate, events, todos, onEventClick, onDayClick, onEventDrop }: MonthViewProps) {
   const { settings } = useSettings();
   const monthDays = useMemo(() => getMonthDays(currentDate, settings.weekStartsOn), [currentDate, settings.weekStartsOn]);
   const weekDayHeaders = useMemo(
