@@ -5,6 +5,7 @@ import { X, MapPin, AlignLeft, Clock, Trash2, Calendar, ExternalLink, Repeat } f
 import { format } from "@/lib/utils/date";
 import { useSettings } from "@/lib/settings-context";
 import { useCalendar } from "@/lib/calendar-context";
+import { CalendarSelect } from "./calendar-select";
 import type { CalendarEvent } from "@/lib/types";
 
 interface EventModalProps {
@@ -210,34 +211,22 @@ export function EventModal({ event, isOpen, isNew, onClose, onSave, onDelete }: 
           {calendars.length > 0 && (
             <div className="flex items-center gap-2.5">
               <Calendar className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              <select
-                value={calendarId}
-                onChange={(e) => setCalendarId(e.target.value)}
-                className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground"
-              >
-                {calendarGroups.map((group: any) => {
-                  const writableCalendars = group.calendars?.filter((cal: any) => !cal.isReadOnly) || [];
-                  if (writableCalendars.length === 0) return null;
-
-                  const providerLabels: Record<string, string> = {
-                    local: "OpenCalendar",
-                    google: "Google",
-                    icloud: "iCloud",
-                    microsoft: "Microsoft",
-                    caldav: "CalDAV",
-                  };
-
-                  return (
-                    <optgroup key={group.id} label={providerLabels[group.provider] || group.provider}>
-                      {writableCalendars.map((cal: any) => (
-                        <option key={cal.id} value={cal.id}>
-                          {cal.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  );
-                })}
-              </select>
+              <div className="flex-1">
+                <CalendarSelect
+                  value={calendarId}
+                  onValueChange={setCalendarId}
+                  groups={calendarGroups.map((group: any) => ({
+                    id: group.id,
+                    provider: group.provider,
+                    calendars: (group.calendars?.filter((cal: any) => !cal.isReadOnly) || []).map((cal: any) => ({
+                      id: cal.id,
+                      name: cal.name,
+                      provider: group.provider,
+                      color: cal.color,
+                    })),
+                  })).filter((group: any) => group.calendars.length > 0)}
+                />
+              </div>
             </div>
           )}
 

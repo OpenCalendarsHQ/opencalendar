@@ -50,6 +50,13 @@
       "when": 1770824248941,
       "tag": "0006_stale_tomas",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1770845906056,
+      "tag": "0007_absent_mister_sinister",
+      "breakpoints": true
     }
   ]
 }
