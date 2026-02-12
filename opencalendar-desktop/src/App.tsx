@@ -30,26 +30,16 @@ import type { CalendarEvent, CalendarGroup, CalendarViewType } from "./lib/types
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-// Check for updates on app startup
+// Check for updates on app startup (alleen in productie, stille fout als endpoint niet bereikbaar)
 async function checkForUpdates() {
+  if (!import.meta.env.PROD) return; // Skip in dev-modus
   try {
-    console.log("Checking for updates...");
     const update = await check();
-    
     if (update) {
-      console.log(`Update available: v${update.version}`);
-      // The dialog is handled automatically by the updater plugin (dialog: true in config)
-      // If you want manual control, you can use:
-      // const confirmed = await ask(`Update to v${update.version}?`, { title: 'Update beschikbaar' });
-      // if (confirmed) {
-      //   await update.downloadAndInstall();
-      //   await relaunch();
-      // }
-    } else {
-      console.log("✅ App is up to date");
+      console.log(`Update beschikbaar: v${update.version}`);
     }
-  } catch (error) {
-    console.error("Failed to check for updates:", error);
+  } catch {
+    // Stil negeren: endpoint niet bereikbaar of geen geldige release (bijv. lokaal/development)
   }
 }
 
@@ -74,16 +64,16 @@ function App() {
 
         if (url.includes("auth-callback")) {
           try {
-            // Handle both with and without trailing slash: auth-callback/ or auth-callback
-            const urlObj = new URL(url.replace("auth-callback/", "auth-callback"));
-            console.log("Parsed URL:", urlObj.toString());
+            // Robuuste parsing: new URL() faalt soms met custom schemes (opencalendar://)
+            const queryStart = url.indexOf("?");
+            const params = queryStart >= 0 ? new URLSearchParams(url.substring(queryStart + 1)) : new URLSearchParams();
 
-            const token = urlObj.searchParams.get("token");
-            const refreshToken = urlObj.searchParams.get("refresh_token");
-            const userId = urlObj.searchParams.get("user_id");
-            const email = urlObj.searchParams.get("email");
-            const name = urlObj.searchParams.get("name");
-            const image = urlObj.searchParams.get("image");
+            const token = params.get("token");
+            const refreshToken = params.get("refresh_token");
+            const userId = params.get("user_id");
+            const email = params.get("email");
+            const name = params.get("name");
+            const image = params.get("image");
 
             console.log("Deep link params:", { token: token?.substring(0, 20) + "...", refreshToken: refreshToken?.substring(0, 20) + "...", userId, email, name });
 
@@ -132,17 +122,17 @@ function App() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-neutral-50">
-        <div className="bg-white rounded-lg border border-neutral-200 shadow-sm p-8 max-w-md w-full mx-4">
-          <h1 className="text-2xl font-semibold text-neutral-900 mb-2">OpenCalendars</h1>
-          <p className="text-neutral-600 mb-6 text-sm">Log in om je agenda's te bekijken</p>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="bg-card rounded-lg border border-border shadow-sm p-8 max-w-md w-full mx-4">
+          <h1 className="text-2xl font-semibold text-foreground mb-2">OpenCalendars</h1>
+          <p className="text-muted-foreground mb-6 text-sm">Log in om je agenda's te bekijken</p>
           <button
             onClick={handleLogin}
-            className="w-full bg-neutral-900 text-white font-medium py-2.5 px-4 rounded-md hover:bg-neutral-800 transition-colors"
+            className="w-full bg-accent text-accent-foreground font-medium py-2.5 px-4 rounded-md hover:bg-accent-hover transition-colors"
           >
             Inloggen met Browser
           </button>
-          <p className="mt-4 text-xs text-neutral-500 text-center">
+          <p className="mt-4 text-xs text-muted-foreground text-center">
             Er wordt een browser geopend voor authenticatie
           </p>
         </div>
@@ -390,17 +380,17 @@ function CalendarApp(props: { user: any; logout: () => void }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex items-center justify-center h-screen bg-background">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-gray-300 dark:border-gray-600 border-t-gray-900 dark:border-t-white rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400 text-lg">Kalenders laden...</p>
+          <div className="w-12 h-12 border-4 border-muted border-t-foreground rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground text-lg">Kalenders laden...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen bg-background">
       {/* Sidebar - only show in calendar view */}
       {mainView === "calendar" && (
         <Sidebar
@@ -416,16 +406,16 @@ function CalendarApp(props: { user: any; logout: () => void }) {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header with navigation */}
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="bg-background border-b border-border">
           {/* Main view tabs */}
-          <div className="mx-auto flex w-full max-w-(--breakpoint-2xl) items-center justify-between gap-1 px-4 pt-3 border-b border-gray-100 dark:border-gray-700">
+          <div className="mx-auto flex w-full max-w-(--breakpoint-2xl) items-center justify-between gap-1 px-4 pt-3 border-b border-border">
             <div className="flex items-center gap-1">
             <button
               onClick={() => setMainView("today")}
               className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
                 mainView === "today"
-                  ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
             >
               Vandaag
@@ -434,8 +424,8 @@ function CalendarApp(props: { user: any; logout: () => void }) {
               onClick={() => setMainView("calendar")}
               className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
                 mainView === "calendar"
-                  ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
             >
               Kalender
@@ -444,8 +434,8 @@ function CalendarApp(props: { user: any; logout: () => void }) {
               onClick={() => setMainView("tasks")}
               className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
                 mainView === "tasks"
-                  ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white"
-                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
             >
               Taken
@@ -453,7 +443,7 @@ function CalendarApp(props: { user: any; logout: () => void }) {
             </div>
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               title="Instellingen"
             >
               <Settings className="w-5 h-5" />
@@ -475,7 +465,7 @@ function CalendarApp(props: { user: any; logout: () => void }) {
         </div>
 
         {/* View content */}
-        <div className="flex-1 overflow-auto bg-white dark:bg-gray-900">
+        <div className="flex-1 overflow-auto bg-background">
           {mainView === "today" && (
             <TodayView
               events={visibleEvents}
@@ -523,9 +513,9 @@ function CalendarApp(props: { user: any; logout: () => void }) {
 
         {/* Floating action button for creating events */}
         {mainView === "calendar" && (
-          <button
-            onClick={handleCreateEvent}
-            className="fixed bottom-8 right-8 w-14 h-14 bg-neutral-900 text-white rounded-full shadow-lg hover:bg-neutral-800 transition-all hover:scale-110 flex items-center justify-center"
+        <button
+          onClick={handleCreateEvent}
+          className="fixed bottom-8 right-8 w-14 h-14 bg-accent text-accent-foreground rounded-full shadow-lg hover:bg-accent-hover transition-all hover:scale-110 flex items-center justify-center"
             title="Nieuw evenement"
           >
             <span className="text-2xl leading-none">+</span>

@@ -93,10 +93,10 @@ export function Sidebar({
 
   if (isCollapsed) {
     return (
-      <div className="w-12 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col items-center py-4">
+      <div className="w-12 border-r border-sidebar-border bg-sidebar-bg flex flex-col items-center py-4">
         <button
           onClick={onToggleCollapsed}
-          className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md p-2"
+          className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-md p-2"
           title="Sidebar openen"
         >
           <PanelLeft className="h-5 w-5" />
@@ -106,13 +106,13 @@ export function Sidebar({
   }
 
   return (
-    <div className="w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col">
+    <div className="w-64 border-r border-sidebar-border bg-sidebar-bg flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-3 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Kalenders</h2>
+      <div className="flex items-center justify-between px-3 py-3 border-b border-sidebar-border">
+        <h2 className="text-sm font-semibold text-foreground">Kalenders</h2>
         <button
           onClick={onToggleCollapsed}
-          className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md p-1"
+          className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-md p-1"
           title="Sidebar sluiten"
         >
           <PanelLeftClose className="h-4 w-4" />
@@ -120,7 +120,7 @@ export function Sidebar({
       </div>
 
       {/* Mini Calendar */}
-      <div className="border-b border-gray-200 dark:border-gray-700 py-2">
+      <div className="border-b border-sidebar-border py-2">
         <MiniCalendar
           selectedDate={selectedDate}
           onDateSelect={onDateSelect}
@@ -139,15 +139,15 @@ export function Sidebar({
               <div key={group.id} className="mb-2">
                 <button
                   onClick={() => toggleGroup(group.id)}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-100 text-sm"
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted text-sm"
                 >
                   {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 text-gray-600" />
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   ) : (
-                    <ChevronRight className="h-4 w-4 text-gray-600" />
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   )}
-                  <ProviderIcon className="h-4 w-4 text-gray-600" />
-                  <span className="flex-1 text-left font-medium text-gray-900 truncate">
+                  <ProviderIcon className="h-4 w-4 text-muted-foreground" />
+                  <span className="flex-1 text-left font-medium text-foreground truncate">
                     {group.email}
                   </span>
                 </button>
@@ -157,22 +157,22 @@ export function Sidebar({
                     {group.calendars.map((calendar) => (
                       <div
                         key={calendar.id}
-                        className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50 group"
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted group"
                       >
                         <button
                           onClick={() => onToggleCalendar(calendar.id)}
                           className="flex items-center gap-2 flex-1 min-w-0"
                         >
                           {calendar.isVisible ? (
-                            <Eye className="h-3.5 w-3.5 text-gray-600 flex-shrink-0" />
+                            <Eye className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                           ) : (
-                            <EyeOff className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                            <EyeOff className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
                           )}
                           <div
                             className="h-3 w-3 rounded-sm flex-shrink-0"
                             style={{ backgroundColor: calendar.color }}
                           />
-                          <span className="text-sm text-gray-900 truncate">
+                          <span className="text-sm text-foreground truncate">
                             {calendar.name}
                           </span>
                         </button>

@@ -49,18 +49,18 @@ export function TodayView({ events, onEventClick }: TodayViewProps) {
   });
 
   return (
-    <div className="h-full overflow-y-auto bg-gray-50">
+    <div className="h-full overflow-y-auto bg-background">
       <div className="mx-auto w-full max-w-3xl px-6 py-8">
         {/* Greeting */}
         <div className="mb-8">
-          <div className="flex items-center gap-2 text-gray-500 mb-2">
+          <div className="flex items-center gap-2 text-muted-foreground mb-2">
             <TimeIcon className="h-5 w-5" />
             <span className="text-sm capitalize">{todayFormatted}</span>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="text-4xl font-bold text-foreground mb-2">
             {timeOfDay.greeting}
           </h1>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             {todayEvents.length} evenement{todayEvents.length !== 1 ? "en" : ""} vandaag
           </p>
         </div>

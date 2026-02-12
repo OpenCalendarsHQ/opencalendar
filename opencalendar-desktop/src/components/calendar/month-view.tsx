@@ -43,62 +43,70 @@ export const MonthView = memo(function MonthView({
   }, [monthDays]);
 
   const cols = showWeekNumbers ? "32px repeat(7, 1fr)" : "repeat(7, 1fr)";
+  const MAX_EVENTS_PER_DAY = 4; // Vaste aantal zichtbare events; rest als "+N meer"
 
   return (
     <div className="flex h-full flex-col">
-      <div className="grid shrink-0 border-b border-gray-200" style={{ gridTemplateColumns: cols }}>
+        <div className="grid shrink-0 border-b border-border" style={{ gridTemplateColumns: cols }}>
         {showWeekNumbers && (
-          <div className="border-r border-gray-100 px-1 py-2 text-center text-[9px] font-medium text-gray-600">#</div>
+          <div className="border-r border-border px-1 py-2 text-center text-[9px] font-medium text-muted-foreground">#</div>
         )}
         {weekDayHeaders.map((day, i) => (
-          <div key={i} className="border-r border-gray-100 px-2 py-2 text-center text-[10px] font-medium uppercase tracking-wider text-gray-600 last:border-r-0">
+          <div key={i} className="border-r border-border px-2 py-2 text-center text-[10px] font-medium uppercase tracking-wider text-muted-foreground last:border-r-0">
             {day}
           </div>
         ))}
       </div>
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex-1 grid min-h-0" style={{ gridTemplateRows: `repeat(${weeks.length}, minmax(0, 1fr))` }}>
         {weeks.map((week, weekIdx) => (
           <div
             key={weekIdx}
-            className="grid flex-1 border-b border-gray-100 last:border-b-0"
+            className="grid border-b border-border last:border-b-0 min-h-0"
             style={{ gridTemplateColumns: cols }}
           >
             {showWeekNumbers && (
-              <div className="flex items-start justify-center border-r border-gray-100 pt-1 text-[9px] font-medium text-gray-600">
+              <div className="flex items-start justify-center border-r border-border pt-1 text-[9px] font-medium text-muted-foreground">
                 {getWeekNumber(week[0], weekStartsOn)}
               </div>
             )}
             {week.map((day) => {
               const dayKey = toDateKey(day);
               const dayEvents = eventsByDay.get(dayKey) || [];
+              const visibleEvents = dayEvents.slice(0, MAX_EVENTS_PER_DAY);
+              const remainingCount = dayEvents.length - MAX_EVENTS_PER_DAY;
               const isCurrentMonth = isSameMonth(day, currentDate);
               const today = isToday(day);
 
               return (
                 <div key={dayKey}
-                  className={`min-h-[60px] cursor-pointer border-r border-gray-100 p-0.5 last:border-r-0 hover:bg-gray-50 md:min-h-[100px] md:p-1 flex flex-col ${
-                    !isCurrentMonth ? "bg-gray-50/50" : ""
+                  className={`h-full min-h-0 cursor-pointer border-r border-border p-0.5 last:border-r-0 hover:bg-muted/50 md:p-1 flex flex-col transition-colors ${
+                    !isCurrentMonth ? "bg-muted/30" : ""
                   }`}
                   onClick={() => onDayClick(day)}>
                   <div className="flex justify-center shrink-0 mb-1">
-                    <span className={`flex h-6 w-6 items-center justify-center rounded-md text-[11px] font-medium transition-all md:h-7 md:w-7 md:text-xs ${
-                      today ? "bg-gray-900 font-bold text-white shadow-sm scale-110" : isCurrentMonth ? "text-gray-900" : "text-gray-400"
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-md text-[11px] font-medium transition-all md:h-7 md:w-7 md:text-xs shrink-0 ${
+                      today ? "bg-accent font-bold text-accent-foreground shadow-sm scale-110" : isCurrentMonth ? "text-foreground" : "text-muted-foreground"
                     }`}>
                       {formatDayNumber(day)}
                     </span>
                   </div>
-                  <div className="mt-1 space-y-1 overflow-y-auto flex-1 px-1">
-                    {dayEvents.map((event) => (
+                  <div className="mt-1 space-y-1 overflow-hidden flex-1 min-h-0 px-1 flex flex-col">
+                    {visibleEvents.map((event) => (
                       <button key={`${event.id}-${dayKey}`} onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
-                        className="flex w-full items-center gap-1.5 truncate rounded-md px-1.5 py-1 text-left text-[10px] hover:bg-gray-100 md:text-[11px] font-medium transition-all active:scale-[0.98]"
+                        className="flex w-full items-center gap-1.5 min-w-0 rounded-md px-1.5 py-1 text-left text-[10px] hover:opacity-90 md:text-[11px] font-medium transition-all active:scale-[0.98] shrink-0"
                         style={{
                           backgroundColor: `${event.color || "#737373"}15`,
                           borderLeft: `3px solid ${event.color || "#737373"}`,
                         }}>
-                        <span className="truncate text-gray-900 pl-0.5">{event.title}</span>
+                        <span className="truncate text-foreground pl-0.5">{event.title}</span>
                       </button>
                     ))}
+                    {remainingCount > 0 && (
+                      <span className="text-[10px] text-muted-foreground truncate shrink-0">
+                        +{remainingCount} meer
+                      </span>
+                    )}
                   </div>
                 </div>
               );

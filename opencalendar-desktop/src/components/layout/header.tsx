@@ -91,15 +91,15 @@ export function Header({
   };
 
   return (
-    <header className="flex h-14 shrink-0 items-center border-b border-gray-200 bg-white">
+    <header className="flex h-14 shrink-0 items-center border-b border-border bg-background">
       <div className="mx-auto flex w-full max-w-(--breakpoint-2xl) items-center justify-between px-4">
         {/* Left: Date + Sync Status */}
         <div className="flex items-center gap-3">
           <div className="flex flex-col">
-            <span className="text-sm font-medium capitalize text-gray-900">
+            <span className="text-sm font-medium capitalize text-foreground">
               {formatMonthYear(currentDate)}
             </span>
-            <span className="text-[10px] capitalize text-gray-600">
+            <span className="text-[10px] capitalize text-muted-foreground">
               {formatTodayDate(new Date())}
             </span>
           </div>
@@ -108,7 +108,7 @@ export function Header({
             <button
               onClick={handleManualSync}
               disabled={isSyncing}
-              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
               title={lastSyncTime ? `Laatst gesynchroniseerd: ${lastSyncTime.toLocaleTimeString()}` : "Synchroniseren"}
             >
               <RefreshCw className={`h-3 w-3 ${isSyncing ? "animate-spin" : ""}`} />
@@ -121,27 +121,27 @@ export function Header({
         <div className="flex items-center gap-2">
           <button
             onClick={onNavigateToday}
-            className="rounded-md border border-gray-300 dark:border-gray-600 px-2.5 py-1 text-xs font-medium text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
           >
             Vandaag
           </button>
 
-          <div className="flex items-center rounded-md border border-gray-300 dark:border-gray-600">
-            <button onClick={onNavigateBack} className="rounded-l-md p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white">
+          <div className="flex items-center rounded-md border border-border">
+            <button onClick={onNavigateBack} className="rounded-l-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <button onClick={onNavigateForward} className="rounded-r-md p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white">
+            <button onClick={onNavigateForward} className="rounded-r-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="flex items-center gap-0.5 rounded-md border border-gray-300 dark:border-gray-600 p-0.5">
+          <div className="flex items-center gap-0.5 rounded-md border border-border p-0.5">
             <button
               onClick={() => onViewTypeChange("day")}
               className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                 viewType === "day"
-                  ? "bg-gray-900 dark:bg-gray-600 text-white"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               Dag
@@ -150,8 +150,8 @@ export function Header({
               onClick={() => onViewTypeChange("week")}
               className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                 viewType === "week"
-                  ? "bg-gray-900 dark:bg-gray-600 text-white"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               Week
@@ -160,8 +160,8 @@ export function Header({
               onClick={() => onViewTypeChange("month")}
               className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                 viewType === "month"
-                  ? "bg-gray-900 dark:bg-gray-600 text-white"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               Maand
@@ -170,8 +170,8 @@ export function Header({
               onClick={() => onViewTypeChange("year")}
               className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                 viewType === "year"
-                  ? "bg-gray-900 dark:bg-gray-600 text-white"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               Jaar
@@ -184,7 +184,7 @@ export function Header({
           {onCreateEvent && (
             <button
               onClick={onCreateEvent}
-              className="flex items-center gap-1 rounded-md bg-gray-900 px-2.5 py-1 text-xs font-medium text-white hover:bg-gray-800"
+              className="flex items-center gap-1 rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground hover:bg-accent-hover"
             >
               <Plus className="h-3.5 w-3.5" />
               Nieuw

@@ -21,14 +21,14 @@ export function MiniCalendar({ selectedDate, onDateSelect, weekStartsOn = 1 }: M
   return (
     <div className="px-3 pb-3">
       <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-xs font-medium capitalize text-gray-900">{formatMonthYear(viewMonth)}</span>
+        <span className="text-xs font-medium capitalize text-foreground">{formatMonthYear(viewMonth)}</span>
         <div className="flex items-center gap-0.5">
           <button onClick={() => setViewMonth(subMonths(viewMonth, 1))}
-            className="rounded-md p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+            className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
             <ChevronLeft className="h-3 w-3" />
           </button>
           <button onClick={() => setViewMonth(addMonths(viewMonth, 1))}
-            className="rounded-md p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+            className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
             <ChevronRight className="h-3 w-3" />
           </button>
         </div>
@@ -36,7 +36,7 @@ export function MiniCalendar({ selectedDate, onDateSelect, weekStartsOn = 1 }: M
 
       <div className="mb-0.5 grid grid-cols-7">
         {weekDayHeaders.map((day, i) => (
-          <div key={i} className="py-0.5 text-center text-[9px] font-medium text-gray-600">{day}</div>
+          <div key={i} className="py-0.5 text-center text-[9px] font-medium text-muted-foreground">{day}</div>
         ))}
       </div>
 
@@ -50,12 +50,12 @@ export function MiniCalendar({ selectedDate, onDateSelect, weekStartsOn = 1 }: M
             <button key={i} onClick={() => onDateSelect(day)}
               className={`mx-auto flex h-6 w-6 items-center justify-center rounded-md text-[10px] ${
                 isSelected
-                  ? "bg-gray-900 font-bold text-white"
+                  ? "bg-accent font-bold text-accent-foreground"
                   : isTodayDate
-                  ? "font-bold text-gray-900 underline underline-offset-2"
+                  ? "font-bold text-foreground underline underline-offset-2"
                   : isCurrentMonth
-                  ? "text-gray-900 hover:bg-gray-100"
-                  : "text-gray-400 hover:bg-gray-50"
+                  ? "text-foreground hover:bg-muted"
+                  : "text-muted-foreground hover:bg-muted/50"
               }`}>
               {formatDayNumber(day)}
             </button>
