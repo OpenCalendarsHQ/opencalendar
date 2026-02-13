@@ -166,7 +166,9 @@ export async function GET(request: NextRequest) {
             )
           )
         )
-      );
+      )
+      // PERFORMANCE: ensure results are streamed in chronological order
+      .orderBy(events.startTime);
 
     // Format the results and deduplicate
     const seen = new Set<string>();
