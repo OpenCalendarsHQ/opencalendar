@@ -9,6 +9,9 @@ import { EVENT_DRAG_TYPE, parseEventFromDragData, type SerializedEvent } from "@
 const HOUR_HEIGHT = 60;
 const SNAP_MINUTES = 15;
 
+// Bewaar scrollpositie bij navigeren tussen dagen/weken
+let savedScrollTop = 0;
+
 interface DragState {
   columnIndex: number;
   startMinutes: number;
@@ -51,9 +54,18 @@ export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, o
 
   useEffect(() => {
     if (scrollRef.current) {
-      const now = new Date();
-      const scrollTo = getTimePosition(now, HOUR_HEIGHT) - 200;
-      scrollRef.current.scrollTop = Math.max(0, scrollTo);
+      const scrollTo =
+        savedScrollTop > 0
+          ? savedScrollTop
+          : Math.max(0, getTimePosition(new Date(), HOUR_HEIGHT) - 200);
+      scrollRef.current.scrollTop = scrollTo;
+      savedScrollTop = scrollTo;
+    }
+  }, [dates]);
+
+  const handleScroll = useCallback(() => {
+    if (scrollRef.current) {
+      savedScrollTop = scrollRef.current.scrollTop;
     }
   }, []);
 
@@ -264,6 +276,7 @@ export const TimeGrid = memo(function TimeGrid({ children, columnCount, dates, o
     <div
       ref={scrollRef}
       data-scroll-container
+      onScroll={handleScroll}
       className="flex-1 overflow-y-auto overflow-x-hidden"
       style={{ willChange: "scroll-position" }}
     >

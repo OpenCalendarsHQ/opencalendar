@@ -42,10 +42,28 @@ function DashboardContent() {
     registerCreateEvent, 
     registerOpenEvent, 
     registerRefreshEvents, 
+    refreshEvents,
     visibleCalendarIds 
   } = useCalendar();
   const { settings } = useSettings();
   const { todos, toggleTodo } = useTodos();
+
+  const optimisticUpdateEvent = useCallback(
+    (eventId: string, updates: { startTime: Date; endTime: Date }) => {
+      setRawEvents((prev) =>
+        prev.map((e) =>
+          e.id === eventId
+            ? { ...e, startTime: new Date(updates.startTime), endTime: new Date(updates.endTime) }
+            : e
+        )
+      );
+    },
+    []
+  );
+
+  const optimisticEventRevert = useCallback(() => {
+    refreshEvents();
+  }, [refreshEvents]);
   const hasSynced = useRef(false);
   const hasInitialized = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -485,6 +503,8 @@ function DashboardContent() {
         onDateChange={setCurrentDate}
         onViewTypeChange={setViewType}
         onToggleTodo={toggleTodo}
+        onOptimisticEventUpdate={optimisticUpdateEvent}
+        onOptimisticEventRevert={optimisticEventRevert}
       />
     </>
   );

@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from "react";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { WeekView } from "./week-view";
 import { DayView } from "./day-view";
 import { MonthView } from "./month-view";
 import { YearView } from "./year-view";
+import { MobileDayView, type DayViewMode } from "./mobile-day-view";
+import { MobileMonthView } from "./mobile-month-view";
+import { MobileWeekView, type WeekViewZoom } from "./mobile-week-view";
 import { EventModal } from "./event-modal";
 import { RecurringEventDialog } from "./recurring-event-dialog";
 import { useSwipe } from "@/hooks/use-swipe";
@@ -25,6 +29,9 @@ interface CalendarViewProps {
   onDateChange: (date: Date) => void;
   onViewTypeChange: (type: CalendarViewType) => void;
   onToggleTodo: (id: string) => void;
+  /** Optimistic update: direct UI update, sync naar backend gebeurt op de achtergrond */
+  onOptimisticEventUpdate?: (eventId: string, updates: { startTime: Date; endTime: Date }) => void;
+  onOptimisticEventRevert?: (eventId: string) => void;
 }
 
 export interface CalendarViewRef {
@@ -42,8 +49,41 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
   onDateChange,
   onViewTypeChange,
   onToggleTodo,
+  onOptimisticEventUpdate,
+  onOptimisticEventRevert,
 }, ref) => {
   const { settings } = useSettings();
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
+  const [dayViewMode, setDayViewModeState] = useState<DayViewMode>(() => {
+    if (typeof window === "undefined") return "day";
+    try {
+      const s = localStorage.getItem("opencalendar_day_view_mode");
+      if (s && ["day", "multi", "list"].includes(s)) return s as DayViewMode;
+    } catch {}
+    return "day";
+  });
+  const [weekViewZoom, setWeekViewZoomState] = useState<WeekViewZoom>(() => {
+    if (typeof window === "undefined") return 5;
+    try {
+      const n = parseInt(localStorage.getItem("opencalendar_week_view_zoom") || "", 10);
+      if ([3, 5, 7].includes(n)) return n as WeekViewZoom;
+    } catch {}
+    return 5;
+  });
+
+  const setDayViewMode = useCallback((mode: DayViewMode) => {
+    setDayViewModeState(mode);
+    try {
+      localStorage.setItem("opencalendar_day_view_mode", mode);
+    } catch {}
+  }, []);
+  const setWeekViewZoom = useCallback((zoom: WeekViewZoom) => {
+    setWeekViewZoomState(zoom);
+    try {
+      localStorage.setItem("opencalendar_week_view_zoom", String(zoom));
+    } catch {}
+  }, []);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewEvent, setIsNewEvent] = useState(false);
@@ -200,32 +240,35 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
       return;
     }
 
-    // Regular event: update via PUT
-    onEventsChange();
+    // Regular event: direct optimistic update, sync op achtergrond
+    const updateId = event.originalId || event.id;
+    onOptimisticEventUpdate?.(updateId, { startTime, endTime });
+
     try {
       const res = await fetch("/api/events", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: event.id,
+          id: updateId,
           startTime: startTime.toISOString(),
           endTime: endTime.toISOString(),
           isAllDay: false,
         }),
       });
       if (res.ok) {
-        onEventsChange();
         toast.success("Event verplaatst");
       } else {
         const err = await res.json().catch(() => ({ error: "Onbekende fout" }));
         toast.error("Event kon niet worden verplaatst: " + (err.error || "Onbekende fout"));
+        onOptimisticEventRevert?.(updateId);
         onEventsChange();
       }
     } catch (error) {
       toast.error("Netwerkfout bij verplaatsen event");
+      onOptimisticEventRevert?.(updateId);
       onEventsChange();
     }
-  }, [onEventsChange]);
+  }, [onEventsChange, onOptimisticEventUpdate, onOptimisticEventRevert]);
 
   // Handle event drop on month view (drop on day cell)
   const handleEventDropToDay = useCallback(async (event: SerializedEvent, date: Date) => {
@@ -306,31 +349,34 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
       return;
     }
 
-    onEventsChange();
+    const updateId = event.originalId || event.id;
+    onOptimisticEventUpdate?.(updateId, { startTime, endTime });
+
     try {
       const res = await fetch("/api/events", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: event.id,
+          id: updateId,
           startTime: startTime.toISOString(),
           endTime: endTime.toISOString(),
           isAllDay,
         }),
       });
       if (res.ok) {
-        onEventsChange();
         toast.success("Event verplaatst");
       } else {
         const err = await res.json().catch(() => ({ error: "Onbekende fout" }));
         toast.error("Event kon niet worden verplaatst: " + (err.error || "Onbekende fout"));
+        onOptimisticEventRevert?.(updateId);
         onEventsChange();
       }
     } catch (error) {
       toast.error("Netwerkfout bij verplaatsen event");
+      onOptimisticEventRevert?.(updateId);
       onEventsChange();
     }
-  }, [onEventsChange]);
+  }, [onEventsChange, onOptimisticEventUpdate, onOptimisticEventRevert]);
 
   const handleDayClick = useCallback((date: Date) => {
     onDateChange(date);
@@ -681,12 +727,14 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
     openEventModal,
   }), [openCreateModal, openEventModal]);
 
-  // Swipe navigation for mobile
+  // Swipe navigation - horizontal for day/week, vertical for month
   const calendar = useCalendar();
   const swipeHandlers = useSwipe({
-    onSwipeLeft: calendar.navigateForward,
-    onSwipeRight: calendar.navigateBack,
-  });
+    onSwipeLeft: viewType === "month" ? undefined : calendar.navigateForward,
+    onSwipeRight: viewType === "month" ? undefined : calendar.navigateBack,
+    onSwipeUp: viewType === "month" ? calendar.navigateForward : undefined,
+    onSwipeDown: viewType === "month" ? calendar.navigateBack : undefined,
+  }, { threshold: 50, allowedTime: 350 });
 
   // Horizontal scroll navigation
   useWheelNavigation({
@@ -697,44 +745,92 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
     cooldown: 400,
   });
 
+  // Key for smooth transition animation when date changes
+  const viewKey = `${viewType}-${currentDate.getFullYear()}-${currentDate.getMonth()}-${currentDate.getDate()}`;
+
   return (
-    <div className="h-full" {...swipeHandlers}>
+    <div className="h-full overflow-hidden" {...swipeHandlers}>
       {viewType === "week" && (
-        <WeekView
-          currentDate={currentDate}
-          events={events}
-          todos={todos}
-          onEventClick={handleEventClick}
-          onTimeSlotClick={handleTimeSlotClick}
-          onDragCreate={handleDragCreate}
-          onTaskDrop={handleTaskDrop}
-          onEventDrop={handleEventDrop}
-        />
+        <div key={viewKey} className="h-full animate-in fade-in duration-200">
+        {isMobile ? (
+          <MobileWeekView
+            currentDate={currentDate}
+            events={events}
+            todos={todos}
+            onEventClick={handleEventClick}
+            onTimeSlotClick={handleTimeSlotClick}
+            onDragCreate={handleDragCreate}
+            onTaskDrop={handleTaskDrop}
+            onEventDrop={handleEventDrop}
+            weekViewZoom={weekViewZoom}
+            onWeekViewZoomChange={setWeekViewZoom}
+          />
+        ) : (
+          <WeekView
+            currentDate={currentDate}
+            events={events}
+            todos={todos}
+            onEventClick={handleEventClick}
+            onTimeSlotClick={handleTimeSlotClick}
+            onDragCreate={handleDragCreate}
+            onTaskDrop={handleTaskDrop}
+            onEventDrop={handleEventDrop}
+          />
+        )}
+        </div>
       )}
       {viewType === "day" && (
-        <DayView
-          currentDate={currentDate}
-          events={events}
-          todos={todos}
-          onEventClick={handleEventClick}
-          onTimeSlotClick={handleTimeSlotClick}
-          onToggleTodo={onToggleTodo}
-          onDragCreate={handleDragCreate}
-          onTaskDrop={handleTaskDrop}
-          onEventDrop={handleEventDrop}
-        />
+        <div key={viewKey} className="h-full animate-in fade-in duration-200">
+        {isMobile ? (
+          <MobileDayView
+            currentDate={currentDate}
+            events={events}
+            todos={todos}
+            dayViewMode={dayViewMode}
+            onDayViewModeChange={setDayViewMode}
+            onEventClick={handleEventClick}
+            onToggleTodo={onToggleTodo}
+            onDragCreate={handleDragCreate}
+          />
+        ) : (
+          <DayView
+            currentDate={currentDate}
+            events={events}
+            todos={todos}
+            onEventClick={handleEventClick}
+            onTimeSlotClick={handleTimeSlotClick}
+            onToggleTodo={onToggleTodo}
+            onDragCreate={handleDragCreate}
+            onTaskDrop={handleTaskDrop}
+            onEventDrop={handleEventDrop}
+          />
+        )}
+        </div>
       )}
       {viewType === "month" && (
-        <MonthView
-          currentDate={currentDate}
-          events={events}
-          todos={todos}
-          onEventClick={handleEventClick}
-          onDayClick={handleDayClick}
-          onEventDrop={handleEventDropToDay}
-        />
+        <div key={viewKey} className="h-full animate-in fade-in slide-in-from-bottom-2 duration-300">
+        {isMobile ? (
+          <MobileMonthView
+            currentDate={currentDate}
+            events={events}
+            todos={todos}
+            onEventClick={handleEventClick}
+            onDayClick={handleDayClick}
+          />
+        ) : (
+          <MonthView
+            currentDate={currentDate}
+            events={events}
+            todos={todos}
+            onEventClick={handleEventClick}
+            onDayClick={handleDayClick}
+            onEventDrop={handleEventDropToDay}
+          />
+        )}
+        </div>
       )}
       {viewType === "year" && (
+        <div key={viewKey} className="h-full animate-in fade-in duration-200">
         <YearView
           currentDate={currentDate}
           events={events}
@@ -743,6 +839,7 @@ export const CalendarView = forwardRef<CalendarViewRef, CalendarViewProps>(({
           onDayClick={handleDayClick}
           onMonthClick={handleMonthClick}
         />
+        </div>
       )}
 
       <EventModal

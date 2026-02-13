@@ -204,6 +204,24 @@ body {
   animation: slide-in-left 200ms ease-out;
 }
 
+/* Swipe transition animations */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-in-from-bottom-2 {
+  from { transform: translateY(8px); opacity: 0.7; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-in {
+  animation-fill-mode: both;
+  animation-timing-function: ease-out;
+}
+.fade-in { animation-name: fade-in; }
+.slide-in-from-bottom-2 { animation-name: slide-in-from-bottom-2; }
+.animate-in.duration-200 { animation-duration: 200ms; }
+.animate-in.duration-300 { animation-duration: 300ms; }
+
 /* Minimal scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

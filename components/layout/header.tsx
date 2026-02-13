@@ -105,77 +105,78 @@ export function Header({
       <header className="shrink-0 border-b border-border">
         {/* Top row */}
         <div className="flex h-14 items-center justify-between px-2 safe-left safe-right">
-          {/* Left: Menu + Date */}
+          {/* Left: Menu + Date with month nav */}
           <div className="flex items-center gap-1.5">
             <button
               onClick={onToggleMobileSidebar}
-              className="touch-target rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="flex min-w-[36px] min-h-[36px] items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label="Menu openen"
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-4 w-4" />
             </button>
-            <div className="flex flex-col">
-              <span className="font-pixel text-sm font-bold capitalize text-foreground">
-                {formatMonthYear(currentDate)}
-              </span>
-              <span className="text-[10px] capitalize text-muted-foreground">
-                {formatTodayDate(new Date())}
-              </span>
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={onNavigateBack}
+                className="flex min-w-[28px] min-h-[28px] items-center justify-center rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Vorige"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <div className="flex min-w-[100px] flex-col items-center px-1">
+                <span className="font-pixel text-sm font-bold capitalize text-foreground leading-tight">
+                  {formatMonthYear(currentDate)}
+                </span>
+                <span className="text-[10px] capitalize text-muted-foreground">
+                  {formatTodayDate(new Date())}
+                </span>
+              </div>
+              <button
+                onClick={onNavigateForward}
+                className="flex min-w-[28px] min-h-[28px] items-center justify-center rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Volgende"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
           </div>
 
-          {/* Right: Sync + Create + Search */}
+          {/* Right: Sync + Create + Search - compact on mobile */}
           <div className="flex items-center gap-0.5">
             {onSync && (
               <button
                 onClick={handleManualSync}
                 disabled={isSyncing}
-                className="touch-target rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                className="flex min-w-[36px] min-h-[36px] items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
                 aria-label={isSyncing ? "Synchroniseren..." : "Synchroniseren"}
               >
-                <RefreshCw className={`h-5 w-5 ${isSyncing ? "animate-spin" : ""}`} />
+                <RefreshCw className={`h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
               </button>
             )}
             <button
               onClick={onCreateEvent}
-              className="touch-target rounded-md bg-accent p-2 text-accent-foreground hover:bg-accent-hover"
+              className="flex min-w-[36px] min-h-[36px] items-center justify-center rounded-md bg-accent p-1.5 text-accent-foreground hover:bg-accent-hover"
               aria-label="Nieuw evenement"
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="h-4 w-4" />
             </button>
             <button
               onClick={onOpenSearch}
-              className="touch-target rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="flex min-w-[36px] min-h-[36px] items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label="Zoeken"
             >
-              <Search className="h-5 w-5" />
+              <Search className="h-4 w-4" />
             </button>
           </div>
         </div>
 
-        {/* Bottom row: Navigation + View selector */}
+        {/* Bottom row: Today + View selector */}
         <div className="flex items-center justify-between border-t border-border-light px-2 py-1.5">
-          {/* Navigation arrows */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={onNavigateBack}
-              className="touch-target rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={onNavigateToday}
-              className="rounded-md border border-border px-2 py-1 text-[10px] font-medium text-foreground hover:bg-muted"
-            >
-              {t("today")}
-            </button>
-            <button
-              onClick={onNavigateForward}
-              className="touch-target rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
+          <button
+            onClick={onNavigateToday}
+            className="rounded-md border border-border px-2 py-1 text-[10px] font-medium text-foreground hover:bg-muted"
+          >
+            {t("today")}
+          </button>
 
           {/* View selector */}
           <div className="flex items-center gap-0.5 rounded-md border border-border p-0.5">

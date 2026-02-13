@@ -33,10 +33,39 @@ interface CalendarContextValue {
 
 const CalendarContext = createContext<CalendarContextValue | null>(null);
 
+const VIEW_PREF_KEY = "opencalendar_view_preferences";
+
+function loadViewPreferences(): CalendarViewType | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(VIEW_PREF_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (["day", "week", "month", "year"].includes(parsed?.viewType)) {
+        return parsed.viewType;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 export function CalendarProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewType, setViewType] = useState<CalendarViewType>(settings.defaultView || "week");
+  const [viewType, setViewTypeState] = useState<CalendarViewType>(
+    () => loadViewPreferences() || settings.defaultView || "week"
+  );
+
+  const setViewType = useCallback((type: CalendarViewType) => {
+    setViewTypeState(type);
+    try {
+      localStorage.setItem(VIEW_PREF_KEY, JSON.stringify({ viewType: type }));
+    } catch {
+      // ignore
+    }
+  }, []);
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
   const [visibleCalendarIds, setVisibleCalendarIds] = useState<Set<string>>(new Set());
   const [calendarGroups, setCalendarGroups] = useState<CalendarGroup[]>([]);
@@ -120,19 +149,19 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
   const navigateBack = useCallback(() => {
     setCurrentDate((prev) => {
-      if (viewType === "week") return subWeeks(prev, 1);
-      if (viewType === "month") return subMonths(prev, 1);
+      if (viewTypeState === "week") return subWeeks(prev, 1);
+      if (viewTypeState === "month") return subMonths(prev, 1);
       return addDays(prev, -1);
     });
-  }, [viewType]);
+  }, [viewTypeState]);
 
   const navigateForward = useCallback(() => {
     setCurrentDate((prev) => {
-      if (viewType === "week") return addWeeks(prev, 1);
-      if (viewType === "month") return addMonths(prev, 1);
+      if (viewTypeState === "week") return addWeeks(prev, 1);
+      if (viewTypeState === "month") return addMonths(prev, 1);
       return addDays(prev, 1);
     });
-  }, [viewType]);
+  }, [viewTypeState]);
 
   const navigateToday = useCallback(() => {
     setCurrentDate(new Date());
@@ -170,7 +199,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     <CalendarContext.Provider
       value={{
         currentDate,
-        viewType,
+        viewType: viewTypeState,
         weekStartsOn: settings.weekStartsOn,
         setCurrentDate,
         setViewType,

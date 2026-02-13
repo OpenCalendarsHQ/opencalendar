@@ -54,6 +54,16 @@ export function getWeekDays(date: Date, weekStartsOn: 0 | 1 = 1): Date[] {
   return eachDayOfInterval({ start, end });
 }
 
+/** Get N days centered around date. For 7, returns full week. */
+export function getDaysAround(date: Date, count: number, weekStartsOn: 0 | 1 = 1): Date[] {
+  if (count === 7) {
+    return getWeekDays(date, weekStartsOn);
+  }
+  const half = Math.floor((count - 1) / 2);
+  const start = addDays(date, -half);
+  return Array.from({ length: count }, (_, i) => addDays(start, i));
+}
+
 export function getMonthDays(
   date: Date,
   weekStartsOn: 0 | 1 = 1

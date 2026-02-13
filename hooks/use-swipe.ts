@@ -16,7 +16,7 @@ export function useSwipe(
   handlers: SwipeHandlers,
   options: SwipeOptions = {}
 ) {
-  const { threshold = 50, allowedTime = 300 } = options;
+  const { threshold = 60, allowedTime = 400 } = options;
   const startX = useRef(0);
   const startY = useRef(0);
   const startTime = useRef(0);
@@ -40,20 +40,20 @@ export function useSwipe(
       const absDx = Math.abs(dx);
       const absDy = Math.abs(dy);
 
-      // Horizontal swipe
-      if (absDx > threshold && absDx > absDy) {
-        if (dx > 0) {
-          handlers.onSwipeRight?.();
-        } else {
-          handlers.onSwipeLeft?.();
-        }
-      }
-      // Vertical swipe
-      else if (absDy > threshold && absDy > absDx) {
+      // Vertical swipe (for month view: up = next, down = prev)
+      if (absDy > threshold && absDy > absDx) {
         if (dy > 0) {
           handlers.onSwipeDown?.();
         } else {
           handlers.onSwipeUp?.();
+        }
+      }
+      // Horizontal swipe (day/week view)
+      else if (absDx > threshold && absDx > absDy) {
+        if (dx > 0) {
+          handlers.onSwipeRight?.();
+        } else {
+          handlers.onSwipeLeft?.();
         }
       }
     },
