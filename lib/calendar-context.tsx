@@ -149,19 +149,19 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
 
   const navigateBack = useCallback(() => {
     setCurrentDate((prev) => {
-      if (viewTypeState === "week") return subWeeks(prev, 1);
-      if (viewTypeState === "month") return subMonths(prev, 1);
+      if (viewType === "week") return subWeeks(prev, 1);
+      if (viewType === "month") return subMonths(prev, 1);
       return addDays(prev, -1);
     });
-  }, [viewTypeState]);
+  }, [viewType]);
 
   const navigateForward = useCallback(() => {
     setCurrentDate((prev) => {
-      if (viewTypeState === "week") return addWeeks(prev, 1);
-      if (viewTypeState === "month") return addMonths(prev, 1);
+      if (viewType === "week") return addWeeks(prev, 1);
+      if (viewType === "month") return addMonths(prev, 1);
       return addDays(prev, 1);
     });
-  }, [viewTypeState]);
+  }, [viewType]);
 
   const navigateToday = useCallback(() => {
     setCurrentDate(new Date());
@@ -199,7 +199,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
     <CalendarContext.Provider
       value={{
         currentDate,
-        viewType: viewTypeState,
+        viewType,
         weekStartsOn: settings.weekStartsOn,
         setCurrentDate,
         setViewType,
