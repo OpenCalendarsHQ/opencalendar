@@ -7,7 +7,7 @@ import {
   syncStates,
   eventRecurrences,
 } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { parseFirstEvent } from "./ical-parser";
 import { parseRRuleUntilFromString } from "@/lib/utils/rrule";
 
@@ -56,6 +56,7 @@ export async function syncCalDAVEventsFromClient(
 
   try {
     await updateSyncStatus("syncing");
+    console.log(`[${logPrefix} Sync] Fetching calendar objects for calendar ${calendarId}`);
 
     const calendarObjects: DAVObject[] = await client.fetchCalendarObjects({
       calendar: { url: cal.externalId } as DAVCalendar,
@@ -73,22 +74,6 @@ export async function syncCalDAVEventsFromClient(
       const externalId = obj.url;
       const icsUid = parsed.uid || null;
       seenExternalIds.add(externalId);
-
-      const [existing] = await db
-        .select()
-        .from(events)
-        .where(
-          and(
-            eq(events.calendarId, calendarId),
-            icsUid ? eq(events.icsUid, icsUid) : eq(events.externalId, externalId)
-          )
-        );
-
-      if (existing && icsUid && existing.externalId !== externalId) {
-        console.log(`[${logPrefix} Sync] Event URL changed: ${parsed.title} (icsUid: ${icsUid})`);
-        console.log(`  Old URL: ${existing.externalId}`);
-        console.log(`  New URL: ${externalId}`);
-      }
 
       const eventData = {
         title: parsed.title || "(Geen titel)",
@@ -108,20 +93,41 @@ export async function syncCalDAVEventsFromClient(
 
       let eventId: string;
 
-      if (existing) {
-        eventId = existing.id;
-        if (existing.etag !== obj.etag || existing.externalId !== externalId) {
-          await db
-            .update(events)
-            .set({ ...eventData, externalId })
-            .where(eq(events.id, existing.id));
-        }
-      } else {
-        const [newEvent] = await db
+      if (icsUid) {
+        // Atomic upsert on (calendar_id, ics_uid) — prevents race condition when two parallel
+        // syncs process the same event simultaneously (partial unique index required).
+        const [upserted] = await db
           .insert(events)
           .values({ calendarId, externalId, ...eventData })
+          .onConflictDoUpdate({
+            target: [events.calendarId, events.icsUid],
+            targetWhere: sql`${events.icsUid} IS NOT NULL`,
+            set: { ...eventData, externalId },
+          })
           .returning();
-        eventId = newEvent.id;
+        eventId = upserted.id;
+      } else {
+        // No icsUid — fall back to externalId lookup
+        const [existing] = await db
+          .select()
+          .from(events)
+          .where(and(eq(events.calendarId, calendarId), eq(events.externalId, externalId)));
+
+        if (existing) {
+          eventId = existing.id;
+          if (existing.etag !== obj.etag || existing.externalId !== externalId) {
+            await db
+              .update(events)
+              .set({ ...eventData, externalId })
+              .where(eq(events.id, existing.id));
+          }
+        } else {
+          const [newEvent] = await db
+            .insert(events)
+            .values({ calendarId, externalId, ...eventData })
+            .returning();
+          eventId = newEvent.id;
+        }
       }
 
       if (parsed.rrule) {
