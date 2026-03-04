@@ -14,7 +14,7 @@ export default function robots(): MetadataRoute.Robots {
         "/static/*",
       ],
     },
-    sitemap: "https://opencalendars.app/sitemap.xml",
-    host: "https://opencalendars.app",
+    sitemap: "https://pulsecalendar.app/sitemap.xml",
+    host: "https://pulsecalendar.app",
   };
 }

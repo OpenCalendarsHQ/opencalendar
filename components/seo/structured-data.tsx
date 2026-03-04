@@ -6,10 +6,10 @@ export function StructuredData() {
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "OpenCalendars",
-    url: "https://opencalendars.app",
-    logo: "https://opencalendars.app/icon-512.png",
-    description: "OpenCalendars brengt al je Google Calendar en iCloud events samen in één overzichtelijke kalender.",
+    name: "PulseCalendar",
+    url: "https://pulsecalendar.app",
+    logo: "https://pulsecalendar.app/icon-512.png",
+    description: "PulseCalendar brengt al je Google Calendar en iCloud events samen in één overzichtelijke kalender.",
     sameAs: [
       "https://github.com/OpenCalendarsHQ/opencalendar",
     ],
@@ -18,7 +18,7 @@ export function StructuredData() {
   const softwareSchema = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "OpenCalendars",
+    name: "PulseCalendar",
     applicationCategory: "Productivity",
     operatingSystem: "Web, Windows, macOS, Linux",
     offers: {
@@ -45,11 +45,11 @@ export function StructuredData() {
   const websiteSchema = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "OpenCalendars",
-    url: "https://opencalendars.app",
+    name: "PulseCalendar",
+    url: "https://pulsecalendar.app",
     potentialAction: {
       "@type": "SearchAction",
-      target: "https://opencalendars.app/search?q={search_term_string}",
+      target: "https://pulsecalendar.app/search?q={search_term_string}",
       "query-input": "required name=search_term_string",
     },
   };

@@ -19,10 +19,10 @@ import { TaskBoard } from "./components/tasks/task-board";
 import { TodayView } from "./components/views/today-view";
 import { useRecurringEvents } from "./hooks/use-recurring-events";
 import { Settings } from "lucide-react";
-import { 
-  startOfMonth, 
-  endOfMonth, 
-  startOfWeek as startOfWeekFn, 
+import {
+  startOfMonth,
+  endOfMonth,
+  startOfWeek as startOfWeekFn,
   endOfWeek as endOfWeekFn,
   addDays
 } from "date-fns";
@@ -57,14 +57,14 @@ function App() {
       const urls = event.payload;
       console.log("Deep link received in frontend:", urls);
 
-      // Parse the URL: opencalendar://auth-callback?token=...&refresh_token=...&user_id=...&email=...
+      // Parse the URL: pulsecalendar://auth-callback?token=...&refresh_token=...&user_id=...&email=...
       if (urls && urls.length > 0) {
         const url = urls[0];
         console.log("Processing deep link URL:", url);
 
         if (url.includes("auth-callback")) {
           try {
-            // Robuuste parsing: new URL() faalt soms met custom schemes (opencalendar://)
+            // Robuuste parsing: new URL() faalt soms met custom schemes (pulsecalendar://)
             const queryStart = url.indexOf("?");
             const params = queryStart >= 0 ? new URLSearchParams(url.substring(queryStart + 1)) : new URLSearchParams();
 
@@ -114,7 +114,7 @@ function App() {
       <div className="flex items-center justify-center min-h-screen bg-neutral-50">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-neutral-300 border-t-neutral-900 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-neutral-600 text-lg">OpenCalendars wordt geladen...</p>
+          <p className="text-neutral-600 text-lg">PulseCalendar wordt geladen...</p>
         </div>
       </div>
     );
@@ -124,7 +124,7 @@ function App() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="bg-card rounded-lg border border-border shadow-sm p-8 max-w-md w-full mx-4">
-          <h1 className="text-2xl font-semibold text-foreground mb-2">OpenCalendars</h1>
+          <h1 className="text-2xl font-semibold text-foreground mb-2">PulseCalendar</h1>
           <p className="text-muted-foreground mb-6 text-sm">Log in om je agenda's te bekijken</p>
           <button
             onClick={handleLogin}
@@ -410,36 +410,33 @@ function CalendarApp(props: { user: any; logout: () => void }) {
           {/* Main view tabs */}
           <div className="mx-auto flex w-full max-w-(--breakpoint-2xl) items-center justify-between gap-1 px-4 pt-3 border-b border-border">
             <div className="flex items-center gap-1">
-            <button
-              onClick={() => setMainView("today")}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                mainView === "today"
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
-            >
-              Vandaag
-            </button>
-            <button
-              onClick={() => setMainView("calendar")}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                mainView === "calendar"
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
-            >
-              Kalender
-            </button>
-            <button
-              onClick={() => setMainView("tasks")}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                mainView === "tasks"
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
-            >
-              Taken
-            </button>
+              <button
+                onClick={() => setMainView("today")}
+                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${mainView === "today"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+              >
+                Vandaag
+              </button>
+              <button
+                onClick={() => setMainView("calendar")}
+                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${mainView === "calendar"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+              >
+                Kalender
+              </button>
+              <button
+                onClick={() => setMainView("tasks")}
+                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${mainView === "tasks"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+              >
+                Taken
+              </button>
             </div>
             <button
               onClick={() => setIsSettingsOpen(true)}
@@ -513,9 +510,9 @@ function CalendarApp(props: { user: any; logout: () => void }) {
 
         {/* Floating action button for creating events */}
         {mainView === "calendar" && (
-        <button
-          onClick={handleCreateEvent}
-          className="fixed bottom-8 right-8 w-14 h-14 bg-accent text-accent-foreground rounded-full shadow-lg hover:bg-accent-hover transition-all hover:scale-110 flex items-center justify-center"
+          <button
+            onClick={handleCreateEvent}
+            className="fixed bottom-8 right-8 w-14 h-14 bg-accent text-accent-foreground rounded-full shadow-lg hover:bg-accent-hover transition-all hover:scale-110 flex items-center justify-center"
             title="Nieuw evenement"
           >
             <span className="text-2xl leading-none">+</span>

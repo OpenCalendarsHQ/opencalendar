@@ -30,11 +30,11 @@ for (let i = 0; i < 100; i++) {
   const y = Math.random() * height;
   const radius = Math.random() * 200 + 50;
   const opacity = Math.random() * 0.1;
-  
+
   const auroraGradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
   auroraGradient.addColorStop(0, `rgba(0, 255, 255, ${opacity})`);
   auroraGradient.addColorStop(1, 'rgba(0, 255, 255, 0)');
-  
+
   ctx.fillStyle = auroraGradient;
   ctx.fillRect(0, 0, width, height);
 }
@@ -67,7 +67,7 @@ ctx.textBaseline = 'middle';
 
 // Try Geist Pixel, fallback to monospace
 ctx.font = 'bold 80px "Geist Pixel", monospace';
-ctx.fillText('OPENCALENDARS', width / 2, height / 2 - 30);
+ctx.fillText('PULSECALENDAR', width / 2, height / 2 - 30);
 
 // Draw tagline
 ctx.font = '36px "Geist Pixel", system-ui, sans-serif';

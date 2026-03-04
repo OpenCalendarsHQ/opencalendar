@@ -1,8 +1,8 @@
 import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://opencalendars.app";
-  
+  const baseUrl = "https://pulsecalendar.app";
+
   return [
     {
       url: baseUrl,

@@ -8,7 +8,7 @@ use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 
 const AUTH_FILE: &str = "auth.json";
-const APP_ID: &str = "com.arjan.opencalendar";
+const APP_ID: &str = "com.arjan.pulsecalendar";
 
 // Debounce voor deep links - voorkomt stack overflow door herhaalde aanroepen
 static LAST_DEEP_LINK: OnceLock<Mutex<Option<(String, Instant)>>> = OnceLock::new();
@@ -151,7 +151,7 @@ pub fn run() {
 
             // Deep link in args (van tweede instantie die door OS wordt gestart)
             for arg in args {
-                if arg.starts_with("opencalendar://") {
+                if arg.starts_with("pulsecalendar://") {
                     // Debounce met static - voorkomt dubbele verwerking
                     let should_emit = {
                         let mutex = LAST_DEEP_LINK.get_or_init(|| Mutex::new(None));
@@ -242,7 +242,7 @@ pub fn run() {
             #[cfg(any(windows, target_os = "linux"))]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
-                app.deep_link().register("opencalendar")?;
+                app.deep_link().register("pulsecalendar")?;
 
                 // Listen for deep links and emit them to the frontend
                 let app_handle = app.handle().clone();

@@ -64,14 +64,14 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "OpenCalendars - Al je kalenders op één plek",
+        alt: "PulseCalendar - Al je kalenders op één plek",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "OpenCalendars - Al je kalenders op één plek",
-    description: "OpenCalendars brengt al je Google Calendar en iCloud events samen in één overzichtelijke kalender. Gratis, open source en met desktop app.",
+    title: "PulseCalendar - Al je kalenders op één plek",
+    description: "PulseCalendar brengt al je Google Calendar en iCloud events samen in één overzichtelijke kalender. Gratis, open source en met desktop app.",
     images: ["/og-image.png"],
   },
   verification: {

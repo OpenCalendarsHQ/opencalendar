@@ -24,7 +24,7 @@ export default function DesktopTokenPage() {
         const data = await response.json();
 
         // Redirect to desktop app with tokens
-        const redirectUrl = new URL("opencalendar://auth-callback");
+        const redirectUrl = new URL("pulsecalendar://auth-callback");
         redirectUrl.searchParams.set("token", data.token);
         redirectUrl.searchParams.set("refresh_token", data.refreshToken);
         redirectUrl.searchParams.set("user_id", data.userId);
