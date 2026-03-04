@@ -9,6 +9,7 @@ export function useSession() {
       email: user.emailAddresses[0]?.emailAddress,
       user_metadata: {
         name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || null,
+        full_name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || null,
         avatar_url: user.imageUrl || null,
       }
     } : null,
