@@ -331,17 +331,6 @@ export default function WelcomePage() {
               width={32} height={32} />
             <span className="font-pixel text-lg font-bold text-white uppercase tracking-tighter">PULSECALENDAR</span>
           </div>
-          <p className="text-sm text-zinc-500">
-            {t("madeBy")} {" "}
-            <Link
-              href="https://arjandenhartog.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-400 transition-colors hover:text-white"
-            >
-              Arjan den Hartog
-            </Link>
-          </p>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-4 text-sm">
               <Link
