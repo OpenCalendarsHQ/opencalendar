@@ -1,40 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 import { generateAccessToken, generateRefreshToken } from "@/lib/auth/jwt";
 import { ensureUserExists } from "@/lib/auth/ensure-user";
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify that user is authenticated via Clerk
-    const user = await currentUser();
+    // Verify that user is authenticated via NextAuth
+    const session = await auth();
 
-    if (!user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Not authenticated" },
         { status: 401 }
       );
     }
 
-    const email = user.emailAddresses[0]?.emailAddress;
+    const { id, email, name, image } = session.user;
 
     await ensureUserExists({
-      id: user.id,
-      email: email,
-      name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || null,
-      image: user.imageUrl || null,
+      id,
+      email: email || undefined,
+      name: name || null,
+      image: image || null,
     });
 
     // Generate JWT tokens
-    const accessToken = generateAccessToken(user.id, email || "");
-    const refreshToken = generateRefreshToken(user.id, email || "");
+    const accessToken = generateAccessToken(id, email || "");
+    const refreshToken = generateRefreshToken(id, email || "");
 
     return NextResponse.json({
       token: accessToken,
       refreshToken,
-      userId: user.id,
-      email: email,
-      name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || null,
-      image: user.imageUrl || null,
+      userId: id,
+      email,
+      name: name || null,
+      image: image || null,
     });
   } catch (error) {
     console.error("Desktop token generation error:", error);

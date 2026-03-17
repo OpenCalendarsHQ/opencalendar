@@ -1,29 +1,26 @@
-import { currentUser, auth } from "@clerk/nextjs/server";
+import { auth } from '@/auth';
 
 export async function getUser() {
-  const user = await currentUser();
-  if (!user) return null;
+  const session = await auth();
+  if (!session?.user?.id) return null;
 
-  const name = `${user.firstName || ""} ${user.lastName || ""}`.trim() || null;
-
-  // Return compatible user object — full_name is a legacy Supabase alias for name
   return {
-    id: user.id,
-    email: user.emailAddresses[0]?.emailAddress,
+    id: session.user.id as string,
+    email: session.user.email,
     user_metadata: {
-      name,
-      full_name: name,
-      avatar_url: user.imageUrl || null,
+      name: session.user.name || null,
+      full_name: session.user.name || null,
+      avatar_url: session.user.image || null,
     }
   };
 }
 
 export async function getSession() {
-  const { sessionId, userId } = await auth();
-  if (!userId) return null;
+  const session = await auth();
+  if (!session?.user) return null;
 
   return {
-    id: sessionId,
-    user: { id: userId }
+    id: null,
+    user: { id: session.user.id }
   };
 }

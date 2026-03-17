@@ -1,25 +1,23 @@
-import { useUser } from "@clerk/nextjs";
+import { useSession as useNextAuthSession } from 'next-auth/react';
 
 export function useSession() {
-  const { user, isLoaded } = useUser();
+  const { data: session, status } = useNextAuthSession();
 
   return {
-    data: user ? {
-      id: user.id,
-      email: user.emailAddresses[0]?.emailAddress,
+    data: session?.user ? {
+      id: session.user.id,
+      email: session.user.email,
       user_metadata: {
-        name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || null,
-        full_name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || null,
-        avatar_url: user.imageUrl || null,
+        name: session.user.name || null,
+        full_name: session.user.name || null,
+        avatar_url: session.user.image || null,
       }
     } : null,
-    isPending: !isLoaded,
+    isPending: status === 'loading',
   };
 }
 
 export function useSupabase() {
-  // Return a mock or handle it elsewhere if needed. 
-  // Most Supabase calls should be replaced with API calls now.
-  console.warn("useSupabase is deprecated, use Clerk or API routes instead");
+  console.warn("useSupabase is deprecated, use API routes instead");
   return null;
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { verifyRequest } from "@/lib/auth/verify-request";
 import { db } from "@/lib/db";
 import { events, calendars, calendarAccounts, eventRecurrences } from "@/lib/db/schema";
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
@@ -13,32 +13,14 @@ import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
  */
 export async function GET(request: NextRequest) {
     try {
-        // Authenticate via Clerk (supports both session cookie and Bearer token)
-        let userId: string | null = null;
+        // Authenticate via NextAuth (supports both session cookie and Bearer JWT)
+        const { user } = await verifyRequest(request);
 
-        const authHeader = request.headers.get("authorization");
-        if (authHeader?.startsWith("Bearer ")) {
-            // Verify the Clerk JWT token that PulseSync passes
-            const token = authHeader.replace("Bearer ", "");
-            try {
-                const { verifyToken } = await import("@clerk/nextjs/server");
-                const payload = await verifyToken(token, {
-                    secretKey: process.env.CLERK_SECRET_KEY,
-                });
-                userId = payload.sub;
-            } catch (e) {
-                console.error("[pulsesync/events] Token verification failed:", e);
-                return NextResponse.json({ error: "Ongeldig token" }, { status: 401 });
-            }
-        } else {
-            // Fallback: Clerk session cookie (for direct browser use)
-            const session = await auth();
-            userId = session.userId;
-        }
-
-        if (!userId) {
+        if (!user?.id) {
             return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
         }
+
+        const userId = user.id;
 
         const { searchParams } = new URL(request.url);
         const rawStart = searchParams.get("start");

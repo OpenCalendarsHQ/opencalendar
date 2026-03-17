@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 import { verifyToken } from "./jwt";
 
 export interface AuthUser {
@@ -15,8 +15,8 @@ export interface AuthResult {
 }
 
 /**
- * Verify authentication from either JWT Bearer token or Clerk session
- * This allows both web app (session cookies) and desktop app (JWT) to use the same API
+ * Verify authentication from either JWT Bearer token or NextAuth session.
+ * This allows both web app (session cookies) and desktop app (JWT) to use the same API.
  */
 export async function verifyRequest(request: NextRequest): Promise<AuthResult> {
   // Check for JWT Bearer token first (desktop app)
@@ -40,17 +40,16 @@ export async function verifyRequest(request: NextRequest): Promise<AuthResult> {
     }
   }
 
-  // Fallback to Clerk session (web app)
-  const { userId } = await auth();
+  // Fallback to NextAuth session (web app)
+  const session = await auth();
 
-  if (userId) {
-    const user = await currentUser();
+  if (session?.user?.id) {
     return {
       user: {
-        id: userId,
-        email: user?.emailAddresses[0]?.emailAddress || "",
-        name: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || null : null,
-        image: user?.imageUrl || null,
+        id: session.user.id,
+        email: session.user.email || "",
+        name: session.user.name || null,
+        image: session.user.image || null,
       },
       source: "session",
     };

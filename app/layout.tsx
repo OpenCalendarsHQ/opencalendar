@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { GeistPixelSquare } from "geist/font/pixel";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "@/components/providers";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { StructuredData } from "@/components/seo/structured-data";
@@ -130,11 +129,10 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <ClerkProvider>
-      <html lang={locale} suppressHydrationWarning>
-        <body
-          className={`${GeistSans.variable} ${GeistMono.variable} ${GeistPixelSquare.variable} font-sans antialiased`}
-        >
+    <html lang={locale} suppressHydrationWarning>
+      <body
+        className={`${GeistSans.variable} ${GeistMono.variable} ${GeistPixelSquare.variable} font-sans antialiased`}
+      >
           <script
             dangerouslySetInnerHTML={{
               __html: `
@@ -174,8 +172,7 @@ export default async function RootLayout({
           <StructuredData />
           <ServiceWorkerRegister />
           <Analytics />
-        </body>
-      </html>
-    </ClerkProvider>
+      </body>
+    </html>
   );
 }

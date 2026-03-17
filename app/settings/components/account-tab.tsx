@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 import { Loader2, RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -19,9 +19,10 @@ function GoogleIcon({ className }: { className?: string }) {
 export function AccountTab() {
   const t = useTranslations("Onboarding");
   const router = useRouter();
-  const { user, isLoaded } = useUser();
+  const { data: session, status } = useSession();
+  const user = session?.user;
 
-  if (!isLoaded) {
+  if (status === "loading") {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -29,10 +30,8 @@ export function AccountTab() {
     );
   }
 
-  const email = user?.emailAddresses[0]?.emailAddress;
-  const createdAt = user?.createdAt ? new Date(user.createdAt) : null;
-  const lastSignInAt = user?.lastSignInAt ? new Date(user.lastSignInAt) : null;
-  const provider = user?.externalAccounts[0]?.provider;
+  const email = user?.email;
+  const provider: string | null = null;
 
   return (
     <div className="space-y-6">
@@ -46,25 +45,11 @@ export function AccountTab() {
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Account aangemaakt</label>
-              <p className="text-sm text-foreground mt-1">
-                {createdAt ? createdAt.toLocaleDateString("nl-NL", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric"
-                }) : "-"}
-              </p>
+              <p className="text-sm text-foreground mt-1">-</p>
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Laatst ingelogd</label>
-              <p className="text-sm text-foreground mt-1">
-                {lastSignInAt ? lastSignInAt.toLocaleDateString("nl-NL", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit"
-                }) : "-"}
-              </p>
+              <p className="text-sm text-foreground mt-1">-</p>
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/auth";
 
 export const metadata: Metadata = {
   title: "PulseCalendar - Al je kalenders op één plek",
@@ -11,9 +11,9 @@ export const metadata: Metadata = {
 };
 
 export default async function RootPage() {
-  const { userId } = await auth();
+  const session = await auth();
 
-  if (userId) {
+  if (session?.user?.id) {
     redirect("/dashboard");
   } else {
     redirect("/welcome");

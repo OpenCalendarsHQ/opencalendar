@@ -3,30 +3,30 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "next-auth/react";
 
 export default function DesktopLoginPage() {
   const router = useRouter();
   const t = useTranslations("Auth");
-  const { user, isLoaded } = useUser();
+  const { data: session, status } = useSession();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     // If logged in, redirect to token generation
-    if (isLoaded && user && !isRedirecting) {
+    if (status === "authenticated" && session && !isRedirecting) {
       setIsRedirecting(true);
       setTimeout(() => {
         window.location.href = "/auth/desktop-token";
       }, 500);
     }
-  }, [isLoaded, user, isRedirecting]);
+  }, [status, session, isRedirecting]);
 
   function handleLogin() {
     // Redirect to sign-in with return URL
-    router.push("/auth/sign-in?redirectTo=/auth/desktop-login");
+    router.push("/auth/sign-in?callbackUrl=/auth/desktop-login");
   }
 
-  if (!isLoaded) {
+  if (status === "loading") {
     return (
       <div className="w-full">
         <div className="mb-8">
@@ -42,7 +42,7 @@ export default function DesktopLoginPage() {
     );
   }
 
-  if (user) {
+  if (session) {
     return (
       <div className="w-full">
         <div className="mb-8">

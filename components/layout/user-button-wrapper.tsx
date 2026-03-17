@@ -1,19 +1,9 @@
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
-import { dark } from "@clerk/themes";
+import { UserButton } from "@ipulsehq/auth-ui";
 
 export function UserButtonWrapper() {
   return (
-    <UserButton
-      appearance={{
-        baseTheme: dark,
-        elements: {
-          userButtonAvatarBox: "h-10 w-10",
-        }
-      }}
-      userProfileMode="navigation"
-      userProfileUrl="/settings?tab=account"
-    />
+    <UserButton />
   );
 }
