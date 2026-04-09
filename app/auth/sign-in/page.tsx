@@ -1,5 +1,10 @@
-import { redirect } from 'next/navigation';
+import { signIn } from '@/auth'
 
-export default function SignInPage() {
-  redirect('/api/auth/signin/ipulse');
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>
+}) {
+  const { callbackUrl } = await searchParams
+  await signIn('ipulse', { redirectTo: callbackUrl || '/dashboard' })
 }
